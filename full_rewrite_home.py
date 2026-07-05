@@ -1,4 +1,4 @@
-import 'dart:convert';
+content = r"""import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
@@ -77,13 +77,8 @@ Future<Map<String, List>> _loadXtream(AppSession session) async {
     final liveCats = cats[0], movieCats = cats[1], seriesCats = cats[2];
     if (liveCats.isNotEmpty) {
       final all = <dynamic>[];
-      // Pega o primeiro canal de cada categoria (sem duplicar)
-      for (final c in liveCats.take(20)) {
-        final ch = await svc.getLiveStreams(c.id, c.name);
-        if (ch.isNotEmpty) all.add(ch.first);
-        if (all.length >= 15) break;
-      }
-      result['channels'] = all;
+      for (final c in liveCats.take(5)) { all.addAll(await svc.getLiveStreams(c.id, c.name)); if (all.length >= 20) break; }
+      all.shuffle(); result['channels'] = all.take(12).toList();
     }
     if (movieCats.isNotEmpty) {
       final all = <dynamic>[];
@@ -372,39 +367,16 @@ class _IBO4Home extends StatelessWidget {
     final feat = mv.isNotEmpty ? mv.first : null;
     return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Stack(children: [
-        // Fundo escuro
-        SizedBox(height: 260, width: double.infinity, child: Container(color: const Color(0xFF050508))),
-        // Poster centralizado
-        SizedBox(height: 260, width: double.infinity,
-          child: feat?.posterUrl != null
-            ? Image.network(feat!.posterUrl!, height: 260, width: double.infinity, fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const SizedBox())
-            : const SizedBox()),
-        // Gradiente lateral
-        SizedBox(height: 260, width: double.infinity, child: Container(decoration: const BoxDecoration(gradient: LinearGradient(
-          begin: Alignment.centerLeft, end: Alignment.centerRight,
-          stops: [0.0, 0.2, 0.7, 1.0],
-          colors: [Color(0xFF050508), Color(0x99050508), Colors.transparent, Color(0xFF050508)])))),
-        // Gradiente inferior
-        SizedBox(height: 260, width: double.infinity, child: Container(decoration: const BoxDecoration(gradient: LinearGradient(
-          begin: Alignment.bottomCenter, end: Alignment.topCenter,
-          stops: [0.0, 0.5, 1.0],
-          colors: [Color(0xFF0a0a0a), Color(0x88050508), Colors.transparent])))),
-        // Info sobreposta
-        Positioned(bottom: 16, left: 20, right: 20, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: p.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(4)),
-            child: Text('EM DESTAQUE', style: TextStyle(color: p, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1))),
-          const SizedBox(height: 6),
-          if (feat != null) Text(feat.name ?? '', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold,
-            shadows: [Shadow(color: Colors.black, blurRadius: 12), Shadow(color: Colors.black, blurRadius: 24)]), maxLines: 2, overflow: TextOverflow.ellipsis),
+        Container(height: 260, width: double.infinity, color: const Color(0xFF1a1a2e),
+          child: feat?.posterUrl != null ? Image.network(feat!.posterUrl!, fit: BoxFit.cover, width: double.infinity, errorBuilder: (_, __, ___) => const SizedBox()) : const SizedBox()),
+        Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Colors.transparent, const Color(0xFF0a0a0a).withValues(alpha: 0.9)])))),
+        Positioned(left: 20, bottom: 20, right: 180, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (feat != null) Text(feat.name ?? '', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), maxLines: 2),
           const SizedBox(height: 12),
           Row(children: [
-            ElevatedButton.icon(onPressed: () => onNav(2), icon: const Icon(Icons.play_arrow, size: 18), label: const Text('Assistir'),
-              style: ElevatedButton.styleFrom(backgroundColor: p, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10))),
-            const SizedBox(width: 10),
-            OutlinedButton(onPressed: () => onNav(2), style: OutlinedButton.styleFrom(side: BorderSide(color: p.withValues(alpha: 0.7)), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
-              child: Text('+ Info', style: TextStyle(color: p))),
+            ElevatedButton.icon(onPressed: () => onNav(2), icon: const Icon(Icons.play_arrow, size: 16), label: const Text('Assistir', style: TextStyle(fontSize: 12)), style: ElevatedButton.styleFrom(backgroundColor: p, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8))),
+            const SizedBox(width: 8),
+            OutlinedButton(onPressed: () => onNav(2), style: OutlinedButton.styleFrom(side: BorderSide(color: p), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)), child: Text('+ Info', style: TextStyle(color: p, fontSize: 12))),
           ]),
         ])),
       ]),
@@ -420,7 +392,7 @@ class _IBO4Home extends StatelessWidget {
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(c['icon'] as IconData, color: c['color'] as Color, size: 28), const SizedBox(height: 4), Text(c['label'] as String, style: TextStyle(color: c['color'] as Color, fontSize: 10))]))))
           .toList()),
         const SizedBox(height: 16),
-        if (!loading) ...[_hList('TV ao Vivo', ch, p, () => onNav(1), isChannel: true), _hList('Filmes em Destaque', mv, const Color(0xFF4b7bff), () => onNav(2)), _hList('Series Populares', sr, const Color(0xFF00c896), () => onNav(3))],
+        if (!loading) ...[_hList('Filmes em Destaque', mv, const Color(0xFF4b7bff), () => onNav(2)), _hList('Series Populares', sr, const Color(0xFF00c896), () => onNav(3)), _hList('TV ao Vivo', ch, p, () => onNav(1), isChannel: true)],
       ])),
     ]));
   }
@@ -609,3 +581,9 @@ class _HomeTab extends StatelessWidget {
       ])));
   }
 }
+"""
+
+with open(r"C:\Users\Jacques\iptv-player-app\lib\screens\home_screen_v2.dart", "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("OK! home_screen_v2.dart reescrito com 6 temas completos!")

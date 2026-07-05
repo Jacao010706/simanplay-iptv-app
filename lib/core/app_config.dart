@@ -49,4 +49,11 @@ class AppConfig {
   // Opcoes: Icons.live_tv, Icons.play_circle, Icons.tv, etc.
   // (mantenha como string do nome do icone para facil troca)
   static const bool usePlayIcon = false; // false = TV, true = Play Circle
+  // ============================================================
+  // TEMA DO APP
+  // ============================================================
+  // 1 = Grade de icones (padrao)
+  // 2 = Netflix style (banner + linhas)
+  // 3 = Sidebar lateral (estilo Smarters)
+  static const int appTheme = 4;
 }
