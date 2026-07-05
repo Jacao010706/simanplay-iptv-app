@@ -55,5 +55,5 @@ class AppConfig {
   // 1 = Grade de icones (padrao)
   // 2 = Netflix style (banner + linhas)
   // 3 = Sidebar lateral (estilo Smarters)
-  static const int appTheme = 4;
+  static const int appTheme = 6;
 }
