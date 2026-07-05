@@ -34,9 +34,9 @@ class _SeriesScreenState extends State<SeriesScreen> {
   }
 
   Future<void> _loadContent() async {
-    if (!widget.session.isXtream) {
+    if (!widget.session.hasXtreamAccess) {
       setState(() {
-        _error = 'Séries disponíveis apenas em conexões Xtream Codes.';
+        _error = 'Séries não disponíveis para esta playlist.';
         _loading = false;
       });
       return;
@@ -47,16 +47,16 @@ class _SeriesScreenState extends State<SeriesScreen> {
     });
     try {
       final service = XtreamService(
-        host: widget.session.xtreamHost!,
-        username: widget.session.xtreamUsername!,
-        password: widget.session.xtreamPassword!,
+        host: widget.session.effectiveXtreamHost!,
+        username: widget.session.effectiveXtreamUsername!,
+        password: widget.session.effectiveXtreamPassword!,
       );
-      final cats = await service.getSeriesCategories();
-      final List<Series> allSeries = [];
-      for (final cat in cats) {
-        final series = await service.getSeries(cat.id, cat.name);
-        allSeries.addAll(series);
-      }
+      final results = await Future.wait([
+        service.getSeriesCategories(),
+        service.getAllSeries(),
+      ]);
+      final cats = results[0] as List<Category>;
+      final allSeries = results[1] as List<Series>;
       setState(() {
         _categories = cats;
         _allSeries = allSeries;

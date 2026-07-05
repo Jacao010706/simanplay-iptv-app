@@ -1,4 +1,4 @@
-import 'dart:convert';
+dart_code = r"""import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -444,3 +444,9 @@ class _ActivationScreenState extends State<ActivationScreen>
     );
   }
 }
+"""
+
+with open(r"C:\Users\Jacques\iptv-player-app\lib\screens\activation_screen_v3.dart", "w", encoding="utf-8") as f:
+    f.write(dart_code)
+
+print("OK! activation_screen_v3.dart reescrito com sucesso.")

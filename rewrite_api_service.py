@@ -1,4 +1,4 @@
-import 'dart:convert';
+dart_code = r"""import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/client_session.dart';
 import '../core/app_config.dart';
@@ -46,3 +46,9 @@ class ApiService {
     }
   }
 }
+"""
+
+with open(r"C:\Users\Jacques\iptv-player-app\lib\services\api_service.dart", "w", encoding="utf-8") as f:
+    f.write(dart_code)
+
+print("OK! api_service.dart reescrito com sucesso.")

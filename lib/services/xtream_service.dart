@@ -72,6 +72,22 @@ class XtreamService {
         .toList();
   }
 
+  /// Todos os filmes de uma vez (sem filtro de categoria)
+  Future<List<Movie>> getAllMovies() async {
+    final url = '$_baseApiUrl&action=get_vod_streams';
+    final response = await http.get(Uri.parse(url));
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Movie.fromXtream(
+              json: e,
+              host: host,
+              username: username,
+              password: password,
+              categoryName: '',
+            ))
+        .toList();
+  }
+
   /// Filmes de uma categoria específica
   Future<List<Movie>> getMovies(
     String categoryId,
@@ -98,6 +114,16 @@ class XtreamService {
     final List data = json.decode(response.body);
     return data
         .map((e) => Category.fromXtream(json: e, type: 'series'))
+        .toList();
+  }
+
+  /// Todas as séries de uma vez (sem filtro de categoria)
+  Future<List<Series>> getAllSeries() async {
+    final url = '$_baseApiUrl&action=get_series';
+    final response = await http.get(Uri.parse(url));
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Series.fromXtream(json: e, categoryName: ''))
         .toList();
   }
 
