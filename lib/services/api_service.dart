@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/client_session.dart';
-
-const String _baseUrl = 'https://web-production-d8671.up.railway.app';
+import '../core/app_config.dart';
 
 class ApiService {
   static Future<ClientSession> login({
@@ -11,7 +10,7 @@ class ApiService {
     String? macAddress,
   }) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/app/login'),
+      Uri.parse('${AppConfig.backendUrl}/app/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,

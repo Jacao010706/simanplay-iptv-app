@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'core/providers/theme_provider.dart';
-import 'screens/login_screen.dart';
+import 'screens/activation_screen_v3.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +23,7 @@ class IptvPlayerApp extends StatelessWidget {
             title: 'SimanPlay IPTV',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
-            home: const LoginScreen(),
+            home: const ActivationScreen(),
           );
         },
       ),
