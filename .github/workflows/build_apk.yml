@@ -102,7 +102,7 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - - name: Decode Keystore
+      - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
 
