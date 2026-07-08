@@ -2,6 +2,11 @@ plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val keyPropertiesFile = rootProject.file("key.properties")
+val keyProperties = java.util.Properties()
+keyProperties.load(java.io.FileInputStream(keyPropertiesFile))
+
 android {
     namespace = "com.simanplay.iptvplayer.iptv_player"
     compileSdk = flutter.compileSdkVersion
@@ -12,10 +17,10 @@ android {
     }
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "simanplay.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            storeFile = file(keyProperties["storeFile"] as String)
+            storePassword = keyProperties["storePassword"] as String
+            keyAlias = keyProperties["keyAlias"] as String
+            keyPassword = keyProperties["keyPassword"] as String
         }
     }
     defaultConfig {
