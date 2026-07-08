@@ -102,8 +102,17 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
+
       - name: Build APK
-        run: flutter build apk --debug --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons
+        env:
+          KEYSTORE_PATH: simanplay.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Rename APK
         run: |
