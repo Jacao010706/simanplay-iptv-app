@@ -1,0 +1,130 @@
+name: Build APK White-label
+
+on:
+  workflow_dispatch:
+    inputs:
+      reseller_id:
+        description: 'ID do revendedor'
+        required: true
+      reseller_username:
+        description: 'Username do revendedor'
+        required: true
+      app_name:
+        description: 'Nome do app'
+        required: true
+        default: 'SimanPlay IPTV'
+      app_subtitle:
+        description: 'Subtitulo do app'
+        required: false
+        default: 'Conecte sua lista'
+      primary_color:
+        description: 'Cor primaria hex (ex: #e94bff)'
+        required: true
+        default: '#e94bff'
+      background_color:
+        description: 'Cor de fundo hex'
+        required: true
+        default: '#0d0b14'
+      surface_color:
+        description: 'Cor de superficie hex'
+        required: true
+        default: '#1a1625'
+      app_theme:
+        description: 'Tema do app (1-6)'
+        required: true
+        default: '1'
+      logo_url:
+        description: 'URL da logo (opcional)'
+        required: false
+        default: ''
+      banner_url:
+        description: 'URL do banner (opcional)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          channel: 'stable'
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Convert color to int
+        id: colors
+        run: |
+          primary=$(echo "${{ inputs.primary_color }}" | sed 's/#//')
+          background=$(echo "${{ inputs.background_color }}" | sed 's/#//')
+          surface=$(echo "${{ inputs.surface_color }}" | sed 's/#//')
+          echo "primary=0xFF${primary}" >> $GITHUB_OUTPUT
+          echo "background=0xFF${background}" >> $GITHUB_OUTPUT
+          echo "surface=0xFF${surface}" >> $GITHUB_OUTPUT
+
+      - name: Update AppConfig
+        run: |
+          cat > lib/core/app_config.dart << 'EOF'
+          class AppConfig {
+            static const String appName = '${{ inputs.app_name }}';
+            static const String appSubtitle = '${{ inputs.app_subtitle }}';
+            static const String appVersion = 'v1.0';
+            static const int primaryColor = ${{ steps.colors.outputs.primary }};
+            static const int backgroundColor = ${{ steps.colors.outputs.background }};
+            static const int surfaceColor = ${{ steps.colors.outputs.surface }};
+            static const String backendUrl = 'https://web-production-d8671.up.railway.app';
+            static const bool useCustomLogo = ${{ inputs.logo_url != '' }};
+            static const double logoSize = 100.0;
+            static const bool usePlayIcon = false;
+            static const int appTheme = ${{ inputs.app_theme }};
+          }
+          EOF
+
+      - name: Download Logo
+        if: ${{ inputs.logo_url != '' }}
+        run: |
+          mkdir -p assets
+          curl -L "${{ inputs.logo_url }}" -o assets/logo.png || true
+
+      - name: Update app name in AndroidManifest
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="${{ inputs.app_name }}"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK
+        run: |
+          mv build/flutter_apk/app-release.apk build/flutter_apk/${{ inputs.reseller_username }}-simanplay.apk || \
+          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/${{ inputs.reseller_username }}-simanplay.apk || true
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.reseller_username }}-apk
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/flutter_apk/*.apk
+          retention-days: 30
+
+      - name: Notify backend - Success
+        if: success()
+        run: |
+          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready" || true
+
+      - name: Notify backend - Failure
+        if: failure()
+        run: |
+          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" || true
