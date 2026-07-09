@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
-import 'player_screen.dart';
+import '../models/app_session.dart';
+import 'home_screen_v2.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -67,10 +68,25 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setString('password', password);
 
       if (!mounted) return;
+      final appSession = AppSession.simanplay(
+        username: username,
+        password: password,
+        primaryM3uUrl: session.primaryUrl ?? '',
+        backupM3uUrls: session.backupPlaylists
+            .map((b) => b.playlistUrl ?? '')
+            .where((u) => u.isNotEmpty)
+            .toList(),
+        expiresAt: session.expiresAt,
+        xtreamHost: session.xtreamHost,
+        xtreamUsername: session.xtreamUsername,
+        xtreamPassword: session.xtreamPassword,
+      );
+
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => PlayerScreen(session: session),
+          builder: (_) => HomeScreen(session: appSession),
         ),
       );
     } catch (e) {
