@@ -75,24 +75,14 @@ jobs:
 
       - name: Update AppConfig
         run: |
-          python3 -c "
-          content = '''class AppConfig {
-            static const String appName = \'${{ inputs.app_name }}\';
-            static const String appSubtitle = \'${{ inputs.app_subtitle }}\';
-            static const String appVersion = \'v1.0\';
-            static const int primaryColor = ${{ steps.colors.outputs.primary }};
-            static const int backgroundColor = ${{ steps.colors.outputs.background }};
-            static const int surfaceColor = ${{ steps.colors.outputs.surface }};
-            static const String backendUrl = \'https://web-production-d8671.up.railway.app\';
-            static const bool useCustomLogo = ${{ inputs.logo_url != '' }};
-            static const double logoSize = 100.0;
-            static const bool usePlayIcon = false;
-            static const int appTheme = ${{ inputs.app_theme }};
-          }
-          '''
-          open('lib/core/app_config.dart', 'w').write(content)
-          "
-
+          sed -i "s/static const String appName = .*/static const String appName = '${{ inputs.app_name }}';/" lib/core/app_config.dart
+          sed -i "s/static const String appSubtitle = .*/static const String appSubtitle = '${{ inputs.app_subtitle }}';/" lib/core/app_config.dart
+          sed -i "s/static const int primaryColor = .*/static const int primaryColor = ${{ steps.colors.outputs.primary }};/" lib/core/app_config.dart
+          sed -i "s/static const int backgroundColor = .*/static const int backgroundColor = ${{ steps.colors.outputs.background }};/" lib/core/app_config.dart
+          sed -i "s/static const int surfaceColor = .*/static const int surfaceColor = ${{ steps.colors.outputs.surface }};/" lib/core/app_config.dart
+          sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = ${{ inputs.logo_url != '' }};/" lib/core/app_config.dart
+          sed -i "s/static const int appTheme = .*/static const int appTheme = ${{ inputs.app_theme }};/" lib/core/app_config.dart
+          cat lib/core/app_config.dart
       - name: Download Logo
         if: ${{ inputs.logo_url != '' }}
         run: |
