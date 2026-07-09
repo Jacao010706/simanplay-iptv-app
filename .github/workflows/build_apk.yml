@@ -83,6 +83,7 @@ jobs:
           sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = ${{ inputs.logo_url != '' }};/" lib/core/app_config.dart
           sed -i "s/static const int appTheme = .*/static const int appTheme = ${{ inputs.app_theme }};/" lib/core/app_config.dart
           cat lib/core/app_config.dart
+
       - name: Download Logo
         if: ${{ inputs.logo_url != '' }}
         run: |
@@ -121,11 +122,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-     - name: Notify backend - Success
+      - name: Notify backend - Success
         if: success()
         run: |
           APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.reseller_username }}-simanplay.apk"
           curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}" || true
+
       - name: Notify backend - Failure
         if: failure()
         run: |
