@@ -45,6 +45,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -113,17 +115,19 @@ jobs:
 
       - name: Rename APK
         run: |
-          mv build/flutter_apk/app-release.apk build/flutter_apk/${{ inputs.reseller_username }}-simanplay.apk || \
-          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/${{ inputs.reseller_username }}-simanplay.apk || true
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || \
+          cp build/flutter_apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || true
 
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ${{ inputs.reseller_username }}-apk
-          path: |
-            build/app/outputs/flutter-apk/*.apk
-            build/flutter_apk/*.apk
-          retention-days: 30
+          tag_name: apk-${{ inputs.reseller_username }}-${{ github.run_number }}
+          name: APK ${{ inputs.app_name }} - ${{ inputs.reseller_username }}
+          files: release/${{ inputs.reseller_username }}-simanplay.apk
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Notify backend - Success
         if: success()
