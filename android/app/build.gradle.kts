@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
@@ -14,8 +17,8 @@ android {
     signingConfigs {
         create("release") {
             val keyPropertiesFile = rootProject.file("key.properties")
-            val keyProperties = java.util.Properties()
-            keyProperties.load(java.io.FileInputStream(keyPropertiesFile))
+            val keyProperties = Properties()
+            keyProperties.load(FileInputStream(keyPropertiesFile))
             storeFile = file(keyProperties["storeFile"] as String)
             storePassword = keyProperties["storePassword"] as String
             keyAlias = keyProperties["keyAlias"] as String
