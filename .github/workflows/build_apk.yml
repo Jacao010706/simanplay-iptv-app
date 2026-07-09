@@ -102,15 +102,11 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Decode Keystore
+     - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
-          cat > android/key.properties << EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=simanplay.jks
-          EOF
+          printf 'storePassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyPassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyAlias=${{ secrets.KEY_ALIAS }}\nstoreFile=simanplay.jks\n' > android/key.properties
+          cat android/key.properties
 
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
