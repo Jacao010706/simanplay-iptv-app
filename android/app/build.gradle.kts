@@ -27,8 +27,8 @@ android {
     }
     defaultConfig {
         applicationId = "com.simanplay.iptvplayer.iptv_player"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 21
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
