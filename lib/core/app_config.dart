@@ -31,6 +31,13 @@ class AppConfig {
   static const String backendUrl = 'https://web-production-d8671.up.railway.app';
 
   // ============================================================
+  // BANNER DE FUNDO (tela de login)
+  // ============================================================
+
+  // URL da imagem de fundo da tela de login (vazio = sem banner)
+  static const String bannerUrl = '';
+
+  // ============================================================
   // LOGO PERSONALIZADA
   // ============================================================
 

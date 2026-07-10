@@ -82,6 +82,7 @@ jobs:
           sed -i "s/static const int surfaceColor = .*/static const int surfaceColor = ${{ steps.colors.outputs.surface }};/" lib/core/app_config.dart
           sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = ${{ inputs.logo_url != '' }};/" lib/core/app_config.dart
           sed -i "s/static const int appTheme = .*/static const int appTheme = ${{ inputs.app_theme }};/" lib/core/app_config.dart
+          sed -i "s|static const String bannerUrl = .*|static const String bannerUrl = '${{ inputs.banner_url }}';|" lib/core/app_config.dart
           cat lib/core/app_config.dart
 
       - name: Download Logo

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../core/app_config.dart';
 import '../models/app_session.dart';
 import '../services/api_service.dart';
@@ -236,9 +237,25 @@ class _ActivationScreenState extends State<ActivationScreen>
       );
     }
 
+    final hasBanner = AppConfig.bannerUrl.isNotEmpty;
+
     return Scaffold(
       backgroundColor: bg,
-      body: SafeArea(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Fundo com banner (se configurado)
+          if (hasBanner)
+            CachedNetworkImage(
+              imageUrl: AppConfig.bannerUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: bg),
+              errorWidget: (_, __, ___) => Container(color: bg),
+            ),
+          // Overlay escuro sobre o banner para legibilidade
+          if (hasBanner)
+            Container(color: Colors.black.withOpacity(0.55)),
+          SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -317,6 +334,8 @@ class _ActivationScreenState extends State<ActivationScreen>
             ),
           ),
         ),
+      ),
+        ],
       ),
     );
   }
