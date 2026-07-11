@@ -262,15 +262,7 @@ class _ActivationScreenState extends State<ActivationScreen>
             child: Column(
               children: [
                 _buildLogo(primary),
-                const SizedBox(height: 12),
-                Text(AppConfig.appName,
-                    style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                const SizedBox(height: 4),
-                Text(AppConfig.appSubtitle,
-                    style: const TextStyle(color: Colors.white54, fontSize: 14)),
+
                 if (_macAddress != null) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -315,7 +307,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                         ],
                       ),
                       SizedBox(
-                        height: 320,
+                        height: 240,
                         child: TabBarView(
                           controller: _tabController,
                           children: [
@@ -362,7 +354,7 @@ class _ActivationScreenState extends State<ActivationScreen>
             const SizedBox(height: 10),
             _buildError(_spError!),
           ],
-          const Spacer(),
+          const SizedBox(height: 12),
           _buildButton(label: 'Entrar', loading: _spLoading, onPressed: _loginSimanPlay, primary: primary),
         ],
       ),
@@ -393,7 +385,7 @@ class _ActivationScreenState extends State<ActivationScreen>
             const SizedBox(height: 8),
             _buildError(_xError!),
           ],
-          const Spacer(),
+          const SizedBox(height: 12),
           _buildButton(label: 'Conectar', loading: _xLoading, onPressed: _loginXtream, primary: primary),
         ],
       ),
