@@ -207,16 +207,7 @@ class _NfHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(height: 200, width: double.infinity, decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [p.withValues(alpha: 0.4), const Color(0xFF141414)])),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(AppConfig.appName, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8), const Text('Sua plataforma de entretenimento', style: TextStyle(color: Colors.white54, fontSize: 13)), const SizedBox(height: 16),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            ElevatedButton.icon(onPressed: () => onNav(1), icon: const Icon(Icons.play_arrow, size: 18), label: const Text('Assistir'), style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black)),
-            const SizedBox(width: 12),
-            OutlinedButton.icon(onPressed: () => onNav(2), icon: const Icon(Icons.movie, size: 18, color: Colors.white), label: const Text('Filmes', style: TextStyle(color: Colors.white)), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54))),
-          ]),
-        ])),
+      _buildHomeBanner(p, onNav),
       if (loading) const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator(color: Color(0xFFe94bff))))
       else ...[
         Padding(padding: const EdgeInsets.all(16), child: Column(children: [
@@ -372,14 +363,14 @@ class _IBO4Home extends StatelessWidget {
   Widget build(BuildContext context) {
     final feat = mv.isNotEmpty ? mv.first : null;
     return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _buildHomeBanner(p, onNav),
       Stack(children: [
         // Fundo escuro
-        SizedBox(height: 260, width: double.infinity, child: Container(color: const Color(0xFF050508))),
+        SizedBox(height: 260, width: double.infinity, child: Container(color: Colors.transparent)),
         // Poster centralizado
-        SizedBox(height: 260, width: double.infinity,
+        SizedBox(height: 0, width: double.infinity,
           child: feat?.posterUrl != null
-            ? Image.network(feat!.posterUrl!, height: 260, width: double.infinity, fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const SizedBox())
+            ? const SizedBox()
             : const SizedBox()),
         // Gradiente lateral
         SizedBox(height: 260, width: double.infinity, child: Container(decoration: const BoxDecoration(gradient: LinearGradient(
@@ -470,6 +461,7 @@ class _IBO5Home extends StatelessWidget {
     if (loading) return Center(child: CircularProgressIndicator(color: p));
     final feat = mv.isNotEmpty ? mv[0] : null;
     return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _buildHomeBanner(p, onNav),
       GestureDetector(onTap: () => onNav(2), child: Container(height: 220, width: double.infinity, color: const Color(0xFF0f0f1a),
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // Poster lateral esquerdo
@@ -548,9 +540,11 @@ class _IBO6Home extends StatelessWidget {
         flexibleSpace: FlexibleSpaceBar(
           collapseMode: CollapseMode.pin,
           background: Stack(children: [
-            mv.isNotEmpty && mv[0].posterUrl != null
-              ? Image.network(mv[0].posterUrl!, fit: BoxFit.cover, width: double.infinity, height: 280, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1a1a2e)))
-              : Container(color: const Color(0xFF1a1a2e)),
+            AppConfig.bannerUrl.isNotEmpty
+              ? Image.network(AppConfig.bannerUrl, fit: BoxFit.cover, width: double.infinity, height: 280, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1a1a2e)))
+              : (mv.isNotEmpty && mv[0].posterUrl != null
+                ? Image.network(mv[0].posterUrl!, fit: BoxFit.cover, width: double.infinity, height: 280, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1a1a2e)))
+                : Container(color: const Color(0xFF1a1a2e))),
             Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xFF0d0d0d)])))),
             Positioned(top: 8, right: 8, child: SafeArea(child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (session.expiresAt != null) Text('Vence: \${_fmtDate(session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
@@ -582,6 +576,39 @@ class _IBO6Home extends StatelessWidget {
   }
 }
 
+
+Widget _buildHomeBanner(Color p, Function(int) onNav) {
+  return Stack(children: [
+    SizedBox(height: 220, width: double.infinity,
+      child: AppConfig.bannerUrl.isNotEmpty
+        ? Image.network(AppConfig.bannerUrl, fit: BoxFit.cover, width: double.infinity, height: 220,
+            errorBuilder: (_, __, ___) => Container(color: const Color(0xFF0d0b14)))
+        : Container(color: const Color(0xFF0d0b14))),
+    Container(height: 220, width: double.infinity,
+      decoration: const BoxDecoration(gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Colors.transparent, Color(0xCC000000), Color(0xFF0d0d0d)]))),
+    SizedBox(height: 220, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      if (AppConfig.useCustomLogo)
+        Image.asset('assets/logo.png', height: 70, errorBuilder: (_, __, ___) => Icon(Icons.live_tv, color: p, size: 60))
+      else
+        Icon(AppConfig.usePlayIcon ? Icons.play_circle : Icons.live_tv, color: p, size: 60),
+      const SizedBox(height: 8),
+      Text(AppConfig.appName, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold,
+        shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
+      const SizedBox(height: 16),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        ElevatedButton.icon(onPressed: () => onNav(1), icon: const Icon(Icons.play_arrow, size: 18), label: const Text('Assistir'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black)),
+        const SizedBox(width: 12),
+        OutlinedButton.icon(onPressed: () => onNav(2), icon: const Icon(Icons.movie, size: 18, color: Colors.white),
+          label: const Text('Filmes', style: TextStyle(color: Colors.white)),
+          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54))),
+      ]),
+    ])),
+  ]);
+}
+
 // ============================================================
 // Home Tab compartilhada (Tema 1)
 // ============================================================
@@ -594,8 +621,9 @@ class _HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = Color(AppConfig.primaryColor);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _buildHomeBanner(p, onNavigate),
+        Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('O que quer assistir?', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500)),
         const SizedBox(height: 20),
         GridView.count(crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5,
