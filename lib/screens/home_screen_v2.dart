@@ -7,6 +7,7 @@ import '../services/xtream_service.dart';
 import '../models/channel.dart';
 import '../models/movie.dart';
 import '../models/series.dart';
+import '../widgets/banner_background.dart';
 import 'activation_screen_v3.dart';
 import 'live_tv_screen.dart';
 import 'movies_screen.dart';
@@ -140,7 +141,7 @@ class _GridLayoutState extends State<_GridLayout> {
     final p = Color(AppConfig.primaryColor);
     final screens = [
       _HomeTab(session: widget.session, onNavigate: (i) => setState(() => _idx = i)),
-      LiveTvScreen(session: widget.session), MoviesScreen(session: widget.session), SeriesScreen(session: widget.session),
+      BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
     ];
     return Scaffold(
       backgroundColor: Color(AppConfig.backgroundColor),
@@ -184,7 +185,7 @@ class _NetflixLayoutState extends State<_NetflixLayout> {
     final p = Color(AppConfig.primaryColor);
     final screens = [
       _NfHome(ch: _ch, mv: _mv, sr: _sr, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p),
-      LiveTvScreen(session: widget.session), MoviesScreen(session: widget.session), SeriesScreen(session: widget.session),
+      BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: const Color(0xFF141414), body: Column(children: [
       SafeArea(child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: Row(children: [
@@ -272,7 +273,7 @@ class _SidebarLayoutState extends State<_SidebarLayout> {
     final sf = Color(AppConfig.surfaceColor);
     final screens = [
       _SmartersHome(cats: _cats, ch: _ch, loading: _loading, selCat: _selCat, onCat: _loadCat, p: p, sf: sf),
-      LiveTvScreen(session: widget.session), MoviesScreen(session: widget.session), SeriesScreen(session: widget.session),
+      BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: Color(AppConfig.backgroundColor), body: SafeArea(child: Row(children: [
       Container(width: 72, color: sf, child: Column(children: [
@@ -349,7 +350,7 @@ class _IBOLayout4State extends State<_IBOLayout4> {
     final sf = Color(AppConfig.surfaceColor);
     final screens = [
       _IBO4Home(mv: _mv, sr: _sr, ch: _ch, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p),
-      LiveTvScreen(session: widget.session), MoviesScreen(session: widget.session), SeriesScreen(session: widget.session),
+      BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: const Color(0xFF0a0a0a), body: SafeArea(child: Column(children: [
       Container(height: 52, color: sf, padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
@@ -445,7 +446,7 @@ class _IBOLayout5State extends State<_IBOLayout5> {
     final nav = [{'icon': Icons.home, 'label': 'Home'}, {'icon': Icons.live_tv, 'label': 'Live TV'}, {'icon': Icons.movie, 'label': 'Filmes'}, {'icon': Icons.video_library, 'label': 'Series'}];
     final screens = [
       _IBO5Home(mv: _mv, sr: _sr, ch: _ch, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p, session: widget.session),
-      LiveTvScreen(session: widget.session), MoviesScreen(session: widget.session), SeriesScreen(session: widget.session),
+      BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: const Color(0xFF0f0f1a), body: SafeArea(child: Row(children: [
       Container(width: 80, decoration: BoxDecoration(color: sf, border: Border(right: BorderSide(color: p.withValues(alpha: 0.2)))), child: Column(children: [
@@ -522,7 +523,7 @@ class _IBOLayout6State extends State<_IBOLayout6> {
     final p = Color(AppConfig.primaryColor);
     final screens = [
       _IBO6Home(mv: _mv, sr: _sr, ch: _ch, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p, onLogout: widget.onLogout, session: widget.session),
-      LiveTvScreen(session: widget.session), MoviesScreen(session: widget.session), SeriesScreen(session: widget.session),
+      BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
     ];
     final navItems = [{'icon': Icons.home, 'label': 'Home', 'idx': 0}, {'icon': Icons.live_tv, 'label': 'Ao Vivo', 'idx': 1}, {'icon': Icons.movie, 'label': 'Filmes', 'idx': 2}, {'icon': Icons.video_library, 'label': 'Series', 'idx': 3}];
     return Scaffold(backgroundColor: const Color(0xFF0d0d0d), body: screens[_idx],

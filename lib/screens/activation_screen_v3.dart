@@ -302,7 +302,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                         unselectedLabelColor: Colors.white54,
                         dividerColor: const Color(0xFF2a2538),
                         tabs: const [
-                          Tab(text: 'SimanPlay'),
+                          Tab(text: AppConfig.appName),
                           Tab(text: 'Xtream Codes'),
                         ],
                       ),
