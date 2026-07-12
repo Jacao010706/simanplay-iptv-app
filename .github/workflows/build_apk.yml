@@ -110,15 +110,15 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p release
-          cp build/app/outputs/flutter-apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || \
-          cp build/flutter_apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || true
+          cp build/app/outputs/flutter-apk/app-release.apk release/${{ inputs.app_name }}.apk || \
+          cp build/flutter_apk/app-release.apk release/${{ inputs.app_name }}.apk || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ inputs.reseller_username }}-${{ github.run_number }}
           name: APK ${{ inputs.app_name }} - ${{ inputs.reseller_username }}
-          files: release/${{ inputs.reseller_username }}-simanplay.apk
+          files: release/${{ inputs.app_name }}.apk
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -126,7 +126,7 @@ jobs:
       - name: Notify backend - Success
         if: success()
         run: |
-          APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.reseller_username }}-simanplay.apk"
+          APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.app_name }}.apk"
           curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}" || true
 
       - name: Notify backend - Failure
