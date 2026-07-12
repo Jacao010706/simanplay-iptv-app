@@ -642,6 +642,7 @@ class _HomeTab extends StatelessWidget {
               if (session.isXtream) Text(session.xtreamHost ?? '', style: const TextStyle(color: Colors.white54, fontSize: 11)),
             ])),
           ])),
+        ])),
       ]),
     );
   }
