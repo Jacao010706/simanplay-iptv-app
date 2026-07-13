@@ -1,414 +1,162 @@
-name: Build Multiplataforma
+name: Build APK White-label
 
 on:
   workflow_dispatch:
     inputs:
-      # ── Inputs enviados pelo painel (POST /resellers/{id}/whitelabel/build) ──
-      app_name:
-        description: 'Nome do app'
-        required: false
-        default: 'PRIMETV'
+      reseller_id:
+        description: 'ID do revendedor'
+        required: true
       reseller_username:
         description: 'Username do revendedor'
-        required: false
-        default: ''
+        required: true
+      app_name:
+        description: 'Nome do app'
+        required: true
+        default: 'SimanPlay IPTV'
       app_subtitle:
-        description: 'Subtítulo do app'
+        description: 'Subtitulo do app'
         required: false
         default: 'Conecte sua lista'
       primary_color:
-        description: 'Cor principal (hex, ex: #e94bff)'
-        required: false
+        description: 'Cor primaria hex (ex: #e94bff)'
+        required: true
         default: '#e94bff'
       background_color:
-        description: 'Cor de fundo (hex)'
-        required: false
+        description: 'Cor de fundo hex'
+        required: true
         default: '#0d0b14'
       surface_color:
-        description: 'Cor de superfície (hex)'
-        required: false
+        description: 'Cor de superficie hex'
+        required: true
         default: '#1a1625'
       app_theme:
-        description: 'Tema da home (1 a 6)'
-        required: false
+        description: 'Tema do app (1-6)'
+        required: true
         default: '1'
-      banner_url:
-        description: 'URL do banner'
-        required: false
-        default: ''
       logo_url:
-        description: 'URL do logo'
+        description: 'URL da logo (opcional)'
         required: false
         default: ''
-      bg_color:
-        description: 'Cor de fundo (compatibilidade)'
+      banner_url:
+        description: 'URL do banner (opcional)'
         required: false
         default: ''
-      reseller_id:
-        description: 'ID do revendedor'
+      icon_url:
+        description: 'URL do icone do APK (opcional - PNG quadrado, min 512x512)'
         required: false
         default: ''
-      api_url:
-        description: 'URL da API'
-        required: false
-        default: 'https://web-production-d8671.up.railway.app'
 
-# Inputs entram só como variáveis de ambiente (nunca interpolados em scripts)
-# e são validados por scripts/normalize_inputs.py em cada job.
-env:
-  IN_APP_NAME: ${{ github.event.inputs.app_name }}
-  IN_APP_SUBTITLE: ${{ github.event.inputs.app_subtitle }}
-  IN_PRIMARY_COLOR: ${{ github.event.inputs.primary_color }}
-  IN_BACKGROUND_COLOR: ${{ github.event.inputs.background_color }}
-  IN_BG_COLOR: ${{ github.event.inputs.bg_color }}
-  IN_SURFACE_COLOR: ${{ github.event.inputs.surface_color }}
-  IN_APP_THEME: ${{ github.event.inputs.app_theme }}
-  IN_LOGO_URL: ${{ github.event.inputs.logo_url }}
-  IN_BANNER_URL: ${{ github.event.inputs.banner_url }}
-  IN_API_URL: ${{ github.event.inputs.api_url }}
-  IN_RESELLER_ID: ${{ github.event.inputs.reseller_id }}
-  IN_RESELLER_USERNAME: ${{ github.event.inputs.reseller_username }}
-
-# ══════════════════════════════════════════════════════════════
-# JOB 1: Android APK + AAB + Roku + Samsung + LG
-# ══════════════════════════════════════════════════════════════
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Python deps
-        run: pip install Pillow requests
-
-      - name: Normalizar dados do painel
-        run: python3 scripts/normalize_inputs.py
-
-      - name: Generate app config (lib/core/app_config.dart)
-        env:
-          PRIMARY_COLOR: ${{ env.PRIMARY_HEX }}
-          BG_COLOR: ${{ env.BG_HEX }}
-          SURFACE_COLOR: ${{ env.SURFACE_HEX }}
-        run: |
-          python3 scripts/generate_app_config.py
-          cat lib/core/app_config.dart
-
-      - name: Ícone do app (logo do revendedor ou PRIMETV)
-        run: python3 scripts/generate_launcher_icons.py
-
-      - name: Generate Android TV banner + Roku icons
-        env:
-          APP_LOGO_URL: ${{ env.LOGO_URL || env.BANNER_URL }}
-          PRIMARY_COLOR: "#${{ env.PRIMARY_HEX }}"
-          BG_COLOR: "#${{ env.BG_HEX }}"
-        run: python3 scripts/generate_tv_assets.py
-
-      # Canal Roku nativo (SceneGraph): valida o BrightScript e empacota para sideload/loja
-      - name: Generate Roku channel
-        run: |
-          python3 scripts/generate_roku_manifest.py
-          npx -y brighterscript@0 bsc --rootDir roku_channel --createPackage false
-          cd roku_channel && zip -r "../${SLUG}_roku.zip" manifest source components images assets && cd ..
-
-      # Samsung (Tizen) e LG (webOS): lançadores que abrem o app de TV do painel (/tv)
-      - name: Generate Samsung (.wgt) + LG (.ipk)
-        run: |
-          python3 scripts/generate_tv_apps.py
-          npx -y -p @webos-tools/cli ares-package --no-minify build_tv/lg -o build_tv
-          mv build_tv/*.ipk "${SLUG}_lg.ipk"
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      # Chave FIXA (Secrets). Com chave nova a cada build o Android recusa
-      # atualizar o app instalado ("App não instalado").
-      - name: Setup Android signing
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
-            echo "::error::Secrets de assinatura ausentes (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD)"
-            exit 1
-          fi
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/simanplay-release.jks"
-          {
-            echo "storePassword=$KEYSTORE_PASSWORD"
-            echo "keyPassword=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
-            echo "keyAlias=$KEY_ALIAS"
-            echo "storeFile=$RUNNER_TEMP/simanplay-release.jks"
-          } > android/key.properties
-
-      # build-number crescente: o Android só instala atualização com versionCode >= ao instalado
-      - name: Build APK
-        run: flutter build apk --release --build-number=${{ github.run_number }}
-
-      - name: Build AAB (Google Play)
-        run: flutter build appbundle --release --build-number=${{ github.run_number }}
-
-      - name: Rename outputs
-        run: |
-          mv build/app/outputs/flutter-apk/app-release.apk    "${SLUG}.apk"
-          mv build/app/outputs/bundle/release/app-release.aab  "${SLUG}.aab"
-          ls -la *.apk *.aab *.wgt *.ipk *_roku.zip
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Android
-          path: "*.apk"
-          retention-days: 7
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: GooglePlay
-          path: "*.aab"
-          retention-days: 7
-
-      - name: Upload Roku
-        uses: actions/upload-artifact@v4
-        with:
-          name: Roku
-          path: "*_roku.zip"
-          retention-days: 7
-
-      - name: Upload Samsung
-        uses: actions/upload-artifact@v4
-        with:
-          name: Samsung
-          path: "*.wgt"
-          retention-days: 7
-          if-no-files-found: ignore
-
-      - name: Upload LG
-        uses: actions/upload-artifact@v4
-        with:
-          name: LG
-          path: "*.ipk"
-          retention-days: 7
-          if-no-files-found: ignore
-
-      - name: Notify backend (Android done)
-        run: python3 scripts/notify_backend.py progress android done
-
-# ══════════════════════════════════════════════════════════════
-# JOB 2: iOS (.ipa)
-# ══════════════════════════════════════════════════════════════
-  build-ios:
-    runs-on: macos-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Normalizar dados do painel
-        run: python3 scripts/normalize_inputs.py
-
-      - name: Generate app config (lib/core/app_config.dart)
-        env:
-          PRIMARY_COLOR: ${{ env.PRIMARY_HEX }}
-          BG_COLOR: ${{ env.BG_HEX }}
-          SURFACE_COLOR: ${{ env.SURFACE_HEX }}
-        run: python3 scripts/generate_app_config.py
-
-      - name: Ícone do app (logo do revendedor ou PRIMETV)
-        run: |
-          pip3 install Pillow --break-system-packages
-          python3 scripts/generate_launcher_icons.py
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build iOS (sem assinatura)
-        run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
-
-      - name: Empacotar IPA
-        run: |
-          mkdir -p Payload
-          cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -r "${SLUG}.ipa" Payload/
-          rm -rf Payload
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: iOS
-          path: "*.ipa"
-          retention-days: 7
-
-      - name: Notify backend (iOS done)
-        run: python3 scripts/notify_backend.py progress ios done
-
-# ══════════════════════════════════════════════════════════════
-# JOB 3: Windows (.zip)
-# ══════════════════════════════════════════════════════════════
-  build-windows:
-    runs-on: windows-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Normalizar dados do painel
-        run: python scripts/normalize_inputs.py
-
-      - name: Generate app config (lib/core/app_config.dart)
-        env:
-          PRIMARY_COLOR: ${{ env.PRIMARY_HEX }}
-          BG_COLOR: ${{ env.BG_HEX }}
-          SURFACE_COLOR: ${{ env.SURFACE_HEX }}
-        run: python scripts/generate_app_config.py
-
-      - name: Ícone do app (logo do revendedor ou PRIMETV)
-        run: |
-          pip install Pillow
-          python scripts/generate_launcher_icons.py
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Enable Windows desktop
-        run: flutter config --enable-windows-desktop
-
-      - name: Build Windows
-        run: flutter build windows --release --build-number=${{ github.run_number }}
-
-      - name: Empacotar Windows (.zip)
-        run: Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "$($env:SLUG)_windows.zip"
-
-      - name: Upload Windows
-        uses: actions/upload-artifact@v4
-        with:
-          name: Windows
-          path: "*_windows.zip"
-          retention-days: 7
-
-      - name: Notify backend (Windows done)
-        run: python scripts/notify_backend.py progress windows done
-
-# ══════════════════════════════════════════════════════════════
-# JOB 4: Publicar GitHub Release + notificar painel
-# ══════════════════════════════════════════════════════════════
-  publish-release:
-    runs-on: ubuntu-latest
-    needs: [build-android, build-ios, build-windows]
-    if: always()
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Normalizar dados do painel
-        run: python3 scripts/normalize_inputs.py
-
-      # Sem APK não há o que publicar: avisa o painel com status de erro
-      # (antes o painel recebia "success" com link de APK inexistente).
-      - name: Android falhou — avisar painel
-        if: needs.build-android.result != 'success'
-        run: |
-          echo "::error::Build Android falhou (${{ needs.build-android.result }})"
-          python3 scripts/notify_backend.py complete error
-          exit 1
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          path: dist/
+          flutter-version: '3.44.5'
+          channel: 'stable'
 
-      - name: List dist files
-        run: find dist/ -type f | sort
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Convert color to int
+        id: colors
+        run: |
+          primary=$(echo "${{ inputs.primary_color }}" | sed 's/#//')
+          background=$(echo "${{ inputs.background_color }}" | sed 's/#//')
+          surface=$(echo "${{ inputs.surface_color }}" | sed 's/#//')
+          echo "primary=0xFF${primary}" >> $GITHUB_OUTPUT
+          echo "background=0xFF${background}" >> $GITHUB_OUTPUT
+          echo "surface=0xFF${surface}" >> $GITHUB_OUTPUT
+
+      - name: Update AppConfig
+        run: |
+          sed -i "s/static const String appName = .*/static const String appName = '${{ inputs.app_name }}';/" lib/core/app_config.dart
+          sed -i "s/static const String appSubtitle = .*/static const String appSubtitle = '${{ inputs.app_subtitle }}';/" lib/core/app_config.dart
+          sed -i "s/static const int primaryColor = .*/static const int primaryColor = ${{ steps.colors.outputs.primary }};/" lib/core/app_config.dart
+          sed -i "s/static const int backgroundColor = .*/static const int backgroundColor = ${{ steps.colors.outputs.background }};/" lib/core/app_config.dart
+          sed -i "s/static const int surfaceColor = .*/static const int surfaceColor = ${{ steps.colors.outputs.surface }};/" lib/core/app_config.dart
+          sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = ${{ inputs.logo_url != '' }};/" lib/core/app_config.dart
+          sed -i "s/static const int appTheme = .*/static const int appTheme = ${{ inputs.app_theme }};/" lib/core/app_config.dart
+          sed -i "s|static const String bannerUrl = .*|static const String bannerUrl = '${{ inputs.banner_url }}';|" lib/core/app_config.dart
+          cat lib/core/app_config.dart
+
+      - name: Download Logo
+        if: ${{ inputs.logo_url != '' }}
+        run: |
+          mkdir -p assets
+          curl -L "${{ inputs.logo_url }}" -o assets/logo.png || true
+
+      - name: Download and resize APK icon
+        if: ${{ inputs.icon_url != '' }}
+        run: |
+          pip install Pillow -q
+          curl -L "${{ inputs.icon_url }}" -o /tmp/icon_source.png
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os
+          img = Image.open("/tmp/icon_source.png").convert("RGBA")
+          sizes = {
+            "mipmap-mdpi":    48,
+            "mipmap-hdpi":    72,
+            "mipmap-xhdpi":   96,
+            "mipmap-xxhdpi":  144,
+            "mipmap-xxxhdpi": 192,
+          }
+          base = "android/app/src/main/res"
+          for folder, size in sizes.items():
+            out = f"{base}/{folder}/ic_launcher.png"
+            img.resize((size, size), Image.LANCZOS).save(out)
+            print(f"✓ {folder}: {size}x{size}")
+          PYEOF
+
+      - name: Update app name in AndroidManifest
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="${{ inputs.app_name }}"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
+          printf 'storePassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyPassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyAlias=${{ secrets.KEY_ALIAS }}\nstoreFile=simanplay.jks\n' > android/key.properties
+          cat android/key.properties
+
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK
+        run: |
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || \
+          cp build/flutter_apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || true
 
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: "${{ env.APP_NAME }} v${{ github.run_number }}"
-          body: |
-            Apps gerados automaticamente pelo painel SimanPlay.
-
-            | Plataforma | Arquivo | Como usar |
-            |---|---|---|
-            | Android / Android TV | `.apk` | Instalar direto no celular/TV |
-            | Google Play | `.aab` | Enviar para o Google Play Console |
-            | iOS (iPhone/iPad) | `.ipa` | Instalar via AltStore |
-            | Windows | `.zip` | Extrair e executar o .exe |
-            | Roku TV | `_roku.zip` | Modo desenvolvedor da Roku (ver docs/TV_APPS.md) |
-            | Samsung Smart TV | `_samsung_nao_assinado.wgt` | Assinar no Tizen Studio e instalar (ver docs/TV_APPS.md) |
-            | LG Smart TV | `_lg.ipk` | Modo desenvolvedor LG / ares-install (ver docs/TV_APPS.md) |
-          files: |
-            dist/**/*.apk
-            dist/**/*.aab
-            dist/**/*.ipa
-            dist/**/*.zip
-            dist/**/*.wgt
-            dist/**/*.ipk
-          draft: false
+          tag_name: apk-${{ inputs.reseller_username }}-${{ github.run_number }}
+          name: APK ${{ inputs.app_name }} - ${{ inputs.reseller_username }}
+          files: release/${{ inputs.reseller_username }}-simanplay.apk
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Montar URLs de download
+      - name: Notify backend - Success
+        if: success()
         run: |
-          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
-          has() { find dist/ -type f -name "$1" | grep -q .; }
-          {
-            echo "DL_ANDROID=${BASE}/${SLUG}.apk"
-            echo "DL_GOOGLEPLAY=${BASE}/${SLUG}.aab"
-            has "*.ipa"         && echo "DL_IOS=${BASE}/${SLUG}.ipa"
-            has "*_windows.zip" && echo "DL_WINDOWS=${BASE}/${SLUG}_windows.zip"
-            has "*_roku.zip"    && echo "DL_ROKU=${BASE}/${SLUG}_roku.zip"
-            has "*.wgt"         && echo "DL_SAMSUNG=${BASE}/${SLUG}_samsung_nao_assinado.wgt"
-            has "*.ipk"         && echo "DL_LG=${BASE}/${SLUG}_lg.ipk"
-            echo "RELEASE_URL=${{ steps.create_release.outputs.url }}"
-          } >> "$GITHUB_ENV"
+          APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.reseller_username }}-simanplay.apk"
+          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}" || true
 
-      - name: Notify backend (build completo + URLs)
-        run: python3 scripts/notify_backend.py complete success
-
-      # ── JSON da página de download (GitHub Pages) ─
-      - name: Save download JSON for GitHub Pages
-        if: env.RESELLER_ID != ''
+      - name: Notify backend - Failure
+        if: failure()
         run: |
-          mkdir -p downloads
-          python3 - <<'PY'
-          import json, os
-          e = os.environ
-          data = {
-              "name": e["APP_NAME"],
-              "subtitle": "IPTV - TV ao Vivo, Filmes e Séries",
-              "logoUrl": e.get("LOGO_URL", ""),
-              "primaryColor": "#" + e["PRIMARY_HEX"],
-              "shortUrl": f"https://primetv.lat/d/{e['RESELLER_ID']}",
-              "downloads": {k[3:].lower(): v for k, v in e.items() if k.startswith("DL_")},
-          }
-          with open(f"downloads/{e['RESELLER_ID']}.json", "w", encoding="utf-8") as f:
-              json.dump(data, f, ensure_ascii=False, indent=2)
-          PY
-          git config user.email "github-actions@github.com"
-          git config user.name  "GitHub Actions"
-          git add "downloads/${RESELLER_ID}.json"
-          git diff --cached --quiet || git commit -m "chore: update download data for ${RESELLER_ID} [skip ci]"
-          git push origin HEAD:main || echo "Push falhou (conflito ignorado)"
+          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" || true
