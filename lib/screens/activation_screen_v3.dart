@@ -18,24 +18,34 @@ class ActivationScreen extends StatefulWidget {
 class _ActivationScreenState extends State<ActivationScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  // SimanPlay
   final _spUserCtrl = TextEditingController();
   final _spPassCtrl = TextEditingController();
   bool _spLoading = false;
   bool _spShowPass = false;
   String? _spError;
+
+  // Xtream Codes
   final _xHostCtrl = TextEditingController();
   final _xUserCtrl = TextEditingController();
   final _xPassCtrl = TextEditingController();
   bool _xLoading = false;
   bool _xShowPass = false;
   String? _xError;
+
+  // M3U URL
+  final _m3uUrlCtrl = TextEditingController();
+  bool _m3uLoading = false;
+  String? _m3uError;
+
   String? _macAddress;
   bool _checkingMac = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _initMacAndLogin();
   }
 
@@ -47,6 +57,7 @@ class _ActivationScreenState extends State<ActivationScreen>
     _xHostCtrl.dispose();
     _xUserCtrl.dispose();
     _xPassCtrl.dispose();
+    _m3uUrlCtrl.dispose();
     super.dispose();
   }
 
@@ -70,7 +81,9 @@ class _ActivationScreenState extends State<ActivationScreen>
       final info = NetworkInfo();
       mac = await info.getWifiBSSID();
       mac = mac?.toUpperCase().trim();
-      if (mac == null || mac.isEmpty || mac == '02:00:00:00:00:00') mac = null;
+      if (mac == null || mac.isEmpty || mac == '02:00:00:00:00:00') {
+        mac = null;
+      }
     } catch (_) {
       mac = null;
     }
@@ -199,9 +212,45 @@ class _ActivationScreenState extends State<ActivationScreen>
     }
   }
 
+  Future<void> _loginM3U() async {
+    final url = _m3uUrlCtrl.text.trim();
+    if (url.isEmpty) {
+      setState(() => _m3uError = 'Informe a URL da playlist M3U.');
+      return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      setState(() => _m3uError = 'URL inválida. Use http:// ou https://');
+      return;
+    }
+    setState(() {
+      _m3uLoading = true;
+      _m3uError = null;
+    });
+    try {
+      final session = AppSession.simanplay(
+        username: 'm3u',
+        password: '',
+        primaryM3uUrl: url,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session', jsonEncode(session.toJson()));
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
+      );
+    } catch (e) {
+      setState(() {
+        _m3uError = e.toString().replaceFirst('Exception: ', '');
+        _m3uLoading = false;
+      });
+    }
+  }
+
   Widget _buildLogo(Color primary) {
     if (AppConfig.useCustomLogo) {
-      return Image.asset('assets/logo.png', height: AppConfig.logoSize,
+      return Image.asset('assets/logo.png',
+          height: AppConfig.logoSize,
           errorBuilder: (_, __, ___) => Icon(Icons.live_tv,
               size: AppConfig.logoSize * 0.75, color: primary));
     }
@@ -244,7 +293,6 @@ class _ActivationScreenState extends State<ActivationScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Fundo com banner (se configurado)
           if (hasBanner)
             CachedNetworkImage(
               imageUrl: AppConfig.bannerUrl,
@@ -252,81 +300,85 @@ class _ActivationScreenState extends State<ActivationScreen>
               placeholder: (_, __) => Container(color: bg),
               errorWidget: (_, __, ___) => Container(color: bg),
             ),
-          // Overlay escuro sobre o banner para legibilidade
           if (hasBanner)
             Container(color: Colors.black.withOpacity(0.55)),
           SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                _buildLogo(primary),
-
-                if (_macAddress != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF2a2538)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.devices, color: Colors.white54, size: 16),
-                        const SizedBox(width: 8),
-                        Text('MAC: $_macAddress',
-                            style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                                fontFamily: 'monospace')),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 32),
-                Container(
-                  decoration: BoxDecoration(
-                    color: surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF2a2538)),
-                  ),
-                  child: Column(
-                    children: [
-                      TabBar(
-                        controller: _tabController,
-                        indicatorColor: primary,
-                        labelColor: primary,
-                        unselectedLabelColor: Colors.white54,
-                        dividerColor: const Color(0xFF2a2538),
-                        tabs: const [
-                          Tab(text: AppConfig.appName),
-                          Tab(text: 'Xtream Codes'),
-                        ],
-                      ),
-                      SizedBox(
-                        height: 240,
-                        child: TabBarView(
-                          controller: _tabController,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    _buildLogo(primary),
+                    if (_macAddress != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF2a2538)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildSimanPlayTab(primary),
-                            _buildXtreamTab(primary),
+                            const Icon(Icons.devices,
+                                color: Colors.white54, size: 16),
+                            const SizedBox(width: 8),
+                            Text('MAC: $_macAddress',
+                                style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                    fontFamily: 'monospace')),
                           ],
                         ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 32),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF2a2538)),
+                      ),
+                      child: Column(
+                        children: [
+                          TabBar(
+                            controller: _tabController,
+                            indicatorColor: primary,
+                            labelColor: primary,
+                            unselectedLabelColor: Colors.white54,
+                            dividerColor: const Color(0xFF2a2538),
+                            labelStyle: const TextStyle(fontSize: 12),
+                            tabs: const [
+                              Tab(text: AppConfig.appName),
+                              Tab(text: 'Xtream'),
+                              Tab(text: 'URL M3U'),
+                            ],
+                          ),
+                          SizedBox(
+                            height: 260,
+                            child: TabBarView(
+                              controller: _tabController,
+                              children: [
+                                _buildSimanPlayTab(primary),
+                                _buildXtreamTab(primary),
+                                _buildM3UTab(primary),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(AppConfig.appVersion,
+                        style: const TextStyle(
+                            color: Colors.white24, fontSize: 11)),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(AppConfig.appVersion,
-                    style: const TextStyle(color: Colors.white24, fontSize: 11)),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
         ],
       ),
     );
@@ -337,7 +389,8 @@ class _ActivationScreenState extends State<ActivationScreen>
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          _buildTextField(controller: _spUserCtrl, label: 'Usuário', icon: Icons.person),
+          _buildTextField(
+              controller: _spUserCtrl, label: 'Usuário', icon: Icons.person),
           const SizedBox(height: 12),
           _buildTextField(
             controller: _spPassCtrl,
@@ -345,7 +398,8 @@ class _ActivationScreenState extends State<ActivationScreen>
             icon: Icons.lock,
             obscure: !_spShowPass,
             suffixIcon: IconButton(
-              icon: Icon(_spShowPass ? Icons.visibility_off : Icons.visibility,
+              icon: Icon(
+                  _spShowPass ? Icons.visibility_off : Icons.visibility,
                   color: Colors.white54),
               onPressed: () => setState(() => _spShowPass = !_spShowPass),
             ),
@@ -355,7 +409,11 @@ class _ActivationScreenState extends State<ActivationScreen>
             _buildError(_spError!),
           ],
           const SizedBox(height: 12),
-          _buildButton(label: 'Entrar', loading: _spLoading, onPressed: _loginSimanPlay, primary: primary),
+          _buildButton(
+              label: 'Entrar',
+              loading: _spLoading,
+              onPressed: _loginSimanPlay,
+              primary: primary),
         ],
       ),
     );
@@ -366,9 +424,15 @@ class _ActivationScreenState extends State<ActivationScreen>
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          _buildTextField(controller: _xHostCtrl, label: 'URL do servidor', icon: Icons.link),
+          _buildTextField(
+              controller: _xHostCtrl,
+              label: 'URL do servidor',
+              icon: Icons.link),
           const SizedBox(height: 10),
-          _buildTextField(controller: _xUserCtrl, label: 'Usuário', icon: Icons.person),
+          _buildTextField(
+              controller: _xUserCtrl,
+              label: 'Usuário',
+              icon: Icons.person),
           const SizedBox(height: 10),
           _buildTextField(
             controller: _xPassCtrl,
@@ -376,7 +440,8 @@ class _ActivationScreenState extends State<ActivationScreen>
             icon: Icons.lock,
             obscure: !_xShowPass,
             suffixIcon: IconButton(
-              icon: Icon(_xShowPass ? Icons.visibility_off : Icons.visibility,
+              icon: Icon(
+                  _xShowPass ? Icons.visibility_off : Icons.visibility,
                   color: Colors.white54),
               onPressed: () => setState(() => _xShowPass = !_xShowPass),
             ),
@@ -386,7 +451,49 @@ class _ActivationScreenState extends State<ActivationScreen>
             _buildError(_xError!),
           ],
           const SizedBox(height: 12),
-          _buildButton(label: 'Conectar', loading: _xLoading, onPressed: _loginXtream, primary: primary),
+          _buildButton(
+              label: 'Conectar',
+              loading: _xLoading,
+              onPressed: _loginXtream,
+              primary: primary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildM3UTab(Color primary) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Cole a URL da sua lista M3U:',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          _buildTextField(
+            controller: _m3uUrlCtrl,
+            label: 'https://servidor.com/lista.m3u',
+            icon: Icons.playlist_play,
+            keyboardType: TextInputType.url,
+          ),
+          if (_m3uError != null) ...[
+            const SizedBox(height: 10),
+            _buildError(_m3uError!),
+          ],
+          const SizedBox(height: 16),
+          _buildButton(
+              label: 'Carregar lista',
+              loading: _m3uLoading,
+              onPressed: _loginM3U,
+              primary: primary),
+          const SizedBox(height: 12),
+          const Text(
+            'Suporta listas M3U e M3U Plus (.m3u, .m3u8)',
+            style: TextStyle(color: Colors.white24, fontSize: 10),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -398,10 +505,12 @@ class _ActivationScreenState extends State<ActivationScreen>
     required IconData icon,
     bool obscure = false,
     Widget? suffixIcon,
+    TextInputType? keyboardType,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
@@ -409,10 +518,12 @@ class _ActivationScreenState extends State<ActivationScreen>
         filled: true,
         fillColor: Color(AppConfig.backgroundColor),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none),
         prefixIcon: Icon(icon, color: Colors.white54, size: 20),
         suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       ),
     );
   }
@@ -444,13 +555,17 @@ class _ActivationScreenState extends State<ActivationScreen>
         onPressed: loading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
         ),
         child: loading
-            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+            ? const CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2)
             : Text(label,
                 style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
       ),
     );
   }
