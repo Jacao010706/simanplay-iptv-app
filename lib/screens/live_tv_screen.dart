@@ -70,8 +70,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       if (widget.session.isXtream) {
         final service = XtreamService(
           host: widget.session.xtreamHost!,
-          username: widget.session.xtreamUsername!,
-          password: widget.session.xtreamPassword!,
+          username: widget.session.effectiveXtreamUsername!,
+          password: widget.session.effectiveXtreamPassword!,
         );
         final cats = await service.getLiveCategories();
         final List<Channel> allCh = [];
@@ -410,15 +410,15 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
   }
 
   Future<void> _loadEpg() async {
-    if (!widget.session.isXtream) {
+    if (!widget.session.hasXtreamAccess) {
       setState(() => _loadingEpg = false);
       return;
     }
     try {
       final service = XtreamService(
-        host:     widget.session.xtreamHost!,
-        username: widget.session.xtreamUsername!,
-        password: widget.session.xtreamPassword!,
+        host:     widget.session.effectiveXtreamHost!,
+        username: widget.session.effectiveXtreamUsername!,
+        password: widget.session.effectiveXtreamPassword!,
       );
       final data    = await service.getShortEpg(widget.channel.id);
       final entries = data['epg_listings'];
