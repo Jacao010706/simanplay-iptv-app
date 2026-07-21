@@ -1,0 +1,13 @@
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://simanplay.com/primetv" version="1.0.0">
+<tizen:application id="SimanPlayTV.app" package="SimanPlayTV" required_version="3.0"/>
+<content src="index.html"/>
+<feature name="http://tizen.org/feature/screen.size.all"/>
+<feature name="http://tizen.org/feature/network.internet"/>
+<tizen:privilege name="http://tizen.org/privilege/internet"/>
+<tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+<tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+<name>APP_NAME_PLACEHOLDER</name>
+<icon src="images/icon.png"/>
+<description>IPTV - TV ao Vivo, Filmes e Séries</description>
+</widget>
