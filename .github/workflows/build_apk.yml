@@ -70,7 +70,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.4'
           channel: 'stable'
           cache: true
 
@@ -118,10 +117,6 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Pin Gradle 8.5 (fix groovy.xml.QName compatibility)
-        run: |
-          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties || true
-          cat android/gradle/wrapper/gradle-wrapper.properties | grep distributionUrl
 
       - name: Build APK
         run: flutter build apk --release
@@ -190,7 +185,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.4'
           channel: 'stable'
           cache: true
 
@@ -251,7 +245,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.4'
           channel: 'stable'
           cache: true
 
