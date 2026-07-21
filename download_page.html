@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title id="pageTitle">Baixar App</title>
+<style>
+  :root { --primary: #FF6B35; --bg: #0d0d1a; --surface: #1a1a2e; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:#fff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+
+  .logo { width:100px; height:100px; border-radius:20px; object-fit:contain; margin-bottom:16px; }
+  .logo-fallback { width:100px; height:100px; border-radius:20px; background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:48px; margin-bottom:16px; }
+  h1 { font-size:28px; font-weight:800; color:var(--primary); margin-bottom:4px; }
+  .subtitle { color:#888; font-size:15px; margin-bottom:32px; }
+
+  .auto-card {
+    background: linear-gradient(135deg, var(--primary), #ff9500);
+    border-radius:16px; padding:24px 32px; text-align:center;
+    width:100%; max-width:400px; margin-bottom:24px; cursor:pointer;
+    box-shadow:0 8px 32px rgba(255,107,53,0.4); transition:transform .2s;
+  }
+  .auto-card:hover { transform:scale(1.02); }
+  .auto-card .platform-icon { font-size:48px; margin-bottom:8px; }
+  .auto-card .platform-name { font-size:22px; font-weight:700; }
+  .auto-card .platform-desc { font-size:13px; opacity:.9; margin-top:4px; }
+  .auto-card .download-btn {
+    display:inline-block; margin-top:16px; background:#fff; color:var(--primary);
+    padding:12px 32px; border-radius:50px; font-weight:700; font-size:16px;
+    text-decoration:none; transition:opacity .2s;
+  }
+  .auto-card .download-btn:hover { opacity:.9; }
+
+  .all-platforms { width:100%; max-width:500px; }
+  .all-platforms h2 { font-size:14px; color:#666; text-align:center; margin-bottom:16px; letter-spacing:1px; text-transform:uppercase; }
+  .platform-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+  .platform-card {
+    background:var(--surface); border-radius:12px; padding:16px; display:flex;
+    align-items:center; gap:12px; cursor:pointer; border:2px solid transparent;
+    text-decoration:none; color:#fff; transition:all .2s;
+  }
+  .platform-card:hover { border-color:var(--primary); background:#252540; }
+  .platform-card.disabled { opacity:.4; cursor:not-allowed; }
+  .platform-card .icon { font-size:28px; flex-shrink:0; }
+  .platform-card .info .name { font-size:14px; font-weight:700; }
+  .platform-card .info .desc { font-size:11px; color:#888; margin-top:2px; }
+  .platform-card .badge {
+    margin-left:auto; font-size:10px; padding:3px 8px; border-radius:20px;
+    background:var(--primary); color:#fff; font-weight:700; flex-shrink:0;
+  }
+  .platform-card .badge.unavailable { background:#333; color:#666; }
+
+  .divider { width:100%; max-width:500px; height:1px; background:#222; margin:20px 0; }
+
+  .share-section { text-align:center; margin-top:24px; width:100%; max-width:400px; }
+  .share-section p { color:#666; font-size:13px; margin-bottom:8px; }
+  .url-box { display:flex; background:var(--surface); border-radius:10px; overflow:hidden; }
+  .url-box span { flex:1; padding:12px 16px; font-size:13px; color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .url-box button { background:var(--primary); border:none; color:#fff; padding:0 20px; cursor:pointer; font-weight:700; font-size:13px; }
+
+  .powered { margin-top:32px; color:#333; font-size:11px; }
+
+  .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); align-items:center; justify-content:center; z-index:100; padding:24px; }
+  .modal.show { display:flex; }
+  .modal-box { background:var(--surface); border-radius:16px; padding:28px; max-width:400px; width:100%; }
+  .modal-box h3 { font-size:18px; margin-bottom:12px; }
+  .modal-box ol { padding-left:20px; color:#ccc; font-size:14px; line-height:2; }
+  .modal-close { margin-top:20px; background:var(--primary); border:none; color:#fff; padding:12px 24px; border-radius:10px; font-weight:700; cursor:pointer; width:100%; font-size:16px; }
+</style>
+</head>
+<body>
+
+<div id="logoWrap" class="logo-fallback">📺</div>
+<h1 id="appName">Carregando...</h1>
+<p class="subtitle" id="appSubtitle">IPTV - TV ao Vivo, Filmes e Séries</p>
+
+<div class="auto-card" id="autoCard" onclick="downloadAuto()">
+  <div class="platform-icon" id="autoIcon">⬇️</div>
+  <div class="platform-name" id="autoPlatform">Detectando...</div>
+  <div class="platform-desc" id="autoDesc">Aguarde</div>
+  <a class="download-btn" id="autoBtn" href="#">Baixar agora</a>
+</div>
+
+<div class="all-platforms">
+  <h2>Outras plataformas</h2>
+  <div class="platform-grid" id="platformGrid"></div>
+</div>
+
+<div class="divider"></div>
+
+<div class="share-section">
+  <p>Compartilhe este link universal:</p>
+  <div class="url-box">
+    <span id="shareUrl"></span>
+    <button onclick="copyUrl()">Copiar</button>
+  </div>
+</div>
+
+<p class="powered">Powered by SimanPlay</p>
+
+<div class="modal" id="instrModal">
+  <div class="modal-box">
+    <h3 id="instrTitle">Como instalar</h3>
+    <ol id="instrSteps"></ol>
+    <button class="modal-close" onclick="closeModal()">Entendi</button>
+  </div>
+</div>
+
+<script>
+const APP_DATA = window.APP_DATA || {
+  name: document.title,
+  subtitle: 'IPTV - TV ao Vivo, Filmes e Séries',
+  logoUrl: '',
+  primaryColor: '#FF6B35',
+  downloads: { android:'', googleplay:'', ios:'', windows:'', roku:'', samsung:'', lg:'' }
+};
+
+const PLATFORMS = [
+  { id:'android',    icon:'🤖', name:'Android',         desc:'Celular, Tablet, Android TV',   ext:'APK'  },
+  { id:'ios',        icon:'🍎', name:'iPhone / iPad',   desc:'iOS 12 ou superior',             ext:'IPA'  },
+  { id:'windows',    icon:'🪟', name:'Windows',         desc:'Windows 10/11 - PC e Notebook', ext:'EXE'  },
+  { id:'googleplay', icon:'▶️', name:'Google Play',     desc:'Android via loja oficial',       ext:'Play' },
+  { id:'roku',       icon:'📺', name:'Roku TV',         desc:'Canal direto no Roku',           ext:'ZIP'  },
+  { id:'samsung',    icon:'📺', name:'Samsung Smart TV',desc:'TVs Samsung com Tizen',          ext:'WGT'  },
+  { id:'lg',         icon:'📺', name:'LG Smart TV',     desc:'TVs LG com webOS',               ext:'IPK'  },
+];
+
+function detectOS() {
+  const ua = navigator.userAgent.toLowerCase();
+  if (/tizen/i.test(ua))             return 'samsung';
+  if (/webos/i.test(ua))             return 'lg';
+  if (/smart-tv|smarttv/i.test(ua))  return 'android';
+  if (/iphone|ipad|ipod/i.test(ua))  return 'ios';
+  if (/android/i.test(ua))           return 'android';
+  if (/windows/i.test(ua))           return 'windows';
+  return 'android';
+}
+
+const TV_INSTRUCTIONS = {
+  roku: {
+    title: 'Instalar no Roku',
+    steps: [
+      'Acesse <b>Settings → System → About</b> e anote o IP da TV',
+      'No controle: <b>Home 3×, Up 2×, Right, Left, Right, Left, Right</b>',
+      'No computador, abra: <b>http://[IP-DA-TV]</b>',
+      'Clique em <b>Upload</b> e envie o arquivo <b>.zip</b> baixado',
+      'O canal aparece na tela inicial do Roku'
+    ]
+  },
+  samsung: {
+    title: 'Instalar na Samsung Smart TV',
+    steps: [
+      'Baixe o arquivo <b>.wgt</b> no computador',
+      'Acesse <b>developer.samsung.com</b> e crie conta gratuita',
+      'No Tizen Studio, conecte sua TV e faça deploy do arquivo .wgt'
+    ]
+  },
+  lg: {
+    title: 'Instalar na LG Smart TV',
+    steps: [
+      'Baixe o arquivo <b>.ipk</b> no computador',
+      'Acesse <b>developer.lge.com</b> e ative o modo desenvolvedor na TV',
+      'Use o <b>webOS Dev App</b> para instalar o .ipk na TV'
+    ]
+  },
+  ios: {
+    title: 'Instalar no iPhone/iPad',
+    steps: [
+      'Baixe o arquivo <b>.ipa</b> no computador',
+      'Instale o <b>AltStore</b> (altstore.io - gratuito)',
+      'Conecte o iPhone via USB e arraste o .ipa para o AltStore'
+    ]
+  }
+};
+
+function init() {
+  document.documentElement.style.setProperty('--primary', APP_DATA.primaryColor || '#FF6B35');
+  document.getElementById('appName').textContent    = APP_DATA.name || 'SimanPlay';
+  document.getElementById('pageTitle').textContent  = APP_DATA.name || 'SimanPlay';
+  document.getElementById('appSubtitle').textContent = APP_DATA.subtitle || '';
+
+  if (APP_DATA.logoUrl) {
+    const img = document.createElement('img');
+    img.src = APP_DATA.logoUrl; img.className = 'logo';
+    document.getElementById('logoWrap').replaceWith(img);
+  }
+
+  const os = detectOS();
+  const platform = PLATFORMS.find(p => p.id === os) || PLATFORMS[0];
+  const url = APP_DATA.downloads[os];
+
+  document.getElementById('autoIcon').textContent     = platform.icon;
+  document.getElementById('autoPlatform').textContent = platform.name;
+  document.getElementById('autoDesc').textContent     = platform.desc;
+
+  const btn = document.getElementById('autoBtn');
+  if (url) { btn.href = url; btn.textContent = `Baixar para ${platform.name}`; }
+  else { btn.textContent = 'Em breve'; btn.style.opacity='.5'; btn.style.pointerEvents='none'; }
+
+  const grid = document.getElementById('platformGrid');
+  PLATFORMS.forEach(p => {
+    if (p.id === os) return;
+    const dl = APP_DATA.downloads[p.id];
+    const a = document.createElement('a');
+    a.className = 'platform-card' + (dl ? '' : ' disabled');
+    a.href = dl || '#';
+    if (!dl) a.onclick = e => e.preventDefault();
+    if (['roku','samsung','lg','ios'].includes(p.id) && dl) {
+      a.href = '#';
+      a.onclick = e => { e.preventDefault(); showInstructions(p.id, dl); };
+    }
+    a.innerHTML = `<span class="icon">${p.icon}</span><div class="info"><div class="name">${p.name}</div><div class="desc">${p.desc}</div></div><span class="badge ${dl?'':'unavailable'}">${dl?p.ext:'—'}</span>`;
+    grid.appendChild(a);
+  });
+
+  document.getElementById('shareUrl').textContent = window.location.href;
+}
+
+function downloadAuto() {
+  const btn = document.getElementById('autoBtn');
+  if (btn.href && btn.href !== '#') window.location.href = btn.href;
+}
+
+function showInstructions(platform, downloadUrl) {
+  const instr = TV_INSTRUCTIONS[platform];
+  if (!instr) { window.location.href = downloadUrl; return; }
+  document.getElementById('instrTitle').textContent = instr.title;
+  const ol = document.getElementById('instrSteps');
+  ol.innerHTML = instr.steps.map(s => `<li>${s}</li>`).join('');
+  if (downloadUrl) ol.innerHTML += `<br><a href="${downloadUrl}" style="color:var(--primary);font-weight:700">⬇️ Baixar arquivo</a>`;
+  document.getElementById('instrModal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('instrModal').classList.remove('show'); }
+
+function copyUrl() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    const btn = document.querySelector('.url-box button');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
