@@ -387,3 +387,35 @@ jobs:
                 \"lg\":         \"${{ steps.urls.outputs.lg }}\"
               }
             }" || echo "Notificação ignorada (endpoint opcional)"
+
+      # ── Salvar JSON de download no repositório (GitHub Pages) ─
+      - name: Save download JSON for GitHub Pages
+        if: ${{ github.event.inputs.reseller_id != '' }}
+        run: |
+          RESELLER_ID="${{ github.event.inputs.reseller_id }}"
+          mkdir -p downloads
+
+          cat > "downloads/${RESELLER_ID}.json" <<EOF
+          {
+            "name": "${{ github.event.inputs.app_name }}",
+            "subtitle": "IPTV - TV ao Vivo, Filmes e Séries",
+            "logoUrl": "${{ github.event.inputs.logo_url }}",
+            "primaryColor": "#${{ github.event.inputs.theme_color }}",
+            "shortUrl": "https://jacao010706.github.io/simanplay-iptv-app/download_page.html?id=${RESELLER_ID}",
+            "downloads": {
+              "android":    "${{ steps.urls.outputs.android }}",
+              "googleplay": "${{ steps.urls.outputs.googleplay }}",
+              "ios":        "${{ steps.urls.outputs.ios }}",
+              "windows":    "${{ steps.urls.outputs.windows }}",
+              "roku":       "${{ steps.urls.outputs.roku }}",
+              "samsung":    "${{ steps.urls.outputs.samsung }}",
+              "lg":         "${{ steps.urls.outputs.lg }}"
+            }
+          }
+          EOF
+
+          git config user.email "github-actions@github.com"
+          git config user.name  "GitHub Actions"
+          git add "downloads/${RESELLER_ID}.json" download_page.html
+          git diff --cached --quiet || git commit -m "chore: update download data for ${RESELLER_ID} [skip ci]"
+          git push origin HEAD:main || echo "Push falhou (conflito ignorado)"
