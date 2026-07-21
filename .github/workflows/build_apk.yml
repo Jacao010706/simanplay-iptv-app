@@ -1,135 +1,139 @@
-name: Build APK White-label
+name: Build APK + TV Assets
 
 on:
   workflow_dispatch:
     inputs:
+      app_name:
+        description: 'Nome do app (revendedor)'
+        required: true
+        default: 'SimanPlay'
+      logo_url:
+        description: 'URL do logo do revendedor (PNG/JPG)'
+        required: false
+        default: ''
+      primary_color:
+        description: 'Cor principal hex (ex: D4AF37)'
+        required: false
+        default: 'FF6B35'
+      bg_color:
+        description: 'Cor de fundo hex (ex: 0a0a0a)'
+        required: false
+        default: '0d0d1a'
       reseller_id:
         description: 'ID do revendedor'
-        required: true
-      reseller_username:
-        description: 'Username do revendedor'
-        required: true
-      app_name:
-        description: 'Nome do app'
-        required: true
-        default: 'SimanPlay IPTV'
-      app_subtitle:
-        description: 'Subtitulo do app'
-        required: false
-        default: 'Conecte sua lista'
-      primary_color:
-        description: 'Cor primaria hex (ex: #e94bff)'
-        required: true
-        default: '#e94bff'
-      background_color:
-        description: 'Cor de fundo hex'
-        required: true
-        default: '#0d0b14'
-      surface_color:
-        description: 'Cor de superficie hex'
-        required: true
-        default: '#1a1625'
-      app_theme:
-        description: 'Tema do app (1-6)'
-        required: true
-        default: '1'
-      logo_url:
-        description: 'URL da logo (opcional)'
         required: false
         default: ''
-      banner_url:
-        description: 'URL do banner (opcional)'
+      api_url:
+        description: 'URL da API do backend'
         required: false
-        default: ''
+        default: 'https://simanplay-backend.up.railway.app'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 30
+
     steps:
+      # 1. Checkout do código
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Configurar Java
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 3. Configurar Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.5'
+          flutter-version: '3.32.2'
           channel: 'stable'
+          cache: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+      # 4. Instalar dependências Python para geração de assets
+      - name: Install Python deps
+        run: pip install Pillow requests
 
-      - name: Convert color to int
-        id: colors
+      # 5. Gerar app_config.dart com dados do revendedor
+      - name: Generate app_config.dart
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          PRIMARY_COLOR: ${{ github.event.inputs.primary_color }}
+          BG_COLOR: ${{ github.event.inputs.bg_color }}
+          API_URL: ${{ github.event.inputs.api_url }}
+          RESELLER_ID: ${{ github.event.inputs.reseller_id }}
         run: |
-          primary=$(echo "${{ inputs.primary_color }}" | sed 's/#//')
-          background=$(echo "${{ inputs.background_color }}" | sed 's/#//')
-          surface=$(echo "${{ inputs.surface_color }}" | sed 's/#//')
-          echo "primary=0xFF${primary}" >> $GITHUB_OUTPUT
-          echo "background=0xFF${background}" >> $GITHUB_OUTPUT
-          echo "surface=0xFF${surface}" >> $GITHUB_OUTPUT
+          python3 scripts/generate_app_config.py
 
-      - name: Update AppConfig
+      # 6. Gerar banner Android TV + ícones Roku com logo do revendedor
+      - name: Generate TV assets (banner + Roku icons)
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          APP_LOGO_URL: ${{ github.event.inputs.logo_url }}
+          PRIMARY_COLOR: "#${{ github.event.inputs.primary_color }}"
+          BG_COLOR: "#${{ github.event.inputs.bg_color }}"
         run: |
-          sed -i "s/static const String appName = .*/static const String appName = '${{ inputs.app_name }}';/" lib/core/app_config.dart
-          sed -i "s/static const String appSubtitle = .*/static const String appSubtitle = '${{ inputs.app_subtitle }}';/" lib/core/app_config.dart
-          sed -i "s/static const int primaryColor = .*/static const int primaryColor = ${{ steps.colors.outputs.primary }};/" lib/core/app_config.dart
-          sed -i "s/static const int backgroundColor = .*/static const int backgroundColor = ${{ steps.colors.outputs.background }};/" lib/core/app_config.dart
-          sed -i "s/static const int surfaceColor = .*/static const int surfaceColor = ${{ steps.colors.outputs.surface }};/" lib/core/app_config.dart
-          sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = ${{ inputs.logo_url != '' }};/" lib/core/app_config.dart
-          sed -i "s/static const int appTheme = .*/static const int appTheme = ${{ inputs.app_theme }};/" lib/core/app_config.dart
-          sed -i "s|static const String bannerUrl = .*|static const String bannerUrl = '${{ inputs.banner_url }}';|" lib/core/app_config.dart
-          cat lib/core/app_config.dart
+          python3 scripts/generate_tv_assets.py
 
-      - name: Download Logo
-        if: ${{ inputs.logo_url != '' }}
+      # 7. Gerar manifest Roku
+      - name: Generate Roku manifest
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
         run: |
-          mkdir -p assets
-          curl -L "${{ inputs.logo_url }}" -o assets/logo.png || true
+          python3 scripts/generate_roku_manifest.py
 
-      - name: Update app name in AndroidManifest
+      # 8. Empacotar canal Roku (.zip)
+      - name: Package Roku channel
         run: |
-          sed -i 's/android:label="[^"]*"/android:label="${{ inputs.app_name }}"/' android/app/src/main/AndroidManifest.xml
+          cd roku_channel
+          zip -r ../simanplay_roku_channel.zip .
+          cd ..
+          echo "✅ Roku channel empacotado"
 
-      - name: Get dependencies
+      # 9. Instalar pacotes Flutter
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Decode Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
-          printf 'storePassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyPassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyAlias=${{ secrets.KEY_ALIAS }}\nstoreFile=simanplay.jks\n' > android/key.properties
-          cat android/key.properties
-
+      # 10. Build APK Android
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release
 
+      # 11. Renomear APK com nome do revendedor
       - name: Rename APK
         run: |
-          mkdir -p release
-          cp build/app/outputs/flutter-apk/app-release.apk release/${{ inputs.app_name }}.apk || \
-          cp build/flutter_apk/app-release.apk release/${{ inputs.app_name }}.apk || true
+          APP_SLUG=$(echo "${{ github.event.inputs.app_name }}" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+          mv build/flutter/outputs/flutter-apk/app-release.apk ${APP_SLUG}.apk || \
+          mv build/app/outputs/flutter-apk/app-release.apk ${APP_SLUG}.apk
+          echo "APK_NAME=${APP_SLUG}.apk" >> $GITHUB_ENV
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      # 12. Upload dos artefatos
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: apk-${{ inputs.reseller_username }}-${{ github.run_number }}
-          name: APK ${{ inputs.app_name }} - ${{ inputs.reseller_username }}
-          files: release/${{ inputs.app_name }}.apk
-          prerelease: false
+          name: ${{ github.event.inputs.app_name }}-APK
+          path: "*.apk"
+          retention-days: 7
+
+      - name: Upload Roku Channel
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-Roku
+          path: simanplay_roku_channel.zip
+          retention-days: 7
+
+      # 13. Notificar Railway com APK e Roku prontos
+      - name: Notify backend
+        if: ${{ github.event.inputs.reseller_id != '' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Notify backend - Success
-        if: success()
+          RESELLER_ID: ${{ github.event.inputs.reseller_id }}
+          API_URL: ${{ github.event.inputs.api_url }}
+          APP_NAME: ${{ github.event.inputs.app_name }}
         run: |
-          APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.app_name }}.apk"
-          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}" || true
-
-      - name: Notify backend - Failure
-        if: failure()
-        run: |
-          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" || true
+          APK_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST "${API_URL}/api/builds/complete" \
+            -H "Content-Type: application/json" \
+            -d "{\"resellerId\": \"${RESELLER_ID}\", \"status\": \"success\", \"downloadUrl\": \"${APK_URL}\", \"appName\": \"${APP_NAME}\"}" \
+            || echo "Notificação ignorada (endpoint opcional)"
