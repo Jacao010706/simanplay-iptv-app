@@ -190,7 +190,7 @@ jobs:
           cache: true
 
       - name: Install Python deps
-        run: pip3 install Pillow requests
+        run: pip3 install Pillow requests --break-system-packages
 
       - name: Generate app_config.dart
         env:
