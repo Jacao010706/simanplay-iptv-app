@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=1920"/>
+    <title>APP_NAME_PLACEHOLDER</title>
+    <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- ── Tela de Login ── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="icon">📺</span>
+      <span id="appTitle">APP_NAME_PLACEHOLDER</span>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabSimanplay" data-focus onclick="switchTab('simanplay')">SimanPlay</button>
+      <button class="tab-btn" id="tabXtream" data-focus onclick="switchTab('xtream')">Xtream</button>
+    </div>
+
+    <div class="tab-content" id="simanplayFields" style="display:flex">
+      <input id="userInput" type="text"     placeholder="Usuário" data-focus tabindex="0"/>
+      <input id="passInput" type="password" placeholder="Senha"   data-focus tabindex="0"/>
+      <button class="btn-login" data-focus tabindex="0" onclick="login()">ENTRAR</button>
+    </div>
+
+    <div class="tab-content" id="xtreamFields">
+      <input id="xHost" type="url"      placeholder="http://servidor.com:8080" data-focus tabindex="0"/>
+      <input id="xUser" type="text"     placeholder="Usuário" data-focus tabindex="0"/>
+      <input id="xPass" type="password" placeholder="Senha"   data-focus tabindex="0"/>
+      <button class="btn-login" data-focus tabindex="0" onclick="loginXtream()">CONECTAR</button>
+    </div>
+
+    <div id="loginStatus"></div>
+  </div>
+</div>
+
+<!-- ── Tela Home ── -->
+<div id="homeScreen">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="app-title">APP_NAME_PLACEHOLDER</div>
+    </div>
+    <div id="menuLive"   class="menu-item active" data-focus tabindex="0" onclick="selectMenu('live')">
+      <span class="menu-icon">📺</span> AO VIVO
+    </div>
+    <div id="menuMovies" class="menu-item" data-focus tabindex="0" onclick="selectMenu('movies')">
+      <span class="menu-icon">🎬</span> FILMES
+    </div>
+    <div id="menuSeries" class="menu-item" data-focus tabindex="0" onclick="selectMenu('series')">
+      <span class="menu-icon">🎭</span> SÉRIES
+    </div>
+    <div class="menu-spacer"></div>
+    <div class="menu-item" data-focus tabindex="0" onclick="logout()">
+      <span class="menu-icon">🚪</span> SAIR
+    </div>
+  </div>
+
+  <div class="content-area">
+    <div id="categoryList"></div>
+    <div id="contentGrid"></div>
+  </div>
+</div>
+
+<!-- ── Player ── -->
+<div id="playerScreen">
+  <video id="videoPlayer" autoplay controls></video>
+  <div class="player-overlay">
+    <div id="nowPlaying"></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
