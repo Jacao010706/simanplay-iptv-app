@@ -1,9 +1,9 @@
-name: Build APK + TV Assets
+name: Build Multiplataforma
 
 on:
   workflow_dispatch:
     inputs:
-      # ── Inputs enviados pelo painel (não remover) ──
+      # ── Inputs enviados pelo painel ──
       app_name:
         description: 'Nome do app'
         required: false
@@ -25,24 +25,23 @@ on:
         required: false
         default: '1a1a2e'
       app_theme:
-        description: 'Tema do app (primary color hex)'
+        description: 'Cor principal hex'
         required: false
         default: 'FF6B35'
       banner_url:
-        description: 'URL do banner do revendedor'
+        description: 'URL do banner'
         required: false
         default: ''
-      # ── Inputs adicionais ──
       logo_url:
-        description: 'URL do logo do revendedor'
+        description: 'URL do logo'
         required: false
         default: ''
       primary_color:
-        description: 'Cor principal hex (fallback se app_theme vazio)'
+        description: 'Cor principal (fallback)'
         required: false
         default: 'FF6B35'
       bg_color:
-        description: 'Cor fundo hex (fallback se background_color vazio)'
+        description: 'Cor fundo (fallback)'
         required: false
         default: '0d0d1a'
       reseller_id:
@@ -50,40 +49,34 @@ on:
         required: false
         default: ''
       api_url:
-        description: 'URL da API do backend'
+        description: 'URL da API'
         required: false
         default: 'https://simanplay-backend.up.railway.app'
 
+# ══════════════════════════════════════════════════════════════
+# JOB 1: Android APK + AAB + Roku + Samsung + LG
+# ══════════════════════════════════════════════════════════════
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    timeout-minutes: 40
     steps:
-      # 1. Checkout do código
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Configurar Java
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Configurar Flutter
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.2'
           channel: 'stable'
           cache: true
 
-      # 4. Instalar dependências Python para geração de assets
       - name: Install Python deps
         run: pip install Pillow requests
 
-      # 5. Gerar app_config.dart com dados do revendedor
       - name: Generate app_config.dart
         env:
           APP_NAME: ${{ github.event.inputs.app_name }}
@@ -96,75 +89,301 @@ jobs:
           API_URL: ${{ github.event.inputs.api_url }}
           RESELLER_ID: ${{ github.event.inputs.reseller_id }}
           RESELLER_USERNAME: ${{ github.event.inputs.reseller_username }}
-        run: |
-          python3 scripts/generate_app_config.py
+        run: python3 scripts/generate_app_config.py
 
-      # 6. Gerar banner Android TV + ícones Roku com logo do revendedor
-      - name: Generate TV assets (banner + Roku icons)
+      - name: Generate Android TV banner + Roku icons
         env:
           APP_NAME: ${{ github.event.inputs.app_name }}
           APP_LOGO_URL: ${{ github.event.inputs.logo_url || github.event.inputs.banner_url }}
           PRIMARY_COLOR: "#${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}"
           BG_COLOR: "#${{ github.event.inputs.background_color || github.event.inputs.bg_color }}"
-        run: |
-          python3 scripts/generate_tv_assets.py
+        run: python3 scripts/generate_tv_assets.py
 
-      # 7. Gerar manifest Roku
-      - name: Generate Roku manifest
+      - name: Generate Roku channel
         env:
           APP_NAME: ${{ github.event.inputs.app_name }}
         run: |
           python3 scripts/generate_roku_manifest.py
+          cd roku_channel && zip -r ../roku_channel.zip . && cd ..
 
-      # 8. Empacotar canal Roku (.zip)
-      - name: Package Roku channel
-        run: |
-          cd roku_channel
-          zip -r ../simanplay_roku_channel.zip .
-          cd ..
-          echo "✅ Roku channel empacotado"
+      - name: Generate Samsung (.wgt) + LG (.ipk)
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          APP_LOGO_URL: ${{ github.event.inputs.logo_url || github.event.inputs.banner_url }}
+          PRIMARY_COLOR: "#${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}"
+          BG_COLOR: "#${{ github.event.inputs.background_color || github.event.inputs.bg_color }}"
+          API_URL: ${{ github.event.inputs.api_url }}
+        run: python3 scripts/generate_tv_apps.py
 
-      # 9. Instalar pacotes Flutter
       - name: Flutter pub get
         run: flutter pub get
 
-      # 10. Build APK Android
       - name: Build APK
         run: flutter build apk --release
 
-      # 11. Renomear APK com nome do revendedor
-      - name: Rename APK
-        run: |
-          APP_SLUG=$(echo "${{ github.event.inputs.app_name }}" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
-          mv build/flutter/outputs/flutter-apk/app-release.apk ${APP_SLUG}.apk || \
-          mv build/app/outputs/flutter-apk/app-release.apk ${APP_SLUG}.apk
-          echo "APK_NAME=${APP_SLUG}.apk" >> $GITHUB_ENV
+      - name: Build AAB (Google Play)
+        run: flutter build appbundle --release
 
-      # 12. Upload dos artefatos
+      - name: Rename outputs
+        run: |
+          SLUG=$(echo "${{ github.event.inputs.app_name }}" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+          mv build/app/outputs/flutter-apk/app-release.apk    ${SLUG}.apk   2>/dev/null || true
+          mv build/app/outputs/bundle/release/app-release.aab  ${SLUG}.aab   2>/dev/null || true
+          mv simanplay_samsung.wgt  ${SLUG}_samsung.wgt 2>/dev/null || true
+          mv simanplay_lg.ipk       ${SLUG}_lg.ipk      2>/dev/null || true
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.inputs.app_name }}-APK
+          name: ${{ github.event.inputs.app_name }}-Android
           path: "*.apk"
           retention-days: 7
 
-      - name: Upload Roku Channel
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-GooglePlay
+          path: "*.aab"
+          retention-days: 7
+
+      - name: Upload Roku
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.app_name }}-Roku
-          path: simanplay_roku_channel.zip
+          path: roku_channel.zip
           retention-days: 7
 
-      # 13. Notificar Railway com APK e Roku prontos
-      - name: Notify backend
+      - name: Upload Samsung
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-Samsung
+          path: "*.wgt"
+          retention-days: 7
+
+      - name: Upload LG
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-LG
+          path: "*.ipk"
+          retention-days: 7
+
+      - name: Notify backend (Android done)
         if: ${{ github.event.inputs.reseller_id != '' }}
-        env:
-          RESELLER_ID: ${{ github.event.inputs.reseller_id }}
-          API_URL: ${{ github.event.inputs.api_url }}
-          APP_NAME: ${{ github.event.inputs.app_name }}
         run: |
-          APK_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          curl -s -X POST "${API_URL}/api/builds/complete" \
+          curl -s -X POST "${{ github.event.inputs.api_url }}/api/builds/progress" \
             -H "Content-Type: application/json" \
-            -d "{\"resellerId\": \"${RESELLER_ID}\", \"status\": \"success\", \"downloadUrl\": \"${APK_URL}\", \"appName\": \"${APP_NAME}\"}" \
-            || echo "Notificação ignorada (endpoint opcional)"
+            -d '{"resellerId":"${{ github.event.inputs.reseller_id }}","platform":"android","status":"done"}' || true
+
+# ══════════════════════════════════════════════════════════════
+# JOB 2: iOS (.ipa)
+# ══════════════════════════════════════════════════════════════
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Python deps
+        run: pip3 install Pillow requests
+
+      - name: Generate app_config.dart
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          APP_SUBTITLE: ${{ github.event.inputs.app_subtitle }}
+          PRIMARY_COLOR: ${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}
+          BG_COLOR: ${{ github.event.inputs.background_color || github.event.inputs.bg_color }}
+          SURFACE_COLOR: ${{ github.event.inputs.surface_color }}
+          BANNER_URL: ${{ github.event.inputs.banner_url }}
+          LOGO_URL: ${{ github.event.inputs.logo_url }}
+          API_URL: ${{ github.event.inputs.api_url }}
+          RESELLER_ID: ${{ github.event.inputs.reseller_id }}
+          RESELLER_USERNAME: ${{ github.event.inputs.reseller_username }}
+        run: python3 scripts/generate_app_config.py
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS (sem assinatura)
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: Empacotar IPA
+        run: |
+          SLUG=$(echo "${{ github.event.inputs.app_name }}" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r ${SLUG}.ipa Payload/
+          rm -rf Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-iOS
+          path: "*.ipa"
+          retention-days: 7
+
+      - name: Notify backend (iOS done)
+        if: ${{ github.event.inputs.reseller_id != '' }}
+        run: |
+          curl -s -X POST "${{ github.event.inputs.api_url }}/api/builds/progress" \
+            -H "Content-Type: application/json" \
+            -d '{"resellerId":"${{ github.event.inputs.reseller_id }}","platform":"ios","status":"done"}' || true
+
+# ══════════════════════════════════════════════════════════════
+# JOB 3: Windows (.exe / MSIX)
+# ══════════════════════════════════════════════════════════════
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Python deps
+        run: pip install Pillow requests
+
+      - name: Generate app_config.dart
+        env:
+          APP_NAME: ${{ github.event.inputs.app_name }}
+          APP_SUBTITLE: ${{ github.event.inputs.app_subtitle }}
+          PRIMARY_COLOR: ${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}
+          BG_COLOR: ${{ github.event.inputs.background_color || github.event.inputs.bg_color }}
+          SURFACE_COLOR: ${{ github.event.inputs.surface_color }}
+          BANNER_URL: ${{ github.event.inputs.banner_url }}
+          LOGO_URL: ${{ github.event.inputs.logo_url }}
+          API_URL: ${{ github.event.inputs.api_url }}
+          RESELLER_ID: ${{ github.event.inputs.reseller_id }}
+          RESELLER_USERNAME: ${{ github.event.inputs.reseller_username }}
+        run: python scripts/generate_app_config.py
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Empacotar Windows (.zip)
+        run: |
+          $SLUG = "${{ github.event.inputs.app_name }}" -replace ' ', '_' -replace '[^a-zA-Z0-9_]', '' | % { $_.ToLower() }
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "${SLUG}_windows.zip"
+
+      - name: Upload Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.app_name }}-Windows
+          path: "*_windows.zip"
+          retention-days: 7
+
+      - name: Notify backend (Windows done)
+        if: ${{ github.event.inputs.reseller_id != '' }}
+        run: |
+          curl -s -X POST "${{ github.event.inputs.api_url }}/api/builds/progress" `
+            -H "Content-Type: application/json" `
+            -d "{`"resellerId`":`"${{ github.event.inputs.reseller_id }}`",`"platform`":`"windows`",`"status`":`"done`"}" || true
+
+# ══════════════════════════════════════════════════════════════
+# JOB 4: Publicar GitHub Release + URL curta + Notificar painel
+# ══════════════════════════════════════════════════════════════
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: [build-android, build-ios, build-windows]
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Baixar todos os artefatos dos jobs anteriores
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: List dist files
+        run: find dist/ -type f | sort
+
+      # Criar GitHub Release com todos os arquivos
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ github.event.inputs.reseller_username || github.event.inputs.app_name }}-${{ github.run_number }}"
+          name: "${{ github.event.inputs.app_name }} v${{ github.run_number }}"
+          body: |
+            ## ${{ github.event.inputs.app_name }}
+
+            Apps gerados automaticamente para todas as plataformas.
+
+            | Plataforma | Arquivo | Como usar |
+            |---|---|---|
+            | 🤖 Android / Android TV | `.apk` | Instalar direto no celular/TV |
+            | ▶️ Google Play | `.aab` | Enviar para o Google Play Console |
+            | 🍎 iOS (iPhone/iPad) | `.ipa` | Instalar via AltStore |
+            | 🪟 Windows | `.zip` | Extrair e executar o .exe |
+            | 📺 Roku TV | `_roku.zip` | Upload no painel desenvolvedor Roku |
+            | 📺 Samsung Smart TV | `.wgt` | Upload via Tizen Studio |
+            | 📺 LG Smart TV | `.ipk` | Upload via webOS Dev App |
+          files: |
+            dist/**/*.apk
+            dist/**/*.aab
+            dist/**/*.ipa
+            dist/**/*.zip
+            dist/**/*.wgt
+            dist/**/*.ipk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Montar JSON com URLs de cada plataforma
+      - name: Build download URLs
+        id: urls
+        run: |
+          SLUG=$(echo "${{ github.event.inputs.app_name }}" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')
+          RELEASE_TAG="${{ github.event.inputs.reseller_username || github.event.inputs.app_name }}-${{ github.run_number }}"
+          BASE="https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}"
+
+          echo "android=${BASE}/${SLUG}.apk"           >> $GITHUB_OUTPUT
+          echo "googleplay=${BASE}/${SLUG}.aab"        >> $GITHUB_OUTPUT
+          echo "ios=${BASE}/${SLUG}.ipa"               >> $GITHUB_OUTPUT
+          echo "windows=${BASE}/${SLUG}_windows.zip"   >> $GITHUB_OUTPUT
+          echo "roku=${BASE}/roku_channel.zip"          >> $GITHUB_OUTPUT
+          echo "samsung=${BASE}/${SLUG}_samsung.wgt"   >> $GITHUB_OUTPUT
+          echo "lg=${BASE}/${SLUG}_lg.ipk"             >> $GITHUB_OUTPUT
+          echo "release_url=${{ steps.create_release.outputs.url }}" >> $GITHUB_OUTPUT
+
+      # Notificar backend com TODAS as URLs — backend gera URL curta e atualiza painel
+      - name: Notify backend (build completo + URLs)
+        if: ${{ github.event.inputs.reseller_id != '' }}
+        run: |
+          curl -s -X POST "${{ github.event.inputs.api_url }}/api/builds/complete" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"resellerId\": \"${{ github.event.inputs.reseller_id }}\",
+              \"appName\": \"${{ github.event.inputs.app_name }}\",
+              \"status\": \"success\",
+              \"releaseUrl\": \"${{ steps.urls.outputs.release_url }}\",
+              \"downloads\": {
+                \"android\":    \"${{ steps.urls.outputs.android }}\",
+                \"googleplay\": \"${{ steps.urls.outputs.googleplay }}\",
+                \"ios\":        \"${{ steps.urls.outputs.ios }}\",
+                \"windows\":    \"${{ steps.urls.outputs.windows }}\",
+                \"roku\":       \"${{ steps.urls.outputs.roku }}\",
+                \"samsung\":    \"${{ steps.urls.outputs.samsung }}\",
+                \"lg\":         \"${{ steps.urls.outputs.lg }}\"
+              }
+            }" || echo "Notificação ignorada (endpoint opcional)"
