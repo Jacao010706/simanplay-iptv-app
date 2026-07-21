@@ -3,20 +3,46 @@ name: Build APK + TV Assets
 on:
   workflow_dispatch:
     inputs:
+      # ── Inputs enviados pelo painel (não remover) ──
       app_name:
-        description: 'Nome do app (revendedor)'
-        required: true
+        description: 'Nome do app'
+        required: false
         default: 'SimanPlay'
+      reseller_username:
+        description: 'Username do revendedor'
+        required: false
+        default: ''
+      app_subtitle:
+        description: 'Subtítulo do app'
+        required: false
+        default: 'Conecte sua lista'
+      background_color:
+        description: 'Cor de fundo hex'
+        required: false
+        default: '0d0d1a'
+      surface_color:
+        description: 'Cor de superfície hex'
+        required: false
+        default: '1a1a2e'
+      app_theme:
+        description: 'Tema do app (primary color hex)'
+        required: false
+        default: 'FF6B35'
+      banner_url:
+        description: 'URL do banner do revendedor'
+        required: false
+        default: ''
+      # ── Inputs adicionais ──
       logo_url:
-        description: 'URL do logo do revendedor (PNG/JPG)'
+        description: 'URL do logo do revendedor'
         required: false
         default: ''
       primary_color:
-        description: 'Cor principal hex (ex: D4AF37)'
+        description: 'Cor principal hex (fallback se app_theme vazio)'
         required: false
         default: 'FF6B35'
       bg_color:
-        description: 'Cor de fundo hex (ex: 0a0a0a)'
+        description: 'Cor fundo hex (fallback se background_color vazio)'
         required: false
         default: '0d0d1a'
       reseller_id:
@@ -61,10 +87,15 @@ jobs:
       - name: Generate app_config.dart
         env:
           APP_NAME: ${{ github.event.inputs.app_name }}
-          PRIMARY_COLOR: ${{ github.event.inputs.primary_color }}
-          BG_COLOR: ${{ github.event.inputs.bg_color }}
+          APP_SUBTITLE: ${{ github.event.inputs.app_subtitle }}
+          PRIMARY_COLOR: ${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}
+          BG_COLOR: ${{ github.event.inputs.background_color || github.event.inputs.bg_color }}
+          SURFACE_COLOR: ${{ github.event.inputs.surface_color }}
+          BANNER_URL: ${{ github.event.inputs.banner_url }}
+          LOGO_URL: ${{ github.event.inputs.logo_url }}
           API_URL: ${{ github.event.inputs.api_url }}
           RESELLER_ID: ${{ github.event.inputs.reseller_id }}
+          RESELLER_USERNAME: ${{ github.event.inputs.reseller_username }}
         run: |
           python3 scripts/generate_app_config.py
 
@@ -72,9 +103,9 @@ jobs:
       - name: Generate TV assets (banner + Roku icons)
         env:
           APP_NAME: ${{ github.event.inputs.app_name }}
-          APP_LOGO_URL: ${{ github.event.inputs.logo_url }}
-          PRIMARY_COLOR: "#${{ github.event.inputs.primary_color }}"
-          BG_COLOR: "#${{ github.event.inputs.bg_color }}"
+          APP_LOGO_URL: ${{ github.event.inputs.logo_url || github.event.inputs.banner_url }}
+          PRIMARY_COLOR: "#${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}"
+          BG_COLOR: "#${{ github.event.inputs.background_color || github.event.inputs.bg_color }}"
         run: |
           python3 scripts/generate_tv_assets.py
 
