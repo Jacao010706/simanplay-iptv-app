@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<script>
+// Redireciona primetv.lat/d/RESELLER_ID → /download_page.html?id=RESELLER_ID
+(function() {
+  var path = window.location.pathname;
+  if (path.match(/^\/d\/([^\/]+)\/?$/)) {
+    var id = path.replace(/^\/d\//, '').replace(/\/$/, '');
+    if (id) {
+      window.location.replace('/download_page.html?id=' + encodeURIComponent(id));
+      return;
+    }
+  }
+  // Qualquer outra 404 → página inicial
+  window.location.replace('/');
+})();
+</script>
+</head>
+<body></body>
+</html>
