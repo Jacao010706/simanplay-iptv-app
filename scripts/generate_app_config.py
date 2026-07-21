@@ -45,4 +45,4 @@ os.makedirs("lib", exist_ok=True)
 with open("lib/app_config.dart", "w", encoding="utf-8") as f:
     f.write(dart_content)
 
-print(f"✅ lib/app_config.dart gerado para: {APP_NAME}")
+"OK: lib/app_config.dart gerado para: " + APP_NAME
