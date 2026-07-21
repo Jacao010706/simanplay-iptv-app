@@ -118,7 +118,7 @@
 
 <script>
 const API_BASE = 'https://simanplay-backend.up.railway.app';
-const PAGES_BASE = 'https://jacao010706.github.io/simanplay-iptv-app';
+const PAGES_BASE = 'https://primetv.lat';
 
 const PLATFORMS = [
   { id:'android',    icon:'🤖', name:'Android',         desc:'Celular, Tablet, Android TV',   ext:'APK'  },
@@ -190,10 +190,16 @@ async function loadAppData() {
   const resellerId = params.get('id') || params.get('reseller');
 
   if (resellerId) {
-    // Tentar GitHub Pages primeiro (JSON estático, sem CORS)
+    // Tentar domínio próprio primeiro (primetv.lat)
     try {
       const res = await fetch(`${PAGES_BASE}/downloads/${resellerId}.json`);
       if (res.ok) return await res.json();
+    } catch(e) {}
+
+    // Fallback GitHub Pages
+    try {
+      const res2 = await fetch(`https://jacao010706.github.io/simanplay-iptv-app/downloads/${resellerId}.json`);
+      if (res2.ok) return await res2.json();
     } catch(e) {}
 
     // Fallback: backend API
