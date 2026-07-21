@@ -117,6 +117,13 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Setup Android signing
+        run: |
+          keytool -genkey -v -keystore /tmp/simanplay.keystore \
+            -alias simanplay -keyalg RSA -keysize 2048 \
+            -validity 10000 -storepass simanplay123 -keypass simanplay123 \
+            -dname "CN=SimanPlay,O=SimanPlay,C=BR" 2>/dev/null
+          printf 'storePassword=simanplay123\nkeyPassword=simanplay123\nkeyAlias=simanplay\nstoreFile=/tmp/simanplay.keystore\n' > android/key.properties
 
       - name: Build APK
         run: flutter build apk --release
