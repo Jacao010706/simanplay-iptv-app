@@ -1,0 +1,16 @@
+{
+  "name": "PRIMETV",
+  "subtitle": "IPTV - TV ao Vivo, Filmes e Séries",
+  "logoUrl": "https://res.cloudinary.com/s4578vyw/image/upload/v1783957663/simanplay/whitelabel/tdld4mrzfnwysrj2ydxy.png",
+  "primaryColor": "#5",
+  "shortUrl": "https://primetv.lat/d/6",
+  "downloads": {
+    "android":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/primetv.apk",
+    "googleplay": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/primetv.aab",
+    "ios":        "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/primetv.ipa",
+    "windows":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/primetv_windows.zip",
+    "roku":       "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/roku_channel.zip",
+    "samsung":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/primetv_samsung.wgt",
+    "lg":         "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-71/primetv_lg.ipk"
+  }
+}
