@@ -60,6 +60,10 @@
 
   .powered { margin-top:32px; color:#333; font-size:11px; }
 
+  .loading-screen { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:999; }
+  .spinner { width:48px; height:48px; border:4px solid #333; border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
   .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); align-items:center; justify-content:center; z-index:100; padding:24px; }
   .modal.show { display:flex; }
   .modal-box { background:var(--surface); border-radius:16px; padding:28px; max-width:400px; width:100%; }
@@ -70,8 +74,14 @@
 </head>
 <body>
 
+<!-- Loading -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <p style="color:#666">Carregando...</p>
+</div>
+
 <div id="logoWrap" class="logo-fallback">📺</div>
-<h1 id="appName">Carregando...</h1>
+<h1 id="appName">Baixar App</h1>
 <p class="subtitle" id="appSubtitle">IPTV - TV ao Vivo, Filmes e Séries</p>
 
 <div class="auto-card" id="autoCard" onclick="downloadAuto()">
@@ -107,13 +117,8 @@
 </div>
 
 <script>
-const APP_DATA = window.APP_DATA || {
-  name: document.title,
-  subtitle: 'IPTV - TV ao Vivo, Filmes e Séries',
-  logoUrl: '',
-  primaryColor: '#FF6B35',
-  downloads: { android:'', googleplay:'', ios:'', windows:'', roku:'', samsung:'', lg:'' }
-};
+const API_BASE = 'https://simanplay-backend.up.railway.app';
+const PAGES_BASE = 'https://jacao010706.github.io/simanplay-iptv-app';
 
 const PLATFORMS = [
   { id:'android',    icon:'🤖', name:'Android',         desc:'Celular, Tablet, Android TV',   ext:'APK'  },
@@ -124,17 +129,6 @@ const PLATFORMS = [
   { id:'samsung',    icon:'📺', name:'Samsung Smart TV',desc:'TVs Samsung com Tizen',          ext:'WGT'  },
   { id:'lg',         icon:'📺', name:'LG Smart TV',     desc:'TVs LG com webOS',               ext:'IPK'  },
 ];
-
-function detectOS() {
-  const ua = navigator.userAgent.toLowerCase();
-  if (/tizen/i.test(ua))             return 'samsung';
-  if (/webos/i.test(ua))             return 'lg';
-  if (/smart-tv|smarttv/i.test(ua))  return 'android';
-  if (/iphone|ipad|ipod/i.test(ua))  return 'ios';
-  if (/android/i.test(ua))           return 'android';
-  if (/windows/i.test(ua))           return 'windows';
-  return 'android';
-}
 
 const TV_INSTRUCTIONS = {
   roku: {
@@ -152,7 +146,7 @@ const TV_INSTRUCTIONS = {
     steps: [
       'Baixe o arquivo <b>.wgt</b> no computador',
       'Acesse <b>developer.samsung.com</b> e crie conta gratuita',
-      'No Tizen Studio, conecte sua TV e faça deploy do arquivo .wgt'
+      'No Tizen Studio, conecte sua TV e faça deploy do .wgt'
     ]
   },
   lg: {
@@ -173,10 +167,64 @@ const TV_INSTRUCTIONS = {
   }
 };
 
-function init() {
+function detectOS() {
+  const ua = navigator.userAgent;
+  if (/Tizen/i.test(ua))              return 'samsung';
+  if (/webOS/i.test(ua))              return 'lg';
+  if (/Smart-TV|SmartTV/i.test(ua))   return 'android';
+  if (/iPhone|iPad|iPod/i.test(ua))   return 'ios';
+  if (/Android/i.test(ua))            return 'android';
+  if (/Windows/i.test(ua))            return 'windows';
+  return 'android';
+}
+
+// ── Carregar dados: URL param ?id= ou window.APP_DATA ─────────
+async function loadAppData() {
+  // 1. Dados já injetados pelo backend (rota /d/:id)
+  if (window.APP_DATA && window.APP_DATA.name) {
+    return window.APP_DATA;
+  }
+
+  // 2. Parâmetro ?id= na URL (GitHub Pages)
+  const params = new URLSearchParams(window.location.search);
+  const resellerId = params.get('id') || params.get('reseller');
+
+  if (resellerId) {
+    // Tentar GitHub Pages primeiro (JSON estático, sem CORS)
+    try {
+      const res = await fetch(`${PAGES_BASE}/downloads/${resellerId}.json`);
+      if (res.ok) return await res.json();
+    } catch(e) {}
+
+    // Fallback: backend API
+    try {
+      const res = await fetch(`${API_BASE}/api/resellers/${resellerId}/downloads`);
+      if (res.ok) return await res.json();
+    } catch(e) {
+      console.warn('Não foi possível carregar dados do revendedor:', e);
+    }
+  }
+
+  // 3. Fallback
+  return {
+    name: 'IPTV',
+    subtitle: 'TV ao Vivo, Filmes e Séries',
+    logoUrl: '',
+    primaryColor: '#FF6B35',
+    downloads: { android:'', googleplay:'', ios:'', windows:'', roku:'', samsung:'', lg:'' }
+  };
+}
+
+async function init() {
+  const APP_DATA = await loadAppData();
+
+  // Esconder loading
+  document.getElementById('loadingScreen').style.display = 'none';
+
+  // Aplicar tema
   document.documentElement.style.setProperty('--primary', APP_DATA.primaryColor || '#FF6B35');
-  document.getElementById('appName').textContent    = APP_DATA.name || 'SimanPlay';
-  document.getElementById('pageTitle').textContent  = APP_DATA.name || 'SimanPlay';
+  document.getElementById('appName').textContent     = APP_DATA.name || 'IPTV';
+  document.getElementById('pageTitle').textContent   = APP_DATA.name || 'IPTV';
   document.getElementById('appSubtitle').textContent = APP_DATA.subtitle || '';
 
   if (APP_DATA.logoUrl) {
@@ -185,22 +233,30 @@ function init() {
     document.getElementById('logoWrap').replaceWith(img);
   }
 
+  // Detectar plataforma
   const os = detectOS();
   const platform = PLATFORMS.find(p => p.id === os) || PLATFORMS[0];
-  const url = APP_DATA.downloads[os];
+  const url = APP_DATA.downloads?.[os] || '';
 
   document.getElementById('autoIcon').textContent     = platform.icon;
   document.getElementById('autoPlatform').textContent = platform.name;
   document.getElementById('autoDesc').textContent     = platform.desc;
 
   const btn = document.getElementById('autoBtn');
-  if (url) { btn.href = url; btn.textContent = `Baixar para ${platform.name}`; }
-  else { btn.textContent = 'Em breve'; btn.style.opacity='.5'; btn.style.pointerEvents='none'; }
+  if (url) {
+    btn.href = url;
+    btn.textContent = `Baixar para ${platform.name}`;
+  } else {
+    btn.textContent = 'Em breve';
+    btn.style.opacity = '.5';
+    btn.style.pointerEvents = 'none';
+  }
 
+  // Grade de outras plataformas
   const grid = document.getElementById('platformGrid');
   PLATFORMS.forEach(p => {
     if (p.id === os) return;
-    const dl = APP_DATA.downloads[p.id];
+    const dl = APP_DATA.downloads?.[p.id] || '';
     const a = document.createElement('a');
     a.className = 'platform-card' + (dl ? '' : ' disabled');
     a.href = dl || '#';
@@ -213,7 +269,9 @@ function init() {
     grid.appendChild(a);
   });
 
-  document.getElementById('shareUrl').textContent = window.location.href;
+  // URL de compartilhamento — usa URL curta do backend se disponível
+  const shareUrl = APP_DATA.shortUrl || window.location.href;
+  document.getElementById('shareUrl').textContent = shareUrl;
 }
 
 function downloadAuto() {
@@ -234,7 +292,8 @@ function showInstructions(platform, downloadUrl) {
 function closeModal() { document.getElementById('instrModal').classList.remove('show'); }
 
 function copyUrl() {
-  navigator.clipboard.writeText(window.location.href).then(() => {
+  const url = document.getElementById('shareUrl').textContent;
+  navigator.clipboard.writeText(url).then(() => {
     const btn = document.querySelector('.url-box button');
     btn.textContent = '✓ Copiado!';
     setTimeout(() => btn.textContent = 'Copiar', 2000);
