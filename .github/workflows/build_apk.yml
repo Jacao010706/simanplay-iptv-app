@@ -400,7 +400,7 @@ jobs:
             "name": "${{ github.event.inputs.app_name }}",
             "subtitle": "IPTV - TV ao Vivo, Filmes e Séries",
             "logoUrl": "${{ github.event.inputs.logo_url }}",
-            "primaryColor": "#${{ github.event.inputs.theme_color }}",
+            "primaryColor": "#${{ github.event.inputs.app_theme || github.event.inputs.primary_color }}",
             "shortUrl": "https://jacao010706.github.io/simanplay-iptv-app/download_page.html?id=${RESELLER_ID}",
             "downloads": {
               "android":    "${{ steps.urls.outputs.android }}",
