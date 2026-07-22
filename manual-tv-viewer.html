@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SimanPlay - Manual de Instalacao</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+  #blocked { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 40px; }
+  #blocked h1 { font-size: 28px; color: #ff4444; margin: 24px 0 12px; }
+  #blocked p { color: #888; font-size: 16px; max-width: 400px; }
+  #expired { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 40px; }
+  #expired h1 { font-size: 28px; color: #ff8800; margin: 24px 0 12px; }
+  #expired p { color: #888; font-size: 16px; max-width: 400px; }
+  #content { display: none; }
+  header { background: linear-gradient(135deg, #1a0533 0%, #0d1a2e 100%); border-bottom: 2px solid #6600cc; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-text { font-size: 22px; font-weight: 700; color: #cc44ff; }
+  .logo-sub { font-size: 12px; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+  #countdown-box { background: rgba(255,136,0,0.15); border: 1px solid #ff8800; border-radius: 10px; padding: 10px 20px; text-align: center; }
+  #countdown-box .label { font-size: 10px; color: #ff8800; text-transform: uppercase; letter-spacing: 1px; }
+  #countdown-num { font-size: 32px; font-weight: 700; color: #ff8800; }
+  main { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+  .page-title { text-align: center; margin-bottom: 40px; }
+  .page-title h1 { font-size: 30px; color: #cc44ff; margin-bottom: 8px; }
+  .page-title p { color: #888; font-size: 15px; }
+  .platform { background: #111120; border: 1px solid #222240; border-radius: 16px; margin-bottom: 32px; overflow: hidden; }
+  .platform-header { display: flex; align-items: center; gap: 16px; padding: 20px 28px; background: linear-gradient(90deg, rgba(102,0,204,0.3), transparent); border-bottom: 1px solid #222240; }
+  .platform-icon { font-size: 36px; }
+  .platform-name { font-size: 20px; font-weight: 700; color: #fff; }
+  .platform-tag { margin-left: auto; background: #6600cc; color: #fff; font-size: 11px; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+  .steps { padding: 24px 28px; }
+  .step { display: flex; gap: 16px; margin-bottom: 20px; }
+  .step:last-child { margin-bottom: 0; }
+  .step-num { width: 32px; height: 32px; background: #6600cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .step-body h3 { font-size: 15px; color: #cc88ff; margin-bottom: 4px; }
+  .step-body p { font-size: 14px; color: #aaa; line-height: 1.6; }
+  .step-body code { background: #1a1a30; border: 1px solid #333355; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #88ffaa; }
+  .tip { margin: 16px 28px 24px; background: rgba(0,150,255,0.08); border-left: 3px solid #0099ff; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #88bbff; }
+  .warning { margin: 0 28px 24px; background: rgba(255,136,0,0.08); border-left: 3px solid #ff8800; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #ffcc88; }
+  .url-box { margin: 4px 0; background: #0d1a0d; border: 1px solid #224422; border-radius: 6px; padding: 8px 14px; font-family: monospace; font-size: 14px; color: #55ff55; word-break: break-all; }
+  footer { text-align: center; padding: 40px 20px; color: #444; font-size: 12px; border-top: 1px solid #1a1a2e; }
+  @keyframes pulse-red { 0%,100% { border-color: #ff4444; } 50% { border-color: #ff000088; } }
+  .danger #countdown-box { border-color: #ff4444; background: rgba(255,68,68,0.15); animation: pulse-red 1s infinite; }
+  .danger #countdown-num { color: #ff4444; }
+  .danger #countdown-box .label { color: #ff4444; }
+</style>
+</head>
+<body>
+<div id="blocked">
+  <div style="font-size:80px">&#x1F512;</div>
+  <h1>Acesso Negado</h1>
+  <p>Este manual e protegido. Solicite ao seu administrador um link de acesso autorizado.</p>
+</div>
+<div id="expired">
+  <div style="font-size:80px">&#x23F0;</div>
+  <h1>Link Expirado</h1>
+  <p>O tempo de visualizacao deste manual encerrou. Solicite ao administrador um novo link de acesso.</p>
+</div>
+<div id="content">
+  <header>
+    <div class="logo">
+      <div style="font-size:32px">&#x1F4FA;</div>
+      <div>
+        <div class="logo-text">SimanPlay</div>
+        <div class="logo-sub">Manual de Instalacao</div>
+      </div>
+    </div>
+    <div id="countdown-box">
+      <div class="label">Expira em</div>
+      <div id="countdown-num">60</div>
+    </div>
+  </header>
+  <main>
+    <div class="page-title">
+      <h1>Guia de Instalacao nas TVs</h1>
+      <p>Siga os passos abaixo para instalar o SimanPlay no seu dispositivo</p>
+    </div>
+    <div class="platform">
+      <div class="platform-header">
+        <div class="platform-icon">&#x1F916;</div>
+        <div><div class="platform-name">Android TV / Caixinha Android</div></div>
+        <div class="platform-tag">Recomendado</div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Habilite Fontes Desconhecidas</h3><p>Acesse <code>Configuracoes &rarr; Seguranca</code> e ative <code>Fontes Desconhecidas</code>.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Instale o App "Downloader"</h3><p>Pesquise por <strong>Downloader</strong> na Play Store ou Amazon App Store, instale e abra.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Baixe o SimanPlay</h3><p>No Downloader, digite o link e pressione <code>GO</code>:</p><div class="url-box">https://primetv.lat/download/simanplay.apk</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Instale o APK</h3><p>Apos o download, toque em <code>Instalar</code> e depois em <code>Abrir</code>.</p></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><h3>Ative com seu Codigo</h3><p>Insira o <strong>codigo do seu revendedor</strong> para ativar o servico.</p></div></div>
+      </div>
+      <div class="tip"><strong>Dica:</strong> Caso apareca aviso de seguranca, toque em "Instalar mesmo assim".</div>
+    </div>
+    <div class="platform">
+      <div class="platform-header">
+        <div class="platform-icon">&#x1F4F1;</div>
+        <div><div class="platform-name">Celular / Tablet Android</div></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Permita Instalacao de APK</h3><p>Acesse <code>Configuracoes &rarr; Apps &rarr; Instalar apps desconhecidos</code> e habilite para o navegador.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Baixe o SimanPlay</h3><p>Abra o navegador e acesse:</p><div class="url-box">https://primetv.lat/download/simanplay.apk</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Instale e Ative</h3><p>Abra o arquivo na pasta <code>Downloads</code>, instale e insira o codigo de ativacao.</p></div></div>
+      </div>
+    </div>
+    <div class="platform">
+      <div class="platform-header">
+        <div class="platform-icon">&#x1F5A5;&#xFE0F;</div>
+        <div><div class="platform-name">Samsung Smart TV (Tizen)</div></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>Na App Store da Samsung TV, pressione <code>1 2 3 4 5</code> no controle.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Configure o Servidor</h3><p>Ative o Modo Desenvolvedor e insira: <div class="url-box">developer.primetv.lat</div></p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Reinicie a TV</h3><p>Desligue e ligue. O SimanPlay aparecera automaticamente nos apps instalados.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o SimanPlay e insira o codigo de ativacao.</p></div></div>
+      </div>
+      <div class="warning"><strong>Atencao:</strong> Samsung TVs anteriores a 2018 podem ter processo diferente.</div>
+    </div>
+    <div class="platform">
+      <div class="platform-header">
+        <div class="platform-icon">&#x1F4FA;</div>
+        <div><div class="platform-name">LG Smart TV (webOS)</div></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>Acesse <code>Configuracoes &rarr; Geral &rarr; Sobre a TV</code> e clique 5 vezes em "Informacoes da TV".</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Instale via Dev Manager</h3><p>Baixe o LG Developer Mode App e configure: <div class="url-box">dev.primetv.lat</div></p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Instale o App</h3><p>No Dev Manager, escolha SimanPlay e clique em <code>Instalar</code>.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o SimanPlay e insira o codigo de ativacao.</p></div></div>
+      </div>
+    </div>
+    <div class="platform">
+      <div class="platform-header">
+        <div class="platform-icon">&#x1F3AE;</div>
+        <div><div class="platform-name">Roku TV</div></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative Developer Mode</h3><p>No controle: <code>Home x3 &rarr; Cima x2 &rarr; Direita &rarr; Esquerda &rarr; Direita &rarr; Esquerda &rarr; Direita</code>.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Habilite e Anote o IP</h3><p><code>Configuracoes &rarr; Sistema &rarr; Avancado &rarr; Modo Desenvolvedor</code>. Anote o IP exibido.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Faca o Upload</h3><p>No computador, acesse <code>http://[IP-DA-TV]</code> e envie o pacote SimanPlay do administrador.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o SimanPlay no Roku e insira o codigo de ativacao.</p></div></div>
+      </div>
+    </div>
+    <div class="platform">
+      <div class="platform-header">
+        <div class="platform-icon">&#x1F198;</div>
+        <div><div class="platform-name">Suporte</div></div>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-num">*</div><div class="step-body"><h3>Precisa de Ajuda?</h3><p>Entre em contato com seu administrador. Tenha em maos o <strong>modelo da TV</strong> e o <strong>codigo de ativacao</strong>.</p></div></div>
+      </div>
+    </div>
+  </main>
+  <footer>SimanPlay &copy; 2024 &mdash; Acesso autorizado e temporario. Este documento expira automaticamente.</footer>
+</div>
+<script>
+(async () => {
+  const SECRET = 'SmnPl4y-S3cr3t-@dm1n-K3y#2025!';
+  const params = new URLSearchParams(location.search);
+  const tokenB64 = params.get('t');
+  function showBlocked() { document.getElementById('blocked').style.display = 'flex'; }
+  function showExpired() { document.getElementById('expired').style.display = 'flex'; document.getElementById('content').style.display = 'none'; }
+  function wipeContent() { document.querySelector('main').innerHTML = '<div style="text-align:center;padding:80px 20px;color:#ff8800;font-size:20px">Tempo esgotado. Conteudo removido.</div>'; }
+  async function hmacHex(msg) {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw', enc.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const buf = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  if (!tokenB64) { showBlocked(); return; }
+  let payload;
+  try { payload = JSON.parse(atob(tokenB64)); } catch(e) { showBlocked(); return; }
+  const { expiry, sig } = payload;
+  if (!expiry || !sig) { showBlocked(); return; }
+  const expectedSig = await hmacHex(String(expiry));
+  if (sig !== expectedSig) { showBlocked(); return; }
+  const remaining = expiry - Date.now();
+  if (remaining <= 0) { showExpired(); return; }
+  document.getElementById('content').style.display = 'block';
+  const numEl = document.getElementById('countdown-num');
+  let secs = Math.ceil(remaining / 1000);
+  numEl.textContent = secs;
+  const timer = setInterval(() => {
+    secs--;
+    numEl.textContent = secs;
+    if (secs <= 15) document.body.classList.add('danger');
+    if (secs <= 0) { clearInterval(timer); showExpired(); wipeContent(); }
+  }, 1000);
+  setTimeout(() => { clearInterval(timer); showExpired(); wipeContent(); }, remaining);
+})();
+</script>
+</body>
+                                          </html>
