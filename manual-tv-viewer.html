@@ -7,57 +7,130 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
-  #blocked { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 40px; }
+  #blocked, #expired {
+    display: none; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; text-align: center; padding: 40px;
+  }
   #blocked h1 { font-size: 28px; color: #ff4444; margin: 24px 0 12px; }
-  #blocked p { color: #888; font-size: 16px; max-width: 400px; }
-  #expired { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; padding: 40px; }
   #expired h1 { font-size: 28px; color: #ff8800; margin: 24px 0 12px; }
-  #expired p { color: #888; font-size: 16px; max-width: 400px; }
+  #blocked p, #expired p { color: #888; font-size: 16px; max-width: 400px; line-height: 1.6; }
   #content { display: none; }
-  header { background: linear-gradient(135deg, #1a0533 0%, #0d1a2e 100%); border-bottom: 2px solid #6600cc; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  header {
+    background: linear-gradient(135deg, #1a0533 0%, #0d1a2e 100%);
+    border-bottom: 2px solid #6600cc; padding: 18px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
   .logo { display: flex; align-items: center; gap: 12px; }
   .logo-text { font-size: 22px; font-weight: 700; color: #cc44ff; }
-  .logo-sub { font-size: 12px; color: #888; letter-spacing: 2px; text-transform: uppercase; }
-  #countdown-box { background: rgba(255,136,0,0.15); border: 1px solid #ff8800; border-radius: 10px; padding: 10px 20px; text-align: center; }
+  .logo-sub { font-size: 11px; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+  #countdown-box {
+    background: rgba(255,136,0,0.15); border: 1px solid #ff8800;
+    border-radius: 10px; padding: 8px 18px; text-align: center; min-width: 90px;
+  }
   #countdown-box .label { font-size: 10px; color: #ff8800; text-transform: uppercase; letter-spacing: 1px; }
-  #countdown-num { font-size: 32px; font-weight: 700; color: #ff8800; }
-  main { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-  .page-title { text-align: center; margin-bottom: 40px; }
-  .page-title h1 { font-size: 30px; color: #cc44ff; margin-bottom: 8px; }
+  #countdown-num { font-size: 30px; font-weight: 700; color: #ff8800; font-variant-numeric: tabular-nums; }
+  main { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+  .page-title { text-align: center; margin-bottom: 44px; }
+  .page-title h1 { font-size: 32px; color: #cc44ff; margin-bottom: 10px; }
   .page-title p { color: #888; font-size: 15px; }
+  .page-title p strong { color: #cc88ff; }
   .platform { background: #111120; border: 1px solid #222240; border-radius: 16px; margin-bottom: 32px; overflow: hidden; }
-  .platform-header { display: flex; align-items: center; gap: 16px; padding: 20px 28px; background: linear-gradient(90deg, rgba(102,0,204,0.3), transparent); border-bottom: 1px solid #222240; }
+  .platform-header {
+    display: flex; align-items: center; gap: 16px; padding: 18px 28px;
+    background: linear-gradient(90deg, rgba(102,0,204,0.3), transparent);
+    border-bottom: 1px solid #222240;
+  }
   .platform-icon { font-size: 36px; }
   .platform-name { font-size: 20px; font-weight: 700; color: #fff; }
-  .platform-tag { margin-left: auto; background: #6600cc; color: #fff; font-size: 11px; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+  .platform-tag {
+    margin-left: auto; background: #6600cc; color: #fff;
+    font-size: 11px; padding: 4px 14px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;
+  }
   .steps { padding: 24px 28px; }
-  .step { display: flex; gap: 16px; margin-bottom: 20px; }
+  .step { display: flex; gap: 16px; margin-bottom: 24px; }
   .step:last-child { margin-bottom: 0; }
-  .step-num { width: 32px; height: 32px; background: #6600cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
-  .step-body h3 { font-size: 15px; color: #cc88ff; margin-bottom: 4px; }
-  .step-body p { font-size: 14px; color: #aaa; line-height: 1.6; }
-  .step-body code { background: #1a1a30; border: 1px solid #333355; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #88ffaa; }
-  .tip { margin: 16px 28px 24px; background: rgba(0,150,255,0.08); border-left: 3px solid #0099ff; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #88bbff; }
-  .warning { margin: 0 28px 24px; background: rgba(255,136,0,0.08); border-left: 3px solid #ff8800; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #ffcc88; }
-  .url-box { margin: 4px 0; background: #0d1a0d; border: 1px solid #224422; border-radius: 6px; padding: 8px 14px; font-family: monospace; font-size: 14px; color: #55ff55; word-break: break-all; }
-  footer { text-align: center; padding: 40px 20px; color: #444; font-size: 12px; border-top: 1px solid #1a1a2e; }
-  @keyframes pulse-red { 0%,100% { border-color: #ff4444; } 50% { border-color: #ff000088; } }
-  .danger #countdown-box { border-color: #ff4444; background: rgba(255,68,68,0.15); animation: pulse-red 1s infinite; }
-  .danger #countdown-num { color: #ff4444; }
-  .danger #countdown-box .label { color: #ff4444; }
+  .step-num {
+    width: 32px; height: 32px; background: #6600cc; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-body h3 { font-size: 15px; color: #cc88ff; margin-bottom: 6px; }
+  .step-body p { font-size: 14px; color: #aaa; line-height: 1.7; }
+  .step-body p + p { margin-top: 6px; }
+  .step-body code {
+    background: #1a1a30; border: 1px solid #333355;
+    padding: 2px 8px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #88ffaa;
+  }
+  .url-box {
+    margin: 8px 0; background: #0d1a0d; border: 1px solid #224422;
+    border-radius: 8px; padding: 10px 16px; font-family: monospace;
+    font-size: 15px; color: #55ff55; word-break: break-all;
+  }
+  .tip {
+    margin: 0 28px 24px; background: rgba(0,150,255,0.08);
+    border-left: 3px solid #0099ff; border-radius: 0 8px 8px 0;
+    padding: 12px 16px; font-size: 13px; color: #88bbff;
+  }
+  .tip strong { color: #0099ff; }
+  .warning {
+    margin: 0 28px 24px; background: rgba(255,136,0,0.08);
+    border-left: 3px solid #ff8800; border-radius: 0 8px 8px 0;
+    padding: 12px 16px; font-size: 13px; color: #ffcc88;
+  }
+  .warning strong { color: #ff8800; }
+  .mockup-row { display: flex; gap: 16px; flex-wrap: wrap; padding: 0 28px 24px; }
+  .mockup { flex: 1; min-width: 220px; background: #0d0d20; border: 1px solid #2a2a50; border-radius: 12px; overflow: hidden; }
+  .mockup-bar {
+    background: #1a1a35; padding: 8px 14px; font-size: 11px;
+    color: #6666aa; display: flex; align-items: center; gap: 6px;
+  }
+  .mockup-bar .dot { background: #333; border-radius: 50%; width: 8px; height: 8px; display: inline-block; }
+  .mockup-body { padding: 14px; }
+  .mock-title { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .mock-menu-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; border-radius: 8px; margin-bottom: 4px; font-size: 13px; color: #ccc;
+  }
+  .mock-menu-item.active { background: rgba(102,0,204,0.3); color: #cc88ff; border: 1px solid #6600cc44; }
+  .toggle { width: 32px; height: 18px; border-radius: 9px; background: #6600cc; position: relative; }
+  .toggle::after { content:""; position:absolute; width:14px; height:14px; border-radius:50%; background:#fff; right:2px; top:2px; }
+  .toggle.off { background: #333; }
+  .toggle.off::after { right:auto; left:2px; }
+  .dl-header { font-size: 13px; color: #ff6600; font-weight: 700; margin-bottom: 12px; }
+  .dl-url-field { background: #1a1a2e; border: 1px solid #6600cc; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #888; margin-bottom: 10px; }
+  .dl-cursor { display: inline-block; width: 2px; height: 14px; background: #cc44ff; vertical-align: middle; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+  .dl-go { background: #ff6600; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 700; width: 100%; }
+  .remote-nums { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 8px; }
+  .rnum { background: #2a2a2a; border-radius: 6px; padding: 7px 4px; text-align: center; font-size: 13px; color: #aaa; font-weight: 600; }
+  .rnum.hl { background: #6600cc; color: #fff; box-shadow: 0 0 8px #6600cc88; }
+  .ph-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; background: #1a1a2e; border-radius: 8px; margin-bottom: 6px; font-size: 12px; color: #aaa; }
+  .ph-item.active { background: rgba(102,0,204,0.25); color: #cc88ff; }
+  footer { text-align: center; padding: 36px 20px; color: #444; font-size: 12px; border-top: 1px solid #1a1a2e; }
+  @keyframes pulse-red { 0%,100%{border-color:#ff4444}50%{border-color:#ff000088} }
+  .danger #countdown-box { border-color:#ff4444; background:rgba(255,68,68,0.15); animation:pulse-red 1s infinite; }
+  .danger #countdown-num { color:#ff4444; }
+  .danger #countdown-box .label { color:#ff4444; }
+  @media(max-width:600px){ header{padding:14px 16px} .steps{padding:16px} .mockup-row{padding:0 16px 16px} .tip,.warning{margin-left:16px;margin-right:16px} }
 </style>
 </head>
 <body>
+
 <div id="blocked">
   <div style="font-size:80px">&#x1F512;</div>
   <h1>Acesso Negado</h1>
-  <p>Este manual e protegido. Solicite ao seu administrador um link de acesso autorizado.</p>
+  <p>Este manual e protegido.<br>Solicite ao seu administrador um link de acesso autorizado.</p>
 </div>
+
 <div id="expired">
   <div style="font-size:80px">&#x23F0;</div>
   <h1>Link Expirado</h1>
-  <p>O tempo de visualizacao deste manual encerrou. Solicite ao administrador um novo link.</p>
+  <p>O tempo de visualizacao deste manual encerrou.<br>Solicite ao administrador um novo link de acesso.</p>
 </div>
+
 <div id="content">
   <header>
     <div class="logo">
@@ -72,11 +145,14 @@
       <div id="countdown-num">60</div>
     </div>
   </header>
+
   <main>
     <div class="page-title">
       <h1>Guia de Instalacao</h1>
       <p>Siga os passos abaixo para instalar o <strong id="app-name-title">APP</strong> no seu dispositivo</p>
     </div>
+
+    <!-- ANDROID TV -->
     <div class="platform">
       <div class="platform-header">
         <div class="platform-icon">&#x1F916;</div>
@@ -84,74 +160,346 @@
         <div class="platform-tag">Recomendado</div>
       </div>
       <div class="steps">
-        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Habilite Fontes Desconhecidas</h3><p>Acesse <code>Configuracoes &rarr; Seguranca</code> e ative <code>Fontes Desconhecidas</code>.</p></div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Instale o App "Downloader"</h3><p>Pesquise por <strong>Downloader</strong> na Play Store ou Amazon App Store, instale e abra.</p></div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Baixe o <span class="app-name">APP</span></h3><p>No Downloader, digite o link e pressione <code>GO</code>:</p><div class="url-box" id="apk-url">https://primetv.lat/download/app.apk</div></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Instale o APK</h3><p>Apos o download, toque em <code>Instalar</code> e depois em <code>Abrir</code>.</p></div></div>
-        <div class="step"><div class="step-num">5</div><div class="step-body"><h3>Ative com seu Codigo</h3><p>Insira o <strong>codigo do seu revendedor</strong> para ativar o servico.</p></div></div>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Habilite Fontes Desconhecidas</h3>
+            <p>Na sua TV ou caixinha, acesse <code>Configuracoes &rarr; Seguranca</code> e ative a opcao <code>Fontes Desconhecidas</code> (ou "Instalar apps desconhecidos").</p>
+          </div>
+        </div>
       </div>
-      <div class="tip"><strong>Dica:</strong> Caso apareca aviso de seguranca, toque em "Instalar mesmo assim".</div>
+      <div class="mockup-row">
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Configuracoes &rarr; Seguranca</div>
+          <div class="mockup-body">
+            <div class="mock-title">Seguranca</div>
+            <div class="mock-menu-item">Verificacao de apps <div class="toggle off"></div></div>
+            <div class="mock-menu-item active">Fontes desconhecidas <div class="toggle"></div></div>
+            <div class="mock-menu-item">Atualizacao automatica <div class="toggle off"></div></div>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Downloader</div>
+          <div class="mockup-body" style="padding:14px">
+            <div class="dl-header">&#x2B07; Downloader</div>
+            <div class="dl-url-field">primetv.lat/download/<span class="apk-url-ref-slug" style="color:#cc44ff">app</span>.apk<span class="dl-cursor"></span></div>
+            <button class="dl-go">GO &rarr;</button>
+          </div>
+        </div>
+      </div>
+      <div class="steps" style="padding-top:0">
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Instale o App "Downloader"</h3>
+            <p>Abra a <code>Play Store</code> ou <code>Amazon App Store</code> na sua TV e pesquise por <strong>Downloader</strong>. Instale e abra o aplicativo.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Baixe o <span class="app-name">APP</span></h3>
+            <p>No Downloader, no campo de URL, digite o endereco abaixo e pressione <code>GO</code>:</p>
+            <div class="url-box" id="apk-url">https://primetv.lat/download/app.apk</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Instale o APK</h3>
+            <p>Apos o download concluir, toque em <code>Instalar</code>. Aguarde a instalacao finalizar e toque em <code>Abrir</code>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h3>Ative com seu Codigo</h3>
+            <p>Ao abrir o <span class="app-name">APP</span>, insira o <strong>codigo do seu revendedor</strong> para ativar o servico. O codigo e fornecido pelo seu administrador.</p>
+          </div>
+        </div>
+      </div>
+      <div class="tip"><strong>Dica:</strong> Caso apareca aviso de seguranca durante a instalacao, toque em "Instalar mesmo assim" para continuar.</div>
     </div>
+
+    <!-- CELULAR -->
     <div class="platform">
       <div class="platform-header">
         <div class="platform-icon">&#x1F4F1;</div>
         <div><div class="platform-name">Celular / Tablet Android</div></div>
       </div>
+      <div class="mockup-row">
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Configuracoes</div>
+          <div class="mockup-body">
+            <div style="height:6px;background:#1a1a35;border-radius:3px;margin-bottom:10px"></div>
+            <div class="ph-item">&#x2699;&#xFE0F; Configuracoes</div>
+            <div class="ph-item">&#x1F4E6; Apps</div>
+            <div class="ph-item active">&#x1F513; Instalar apps desconhecidos</div>
+            <div style="padding:8px 8px 0;font-size:11px;color:#6666aa">&rarr; Selecione seu navegador &rarr; Ative</div>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Navegador</div>
+          <div class="mockup-body">
+            <div style="background:#1a1a35;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#888">
+              &#x1F512; primetv.lat/download/<span class="app-name" style="color:#cc44ff">app</span>.apk
+            </div>
+            <div style="background:#224422;border-radius:8px;padding:12px;text-align:center">
+              <div style="font-size:24px;margin-bottom:6px">&#x2B07;&#xFE0F;</div>
+              <div style="font-size:13px;color:#55ff55;font-weight:600">Download iniciado</div>
+              <div class="app-name" style="font-size:11px;color:#888;margin-top:3px">app.apk</div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="steps">
-        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Permita Instalacao de APK</h3><p>Acesse <code>Configuracoes &rarr; Apps &rarr; Instalar apps desconhecidos</code> e habilite para o navegador.</p></div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Baixe o <span class="app-name">APP</span></h3><p>Abra o navegador e acesse:</p><div class="url-box apk-url-ref">https://primetv.lat/download/app.apk</div></div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Instale e Ative</h3><p>Abra o arquivo na pasta <code>Downloads</code>, instale e insira o codigo de ativacao.</p></div></div>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Permita Instalacao de APK</h3>
+            <p>Acesse <code>Configuracoes &rarr; Apps &rarr; Acesso especial de apps &rarr; Instalar apps desconhecidos</code> e habilite para o seu navegador.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Baixe o <span class="app-name">APP</span></h3>
+            <p>Abra o navegador e acesse:</p>
+            <div class="url-box apk-url-ref">https://primetv.lat/download/app.apk</div>
+            <p>Toque em <code>Baixar</code> quando solicitado.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Instale e Ative</h3>
+            <p>Abra o arquivo baixado na pasta <code>Downloads</code>, toque em <code>Instalar</code>, aguarde e abra o app. Insira o codigo fornecido pelo seu administrador.</p>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- SAMSUNG -->
     <div class="platform">
       <div class="platform-header">
         <div class="platform-icon">&#x1F5A5;&#xFE0F;</div>
         <div><div class="platform-name">Samsung Smart TV (Tizen)</div></div>
       </div>
-      <div class="steps">
-        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>Na App Store da Samsung TV, pressione <code>1 2 3 4 5</code> no controle.</p></div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Configure o Servidor</h3><p>Ative o Modo Desenvolvedor e insira: <div class="url-box">developer.primetv.lat</div></p></div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Reinicie a TV</h3><p>Desligue e ligue. O <span class="app-name">APP</span> aparecera automaticamente nos apps instalados.</p></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o app e insira o codigo de ativacao.</p></div></div>
+      <div class="mockup-row">
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Controle Samsung</div>
+          <div class="mockup-body">
+            <div style="font-size:11px;color:#666;text-align:center;margin-bottom:8px">Pressione na App Store:</div>
+            <div style="background:#1a1a1a;border-radius:16px;padding:14px 18px;max-width:130px;margin:0 auto">
+              <div class="remote-nums">
+                <div class="rnum hl">1</div><div class="rnum hl">2</div><div class="rnum hl">3</div>
+                <div class="rnum hl">4</div><div class="rnum hl">5</div><div class="rnum">6</div>
+                <div class="rnum">7</div><div class="rnum">8</div><div class="rnum">9</div>
+              </div>
+              <div style="text-align:center"><div class="rnum" style="display:inline-block;padding:7px 18px">0</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Developer Mode</div>
+          <div class="mockup-body">
+            <div class="mock-title">Samsung Developer Mode</div>
+            <div class="mock-menu-item active">Developer Mode <div class="toggle"></div></div>
+            <div style="margin-top:10px;background:#0d1a0d;border:1px solid #224422;border-radius:6px;padding:8px 12px">
+              <div style="font-size:10px;color:#666;margin-bottom:4px">Host PC IP</div>
+              <div style="font-size:13px;color:#55ff55;font-family:monospace">developer.primetv.lat</div>
+            </div>
+            <div style="margin-top:10px;background:#6600cc;border-radius:6px;padding:8px;text-align:center;font-size:12px;color:#fff;font-weight:600">OK &rarr;</div>
+          </div>
+        </div>
       </div>
-      <div class="warning"><strong>Atencao:</strong> Samsung TVs anteriores a 2018 podem ter processo diferente.</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Ative o Modo Desenvolvedor</h3>
+            <p>Na tela inicial da sua Samsung TV, abra a <code>App Store</code> e pressione os numeros <code>1 2 3 4 5</code> no controle remoto. Um painel de desenvolvedor aparecera.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Configure o Servidor</h3>
+            <p>Ative o <code>Modo Desenvolvedor</code> e insira o endereco do servidor no campo IP:</p>
+            <div class="url-box">developer.primetv.lat</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Reinicie a TV</h3>
+            <p>Desligue e ligue a TV novamente. O <span class="app-name">APP</span> aparecera automaticamente na lista de apps instalados.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Ative o Servico</h3>
+            <p>Abra o <span class="app-name">APP</span> e insira o codigo de ativacao fornecido pelo seu administrador.</p>
+          </div>
+        </div>
+      </div>
+      <div class="warning"><strong>Atencao:</strong> Em Samsung TVs mais antigas (antes de 2018), o processo pode ser diferente. Consulte o seu administrador.</div>
     </div>
+
+    <!-- LG -->
     <div class="platform">
       <div class="platform-header">
         <div class="platform-icon">&#x1F4FA;</div>
         <div><div class="platform-name">LG Smart TV (webOS)</div></div>
       </div>
+      <div class="mockup-row">
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Configuracoes LG</div>
+          <div class="mockup-body">
+            <div class="mock-title">Geral &rarr; Sobre a TV</div>
+            <div class="mock-menu-item">Nome da TV</div>
+            <div class="mock-menu-item">Rede</div>
+            <div class="mock-menu-item active">Informacoes da TV <span style="font-size:11px;color:#cc44ff">&larr; clicar 5x</span></div>
+            <div style="margin-top:8px;background:rgba(102,0,204,0.2);border:1px dashed #6600cc;border-radius:6px;padding:8px 12px;font-size:12px;color:#cc88ff;text-align:center">
+              &#x2713; Developer Mode ativado!
+            </div>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> LG Dev Manager</div>
+          <div class="mockup-body">
+            <div class="mock-title">Device Manager</div>
+            <div style="background:#0d1a0d;border:1px solid #224422;border-radius:6px;padding:8px 12px;margin-bottom:8px">
+              <div style="font-size:10px;color:#666;margin-bottom:4px">Server IP</div>
+              <div style="font-size:13px;color:#55ff55;font-family:monospace">dev.primetv.lat</div>
+            </div>
+            <div style="background:#6600cc;border-radius:6px;padding:8px;text-align:center;font-size:12px;color:#fff;font-weight:600">Instalar App &rarr;</div>
+          </div>
+        </div>
+      </div>
       <div class="steps">
-        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>Acesse <code>Configuracoes &rarr; Geral &rarr; Sobre a TV</code> e clique 5 vezes em "Informacoes da TV".</p></div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Instale via Dev Manager</h3><p>Baixe o LG Developer Mode App e configure: <div class="url-box">dev.primetv.lat</div></p></div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Instale o App</h3><p>No Dev Manager, escolha <span class="app-name">APP</span> e clique em <code>Instalar</code>.</p></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o app e insira o codigo de ativacao.</p></div></div>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Ative o Modo Desenvolvedor</h3>
+            <p>Acesse <code>Configuracoes &rarr; Geral &rarr; Sobre a TV &rarr; Informacoes da TV</code>. Clique rapidamente <strong>5 vezes</strong> nesse campo. Um menu de desenvolvedor aparecera.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Instale via Dev Manager</h3>
+            <p>Baixe o <strong>LG Developer Mode App</strong> no seu computador e configure o endereco IP:</p>
+            <div class="url-box">dev.primetv.lat</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Faca o Deploy do App</h3>
+            <p>No Dev Manager, escolha o <span class="app-name">APP</span> na lista e clique em <code>Instalar</code>. O app aparecera na tela inicial da TV.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Ative o Servico</h3>
+            <p>Abra o <span class="app-name">APP</span> na sua LG TV e insira o codigo de ativacao.</p>
+          </div>
+        </div>
       </div>
     </div>
+
+    <!-- ROKU -->
     <div class="platform">
       <div class="platform-header">
         <div class="platform-icon">&#x1F3AE;</div>
-        <div><div class="platform-name">Roku TV</div></div>
+        <div><div class="platform-name">Roku TV / Dispositivo Roku</div></div>
+      </div>
+      <div class="mockup-row">
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Sequencia do Controle</div>
+          <div class="mockup-body">
+            <div class="mock-title">Pressione na ordem:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px">
+              <span style="background:#6600cc;padding:4px 8px;border-radius:4px;color:#fff">&#x1F3E0;x3</span>
+              <span style="background:#333;padding:4px 8px;border-radius:4px;color:#aaa">&uarr;x2</span>
+              <span style="background:#333;padding:4px 8px;border-radius:4px;color:#aaa">&rarr;</span>
+              <span style="background:#333;padding:4px 8px;border-radius:4px;color:#aaa">&larr;</span>
+              <span style="background:#333;padding:4px 8px;border-radius:4px;color:#aaa">&rarr;</span>
+              <span style="background:#333;padding:4px 8px;border-radius:4px;color:#aaa">&larr;</span>
+              <span style="background:#333;padding:4px 8px;border-radius:4px;color:#aaa">&rarr;</span>
+            </div>
+            <div style="margin-top:10px;background:rgba(102,0,204,0.2);border:1px dashed #6600cc;border-radius:6px;padding:8px;font-size:12px;color:#cc88ff;text-align:center">Developer Settings &#x2713;</div>
+          </div>
+        </div>
+        <div class="mockup">
+          <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Roku Developer</div>
+          <div class="mockup-body">
+            <div class="mock-title">Upload Channel</div>
+            <div style="background:#1a1a35;border:2px dashed #333355;border-radius:8px;padding:16px;text-align:center;margin-bottom:8px">
+              <div style="font-size:24px;margin-bottom:4px">&#x1F4E6;</div>
+              <div style="font-size:12px;color:#666">Pacote do <span class="app-name">APP</span></div>
+            </div>
+            <div style="background:#6600cc;border-radius:6px;padding:8px;text-align:center;font-size:12px;color:#fff;font-weight:600">Upload &rarr;</div>
+          </div>
+        </div>
       </div>
       <div class="steps">
-        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative Developer Mode</h3><p>No controle: <code>Home x3 &rarr; Cima x2 &rarr; Direita &rarr; Esquerda &rarr; Direita &rarr; Esquerda &rarr; Direita</code>.</p></div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Habilite e Anote o IP</h3><p><code>Configuracoes &rarr; Sistema &rarr; Avancado &rarr; Modo Desenvolvedor</code>. Anote o IP exibido.</p></div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Faca o Upload</h3><p>No computador, acesse <code>http://[IP-DA-TV]</code> e envie o pacote do administrador.</p></div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o <span class="app-name">APP</span> no Roku e insira o codigo.</p></div></div>
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Ative o Modo Desenvolvedor</h3>
+            <p>No controle do Roku, pressione a sequencia: <code>Home x3 &rarr; &uarr; x2 &rarr; Dir &rarr; Esq &rarr; Dir &rarr; Esq &rarr; Dir</code>. O menu de Developer abrira.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Habilite o Developer Mode</h3>
+            <p>Em <code>Configuracoes &rarr; Sistema &rarr; Avancado &rarr; Modo Desenvolvedor</code>, ative a opcao. Anote o IP exibido na tela da TV.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Instale o Canal <span class="app-name">APP</span></h3>
+            <p>No seu computador, acesse <code>http://[IP-DA-TV]</code> e faca o upload do pacote que seu administrador enviou.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Ative o Servico</h3>
+            <p>Abra o canal <span class="app-name">APP</span> no Roku e insira o codigo de ativacao.</p>
+          </div>
+        </div>
       </div>
+      <div class="tip"><strong>Dica:</strong> Caso tenha dificuldades, seu administrador pode fazer a instalacao remotamente se voce estiver na mesma rede Wi-Fi.</div>
     </div>
+
+    <!-- SUPORTE -->
     <div class="platform">
       <div class="platform-header">
         <div class="platform-icon">&#x1F198;</div>
         <div><div class="platform-name">Suporte</div></div>
       </div>
       <div class="steps">
-        <div class="step"><div class="step-num">*</div><div class="step-body"><h3>Precisa de Ajuda?</h3><p>Entre em contato com seu administrador. Tenha em maos o <strong>modelo da TV</strong> e o <strong>codigo de ativacao</strong>.</p></div></div>
+        <div class="step">
+          <div class="step-num">&#x2605;</div>
+          <div class="step-body">
+            <h3>Precisa de Ajuda?</h3>
+            <p>Entre em contato com o seu revendedor ou administrador. Tenha em maos o <strong>modelo da sua TV</strong> e o <strong>codigo de ativacao</strong> para agilizar o atendimento.</p>
+          </div>
+        </div>
       </div>
     </div>
+
   </main>
-  <footer id="footer-text">Acesso autorizado e temporario. Este documento expira automaticamente.</footer>
+  <footer><span id="footer-text">Acesso autorizado e temporario. Este documento expira automaticamente.</span></footer>
 </div>
+
 <script>
 (async () => {
   const SECRET = 'SmnPl4y-S3cr3t-@dm1n-K3y#2025!';
@@ -159,10 +507,10 @@
   const tokenB64 = params.get('t');
   function showBlocked() { document.getElementById('blocked').style.display = 'flex'; }
   function showExpired() { document.getElementById('expired').style.display = 'flex'; document.getElementById('content').style.display = 'none'; }
-  function wipeContent() { document.querySelector('main').innerHTML = '<div style="text-align:center;padding:80px 20px;color:#ff8800;font-size:20px">Tempo esgotado. Conteudo removido.</div>'; }
+  function wipeContent() { document.querySelector('main').innerHTML = '<div style="text-align:center;padding:80px 20px;color:#ff8800;font-size:20px">&#x23F0; Tempo esgotado. Conteudo removido.</div>'; }
   async function hmacHex(msg) {
     const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw', enc.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const key = await crypto.subtle.importKey('raw', enc.encode(SECRET), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
     const buf = await crypto.subtle.sign('HMAC', key, enc.encode(msg));
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
@@ -174,6 +522,7 @@
     const apkUrl = 'https://primetv.lat/download/' + apkSlug + '.apk';
     document.getElementById('apk-url').textContent = apkUrl;
     document.querySelectorAll('.apk-url-ref').forEach(el => el.textContent = apkUrl);
+    document.querySelectorAll('.apk-url-ref-slug').forEach(el => el.textContent = apkSlug);
     document.getElementById('footer-text').textContent = appName + ' - Acesso autorizado e temporario. Este documento expira automaticamente.';
   }
   if (!tokenB64) { showBlocked(); return; }
@@ -200,4 +549,4 @@
 })();
 </script>
 </body>
-                                                                               </html>
+       </html>
