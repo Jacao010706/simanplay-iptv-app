@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">Manual de Instalacao</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none !important; -moz-user-select: none !important; user-select: none !important; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+  @media print { body { display: none !important; } }
   #blocked, #expired {
     display: none; flex-direction: column; align-items: center;
     justify-content: center; min-height: 100vh; text-align: center; padding: 40px;
@@ -83,17 +84,11 @@
   .warning strong { color: #ff8800; }
   .mockup-row { display: flex; gap: 16px; flex-wrap: wrap; padding: 0 28px 24px; }
   .mockup { flex: 1; min-width: 220px; background: #0d0d20; border: 1px solid #2a2a50; border-radius: 12px; overflow: hidden; }
-  .mockup-bar {
-    background: #1a1a35; padding: 8px 14px; font-size: 11px;
-    color: #6666aa; display: flex; align-items: center; gap: 6px;
-  }
-  .mockup-bar .dot { background: #333; border-radius: 50%; width: 8px; height: 8px; display: inline-block; }
+  .mockup-bar { background: #1a1a35; padding: 8px 14px; font-size: 11px; color: #6666aa; display: flex; align-items: center; gap: 6px; }
+  .dot { background: #333; border-radius: 50%; width: 8px; height: 8px; display: inline-block; }
   .mockup-body { padding: 14px; }
   .mock-title { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-  .mock-menu-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 9px 12px; border-radius: 8px; margin-bottom: 4px; font-size: 13px; color: #ccc;
-  }
+  .mock-menu-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 8px; margin-bottom: 4px; font-size: 13px; color: #ccc; }
   .mock-menu-item.active { background: rgba(102,0,204,0.3); color: #cc88ff; border: 1px solid #6600cc44; }
   .toggle { width: 32px; height: 18px; border-radius: 9px; background: #6600cc; position: relative; }
   .toggle::after { content:""; position:absolute; width:14px; height:14px; border-radius:50%; background:#fff; right:2px; top:2px; }
@@ -180,7 +175,7 @@
         </div>
         <div class="mockup">
           <div class="mockup-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Downloader</div>
-          <div class="mockup-body" style="padding:14px">
+          <div class="mockup-body">
             <div class="dl-header">&#x2B07; Downloader</div>
             <div class="dl-url-field">primetv.lat/download/<span class="apk-url-ref-slug" style="color:#cc44ff">app</span>.apk<span class="dl-cursor"></span></div>
             <button class="dl-go">GO &rarr;</button>
@@ -314,35 +309,10 @@
         </div>
       </div>
       <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h3>Ative o Modo Desenvolvedor</h3>
-            <p>Na tela inicial da sua Samsung TV, abra a <code>App Store</code> e pressione os numeros <code>1 2 3 4 5</code> no controle remoto. Um painel de desenvolvedor aparecera.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h3>Configure o Servidor</h3>
-            <p>Ative o <code>Modo Desenvolvedor</code> e insira o endereco do servidor no campo IP:</p>
-            <div class="url-box">developer.primetv.lat</div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h3>Reinicie a TV</h3>
-            <p>Desligue e ligue a TV novamente. O <span class="app-name">APP</span> aparecera automaticamente na lista de apps instalados.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <h3>Ative o Servico</h3>
-            <p>Abra o <span class="app-name">APP</span> e insira o codigo de ativacao fornecido pelo seu administrador.</p>
-          </div>
-        </div>
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>Na tela inicial da sua Samsung TV, abra a <code>App Store</code> e pressione os numeros <code>1 2 3 4 5</code> no controle remoto. Um painel de desenvolvedor aparecera.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Configure o Servidor</h3><p>Ative o <code>Modo Desenvolvedor</code> e insira o endereco do servidor no campo IP:</p><div class="url-box">developer.primetv.lat</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Reinicie a TV</h3><p>Desligue e ligue a TV novamente. O <span class="app-name">APP</span> aparecera automaticamente na lista de apps instalados.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o <span class="app-name">APP</span> e insira o codigo de ativacao fornecido pelo seu administrador.</p></div></div>
       </div>
       <div class="warning"><strong>Atencao:</strong> Em Samsung TVs mais antigas (antes de 2018), o processo pode ser diferente. Consulte o seu administrador.</div>
     </div>
@@ -361,9 +331,7 @@
             <div class="mock-menu-item">Nome da TV</div>
             <div class="mock-menu-item">Rede</div>
             <div class="mock-menu-item active">Informacoes da TV <span style="font-size:11px;color:#cc44ff">&larr; clicar 5x</span></div>
-            <div style="margin-top:8px;background:rgba(102,0,204,0.2);border:1px dashed #6600cc;border-radius:6px;padding:8px 12px;font-size:12px;color:#cc88ff;text-align:center">
-              &#x2713; Developer Mode ativado!
-            </div>
+            <div style="margin-top:8px;background:rgba(102,0,204,0.2);border:1px dashed #6600cc;border-radius:6px;padding:8px 12px;font-size:12px;color:#cc88ff;text-align:center">&#x2713; Developer Mode ativado!</div>
           </div>
         </div>
         <div class="mockup">
@@ -379,35 +347,10 @@
         </div>
       </div>
       <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h3>Ative o Modo Desenvolvedor</h3>
-            <p>Acesse <code>Configuracoes &rarr; Geral &rarr; Sobre a TV &rarr; Informacoes da TV</code>. Clique rapidamente <strong>5 vezes</strong> nesse campo. Um menu de desenvolvedor aparecera.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h3>Instale via Dev Manager</h3>
-            <p>Baixe o <strong>LG Developer Mode App</strong> no seu computador e configure o endereco IP:</p>
-            <div class="url-box">dev.primetv.lat</div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h3>Faca o Deploy do App</h3>
-            <p>No Dev Manager, escolha o <span class="app-name">APP</span> na lista e clique em <code>Instalar</code>. O app aparecera na tela inicial da TV.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <h3>Ative o Servico</h3>
-            <p>Abra o <span class="app-name">APP</span> na sua LG TV e insira o codigo de ativacao.</p>
-          </div>
-        </div>
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>Acesse <code>Configuracoes &rarr; Geral &rarr; Sobre a TV &rarr; Informacoes da TV</code>. Clique rapidamente <strong>5 vezes</strong> nesse campo. Um menu de desenvolvedor aparecera.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Instale via Dev Manager</h3><p>Baixe o <strong>LG Developer Mode App</strong> no seu computador e configure o endereco IP:</p><div class="url-box">dev.primetv.lat</div></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Faca o Deploy do App</h3><p>No Dev Manager, escolha o <span class="app-name">APP</span> na lista e clique em <code>Instalar</code>. O app aparecera na tela inicial da TV.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o <span class="app-name">APP</span> na sua LG TV e insira o codigo de ativacao.</p></div></div>
       </div>
     </div>
 
@@ -447,34 +390,10 @@
         </div>
       </div>
       <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h3>Ative o Modo Desenvolvedor</h3>
-            <p>No controle do Roku, pressione a sequencia: <code>Home x3 &rarr; &uarr; x2 &rarr; Dir &rarr; Esq &rarr; Dir &rarr; Esq &rarr; Dir</code>. O menu de Developer abrira.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h3>Habilite o Developer Mode</h3>
-            <p>Em <code>Configuracoes &rarr; Sistema &rarr; Avancado &rarr; Modo Desenvolvedor</code>, ative a opcao. Anote o IP exibido na tela da TV.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h3>Instale o Canal <span class="app-name">APP</span></h3>
-            <p>No seu computador, acesse <code>http://[IP-DA-TV]</code> e faca o upload do pacote que seu administrador enviou.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <h3>Ative o Servico</h3>
-            <p>Abra o canal <span class="app-name">APP</span> no Roku e insira o codigo de ativacao.</p>
-          </div>
-        </div>
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h3>Ative o Modo Desenvolvedor</h3><p>No controle do Roku, pressione a sequencia: <code>Home x3 &rarr; &uarr; x2 &rarr; Dir &rarr; Esq &rarr; Dir &rarr; Esq &rarr; Dir</code>. O menu de Developer abrira.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h3>Habilite o Developer Mode</h3><p>Em <code>Configuracoes &rarr; Sistema &rarr; Avancado &rarr; Modo Desenvolvedor</code>, ative a opcao. Anote o IP exibido na tela da TV.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h3>Instale o Canal <span class="app-name">APP</span></h3><p>No seu computador, acesse <code>http://[IP-DA-TV]</code> e faca o upload do pacote que seu administrador enviou.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h3>Ative o Servico</h3><p>Abra o canal <span class="app-name">APP</span> no Roku e insira o codigo de ativacao.</p></div></div>
       </div>
       <div class="tip"><strong>Dica:</strong> Caso tenha dificuldades, seu administrador pode fazer a instalacao remotamente se voce estiver na mesma rede Wi-Fi.</div>
     </div>
@@ -547,6 +466,19 @@
   }, 1000);
   setTimeout(() => { clearInterval(timer); showExpired(); wipeContent(); }, remaining);
 })();
+
+// ---- PROTECAO CONTRA COPIA, PRINT E DEVTOOLS ----
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy', e => e.preventDefault());
+document.addEventListener('cut', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  const k = (e.key || '').toLowerCase();
+  if (e.ctrlKey && ['c','a','x','p','s','u'].includes(k)) { e.preventDefault(); return false; }
+  if (e.key === 'F12') { e.preventDefault(); return false; }
+  if (e.ctrlKey && e.shiftKey && ['i','j','c','k'].includes(k)) { e.preventDefault(); return false; }
+  if (e.key === 'PrintScreen') { try { navigator.clipboard.writeText(''); } catch(_){} e.preventDefault(); return false; }
+});
 </script>
 </body>
-       </html>
+</html>
