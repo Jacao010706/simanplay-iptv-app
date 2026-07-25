@@ -10,11 +10,13 @@ from PIL import Image, ImageDraw, ImageFont
 
 APP_NAME      = os.environ.get("APP_NAME", "PRIME TV")
 APP_LOGO_URL  = os.environ.get("APP_LOGO_URL", "")
-PRIMARY_COLOR = os.environ.get("PRIMARY_COLOR", "#D4AF37")
-BG_COLOR      = os.environ.get("BG_COLOR", "#0a0a0a")
+PRIMARY_COLOR = os.environ.get("PRIMARY_COLOR", "#D4AF37") or "#D4AF37"
+BG_COLOR      = os.environ.get("BG_COLOR", "#0a0a0a")      or "#0a0a0a"
 
 def hex_to_rgb(h):
-    h = h.lstrip("#")
+    h = h.lstrip("#").strip()
+    if len(h) < 6:
+        return (212, 175, 55)  # fallback gold
     return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
 PRIMARY_RGB = hex_to_rgb(PRIMARY_COLOR)
