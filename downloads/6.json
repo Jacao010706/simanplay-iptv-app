@@ -5,12 +5,12 @@
   "primaryColor": "#5",
   "shortUrl": "https://primetv.lat/d/6",
   "downloads": {
-    "android":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/primetv.apk",
-    "googleplay": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/primetv.aab",
-    "ios":        "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/primetv.ipa",
-    "windows":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/primetv_windows.zip",
-    "roku":       "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/roku_channel.zip",
-    "samsung":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/primetv_samsung.wgt",
-    "lg":         "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-81/primetv_lg.ipk"
+    "android":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/primetv.apk",
+    "googleplay": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/primetv.aab",
+    "ios":        "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/primetv.ipa",
+    "windows":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/primetv_windows.zip",
+    "roku":       "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/roku_channel.zip",
+    "samsung":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/primetv_samsung.wgt",
+    "lg":         "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-84/primetv_lg.ipk"
   }
 }
