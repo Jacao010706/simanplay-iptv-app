@@ -1,0 +1,16 @@
+{
+  "name": "MARTINSTV",
+  "subtitle": "IPTV - TV ao Vivo, Filmes e Séries",
+  "logoUrl": "https://res.cloudinary.com/s4578vyw/image/upload/v1783818055/simanplay/whitelabel/ncfusgzvojuucib69fzu.png",
+  "primaryColor": "#2",
+  "shortUrl": "https://primetv.lat/d/5",
+  "downloads": {
+    "android":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/martinstv.apk",
+    "googleplay": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/martinstv.aab",
+    "ios":        "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/martinstv.ipa",
+    "windows":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/martinstv_windows.zip",
+    "roku":       "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/roku_channel.zip",
+    "samsung":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/martinstv_samsung.wgt",
+    "lg":         "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/martinstv-83/martinstv_lg.ipk"
+  }
+}
