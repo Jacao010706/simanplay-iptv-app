@@ -2,15 +2,15 @@
   "name": "PRIMETV",
   "subtitle": "IPTV - TV ao Vivo, Filmes e Séries",
   "logoUrl": "https://res.cloudinary.com/s4578vyw/image/upload/v1783957663/simanplay/whitelabel/tdld4mrzfnwysrj2ydxy.png",
-  "primaryColor": "#5",
+  "primaryColor": "#e94bff",
   "shortUrl": "https://primetv.lat/d/6",
   "downloads": {
-    "android":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/primetv.apk",
-    "googleplay": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/primetv.aab",
-    "ios":        "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/primetv.ipa",
-    "windows":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/primetv_windows.zip",
-    "roku":       "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/roku_channel.zip",
-    "samsung":    "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/primetv_samsung.wgt",
-    "lg":         "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/PRIMETV-87/primetv_lg.ipk"
+    "googleplay": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv.aab",
+    "android": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv.apk",
+    "ios": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv.ipa",
+    "windows": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv_windows.zip",
+    "roku": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv_roku.zip",
+    "lg": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv_lg.ipk",
+    "samsung": "https://github.com/Jacao010706/simanplay-iptv-app/releases/download/primetv-92/primetv_samsung_nao_assinado.wgt"
   }
 }
