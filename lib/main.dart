@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'core/providers/theme_provider.dart';
 import 'screens/activation_screen_v3.dart';
+import 'screens/license_gate.dart';
+import 'core/app_config.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +22,11 @@ class IptvPlayerApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
-            title: 'SimanPlay IPTV',
+            title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
-            home: const ActivationScreen(),
+            // Teste grátis de 7 dias; depois exige plano pago no site (PIX)
+            home: const LicenseGate(child: ActivationScreen()),
           );
         },
       ),

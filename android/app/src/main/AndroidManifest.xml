@@ -22,4 +22,11 @@
 </activity>
 <meta-data android:name="flutterEmbedding" android:value="2"/>
 </application>
+<!-- Abrir o site de pagamento no navegador (url_launcher, Android 11+) -->
+<queries>
+<intent>
+<action android:name="android.intent.action.VIEW"/>
+<data android:scheme="https"/>
+</intent>
+</queries>
 </manifest>
