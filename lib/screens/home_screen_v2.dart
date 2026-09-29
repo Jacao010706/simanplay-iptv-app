@@ -590,7 +590,7 @@ Widget _buildHomeBanner(Color p, Function(int) onNav) {
         colors: [Colors.transparent, Color(0xCC000000), Color(0xFF0d0d0d)]))),
     SizedBox(height: 220, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       if (AppConfig.useCustomLogo)
-        Image.asset('assets/logo.png', height: 70, errorBuilder: (_, __, ___) => Icon(Icons.live_tv, color: p, size: 60))
+        Image.network(AppConfig.logoUrl, height: 70, errorBuilder: (_, __, ___) => Icon(Icons.live_tv, color: p, size: 60))
       else
         Icon(AppConfig.usePlayIcon ? Icons.play_circle : Icons.live_tv, color: p, size: 60),
       const SizedBox(height: 8),

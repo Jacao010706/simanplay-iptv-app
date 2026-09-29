@@ -249,7 +249,7 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   Widget _buildLogo(Color primary) {
     if (AppConfig.useCustomLogo) {
-      return Image.asset('assets/logo.png',
+      return Image.network(AppConfig.logoUrl,
           height: AppConfig.logoSize,
           errorBuilder: (_, __, ___) => Icon(Icons.live_tv,
               size: AppConfig.logoSize * 0.75, color: primary));

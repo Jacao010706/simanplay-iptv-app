@@ -1,48 +1,117 @@
 #!/usr/bin/env python3
 """
 generate_app_config.py
-Gera lib/app_config.dart com os dados do revendedor.
+Gera lib/core/app_config.dart (o arquivo que o app realmente usa) com os dados
+do white-label do revendedor enviados pelo painel.
+
+Variáveis de ambiente (todas opcionais):
+  APP_NAME, APP_SUBTITLE, PRIMARY_COLOR, BG_COLOR, SURFACE_COLOR (hex, com ou sem #),
+  APP_THEME (1-6), LOGO_URL, BANNER_URL, API_URL, RESELLER_ID, RESELLER_USERNAME
 """
 import os
+import re
 
-APP_NAME         = os.environ.get("APP_NAME",         "SimanPlay")
-APP_SUBTITLE     = os.environ.get("APP_SUBTITLE",     "Conecte sua lista")
-PRIMARY_COLOR    = os.environ.get("PRIMARY_COLOR",    "FF6B35")
-BG_COLOR         = os.environ.get("BG_COLOR",         "0d0d1a")
-SURFACE_COLOR    = os.environ.get("SURFACE_COLOR",    "1a1a2e")
-BANNER_URL       = os.environ.get("BANNER_URL",       "")
-LOGO_URL         = os.environ.get("LOGO_URL",         "")
-API_URL          = os.environ.get("API_URL",          "https://simanplay-backend.up.railway.app")
-RESELLER_ID      = os.environ.get("RESELLER_ID",      "")
-RESELLER_USERNAME= os.environ.get("RESELLER_USERNAME","")
+DEFAULTS = {
+    "primary": "e94bff",
+    "bg": "0d0b14",
+    "surface": "1a1625",
+    "api": "https://web-production-d8671.up.railway.app",
+}
 
-# Garantir que as cores não tenham #
-PRIMARY_COLOR = PRIMARY_COLOR.lstrip("#")
-BG_COLOR      = BG_COLOR.lstrip("#")
-SURFACE_COLOR = SURFACE_COLOR.lstrip("#")
 
-dart_content = f"""// AUTO-GENERATED — não editar manualmente
-// Gerado por scripts/generate_app_config.py
+def env(name, default=""):
+    value = os.environ.get(name, "")
+    return value.strip() if value and value.strip() else default
 
+
+def hex_color(value, default):
+    """'#e94bff' / 'e94bff' / '#fff' -> 'e94bff'. Valor inválido vira o padrão."""
+    h = (value or "").strip().lstrip("#")
+    if not h:
+        return default
+    if re.fullmatch(r"[0-9a-fA-F]{3}", h):
+        h = "".join(c * 2 for c in h)
+    if not re.fullmatch(r"[0-9a-fA-F]{6}", h):
+        print(f"  aviso: cor inválida {value!r}, usando #{default}")
+        return default
+    return h.lower()
+
+
+def theme(value):
+    try:
+        t = int(str(value).strip())
+    except ValueError:
+        t = 1
+    return t if 1 <= t <= 6 else 1
+
+
+def dart_str(value):
+    """String literal Dart segura (aspas, barras, $ e quebras de linha)."""
+    s = (value or "").replace("\\", "\\\\").replace("'", "\\'").replace("$", "\\$")
+    s = s.replace("\r", " ").replace("\n", " ")
+    return f"'{s}'"
+
+
+def build_config():
+    primary = hex_color(env("PRIMARY_COLOR"), DEFAULTS["primary"])
+    bg = hex_color(env("BG_COLOR"), DEFAULTS["bg"])
+    surface = hex_color(env("SURFACE_COLOR"), DEFAULTS["surface"])
+    logo_url = env("LOGO_URL")
+    return {
+        "appName": env("APP_NAME", "SimanPlay IPTV"),
+        "appSubtitle": env("APP_SUBTITLE", "Conecte sua lista"),
+        "primaryColor": f"0xFF{primary.upper()}",
+        "backgroundColor": f"0xFF{bg.upper()}",
+        "surfaceColor": f"0xFF{surface.upper()}",
+        "backendUrl": env("API_URL", DEFAULTS["api"]).rstrip("/"),
+        "bannerUrl": env("BANNER_URL"),
+        "logoUrl": logo_url,
+        "useCustomLogo": bool(logo_url),
+        "appTheme": theme(env("APP_THEME", "1")),
+        "resellerId": env("RESELLER_ID"),
+        "resellerUsername": env("RESELLER_USERNAME"),
+    }
+
+
+def render(c):
+    return f"""// AUTO-GERADO por scripts/generate_app_config.py no build do white-label.
+// Para testes locais pode ser editado; o build sobrescreve este arquivo.
 class AppConfig {{
-  static const String appName         = '{APP_NAME}';
-  static const String appSubtitle     = '{APP_SUBTITLE}';
-  static const String primaryColor    = '#{PRIMARY_COLOR}';
-  static const String bgColor         = '#{BG_COLOR}';
-  static const String surfaceColor    = '#{SURFACE_COLOR}';
-  static const String bannerUrl       = '{BANNER_URL}';
-  static const String logoUrl         = '{LOGO_URL}';
-  static const String apiUrl          = '{API_URL}';
-  static const String resellerId      = '{RESELLER_ID}';
-  static const String resellerUsername= '{RESELLER_USERNAME}';
+  static const String appName = {dart_str(c['appName'])};
+  static const String appSubtitle = {dart_str(c['appSubtitle'])};
+  static const String appVersion = 'v1.0';
 
-  // URL curta de download para este revendedor
-  static const String downloadUrl     = 'https://primetv.lat/d/{RESELLER_ID}';
+  // Cores (ARGB)
+  static const int primaryColor = {c['primaryColor']};
+  static const int backgroundColor = {c['backgroundColor']};
+  static const int surfaceColor = {c['surfaceColor']};
+
+  // Backend SimanPlay
+  static const String backendUrl = {dart_str(c['backendUrl'])};
+
+  // Banner de fundo da tela de login (vazio = sem banner)
+  static const String bannerUrl = {dart_str(c['bannerUrl'])};
+
+  // Logo do revendedor (URL). Vazio = ícone padrão.
+  static const String logoUrl = {dart_str(c['logoUrl'])};
+  static const bool useCustomLogo = {'true' if c['useCustomLogo'] else 'false'};
+  static const double logoSize = 100.0;
+  static const bool usePlayIcon = false; // false = TV, true = Play Circle
+
+  // Tema da home: 1 Grade, 2 Netflix, 3 Sidebar, 4 IBO Banner+Grade,
+  // 5 IBO Sidebar Escura, 6 IBO Banner Tela Cheia
+  static const int appTheme = {c['appTheme']};
+
+  static const String resellerId = {dart_str(c['resellerId'])};
+  static const String resellerUsername = {dart_str(c['resellerUsername'])};
 }}
 """
 
-os.makedirs("lib", exist_ok=True)
-with open("lib/app_config.dart", "w", encoding="utf-8") as f:
-    f.write(dart_content)
 
-"OK: lib/app_config.dart gerado para: " + APP_NAME
+if __name__ == "__main__":
+    config = build_config()
+    os.makedirs("lib/core", exist_ok=True)
+    with open("lib/core/app_config.dart", "w", encoding="utf-8", newline="\n") as f:
+        f.write(render(config))
+    print(f"OK: lib/core/app_config.dart gerado para {config['appName']!r} "
+          f"(tema {config['appTheme']}, cor {config['primaryColor']}, logo {'sim' if config['useCustomLogo'] else 'não'})")
