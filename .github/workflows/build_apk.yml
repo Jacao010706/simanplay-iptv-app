@@ -104,6 +104,9 @@ jobs:
           python3 scripts/generate_app_config.py
           cat lib/core/app_config.dart
 
+      - name: Ícone do app (logo do revendedor ou PRIMETV)
+        run: python3 scripts/generate_launcher_icons.py
+
       - name: Generate Android TV banner + Roku icons
         env:
           APP_LOGO_URL: ${{ env.LOGO_URL || env.BANNER_URL }}
@@ -226,6 +229,11 @@ jobs:
           SURFACE_COLOR: ${{ env.SURFACE_HEX }}
         run: python3 scripts/generate_app_config.py
 
+      - name: Ícone do app (logo do revendedor ou PRIMETV)
+        run: |
+          pip3 install Pillow --break-system-packages
+          python3 scripts/generate_launcher_icons.py
+
       - name: Flutter pub get
         run: flutter pub get
 
@@ -272,6 +280,11 @@ jobs:
           BG_COLOR: ${{ env.BG_HEX }}
           SURFACE_COLOR: ${{ env.SURFACE_HEX }}
         run: python scripts/generate_app_config.py
+
+      - name: Ícone do app (logo do revendedor ou PRIMETV)
+        run: |
+          pip install Pillow
+          python scripts/generate_launcher_icons.py
 
       - name: Flutter pub get
         run: flutter pub get
