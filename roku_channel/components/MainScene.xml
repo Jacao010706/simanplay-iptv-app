@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MainScene" extends="Scene">
+  <children>
+    <Rectangle id="bg" width="1920" height="1080" color="0x0A0A0FFF" />
+
+    <!-- Cabeçalho -->
+    <Rectangle id="header" width="1920" height="130" color="0x1A1625FF">
+      <Label id="appTitle" translation="[90,38]" width="900" height="60"
+             font="font:LargeBoldSystemFont" color="0xE94BFFFF" />
+      <Label id="breadcrumb" translation="[900,48]" width="930" height="40" horizAlign="right"
+             font="font:SmallSystemFont" color="0xCCCCCCFF" />
+    </Rectangle>
+
+    <!-- Lista única reaproveitada: menu, categorias, itens, temporadas, episódios -->
+    <LabelList id="list" translation="[90,170]" itemSize="[1740,72]" numRows="11"
+               focusBitmapBlendColor="0xE94BFFFF" color="0xFFFFFFFF" focusedColor="0x000000FF"
+               font="font:MediumSystemFont" focusedFont="font:MediumBoldSystemFont" vertFocusAnimationStyle="floatingFocus" />
+
+    <Label id="status" translation="[90,1000]" width="1740" height="50"
+           font="font:SmallSystemFont" color="0xCCCCCCFF" />
+
+    <Video id="video" width="1920" height="1080" visible="false" />
+  </children>
+  <script type="text/brightscript" uri="pkg:/components/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/components/Config.brs" />
+  <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
+</component>

@@ -108,10 +108,42 @@ class AppConfig {{
 """
 
 
+def xml_text(value):
+    return (value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                 .replace('"', "&quot;").replace("'", "&apos;"))
+
+
+def set_launcher_name(name):
+    """Nome embaixo do ícone: Android (android:label) e iOS (CFBundleDisplayName)."""
+    manifest = "android/app/src/main/AndroidManifest.xml"
+    if os.path.exists(manifest):
+        with open(manifest, encoding="utf-8") as f:
+            m = f.read()
+        m2, n = re.subn(r'(<application\b[^>]*?\sandroid:label=")[^"]*(")',
+                        lambda g: g.group(1) + xml_text(name) + g.group(2), m, count=1)
+        if n:
+            with open(manifest, "w", encoding="utf-8", newline="") as f:
+                f.write(m2)
+        print(f"  Android label: {'ok' if n else 'NÃO encontrado'}")
+    plist = "ios/Runner/Info.plist"
+    if os.path.exists(plist):
+        with open(plist, encoding="utf-8") as f:
+            p = f.read()
+        p2, n = re.subn(r"(<key>CFBundleDisplayName</key>\s*<string>)[^<]*(</string>)",
+                        lambda g: g.group(1) + xml_text(name) + g.group(2), p, count=1)
+        if n:
+            with open(plist, "w", encoding="utf-8", newline="") as f:
+                f.write(p2)
+        print(f"  iOS display name: {'ok' if n else 'NÃO encontrado'}")
+
+
 if __name__ == "__main__":
     config = build_config()
     os.makedirs("lib/core", exist_ok=True)
     with open("lib/core/app_config.dart", "w", encoding="utf-8", newline="\n") as f:
         f.write(render(config))
+    # Só no build do white-label (o CI define APP_NAME); rodar local não mexe nos manifests
+    if os.environ.get("APP_NAME"):
+        set_launcher_name(config["appName"])
     print(f"OK: lib/core/app_config.dart gerado para {config['appName']!r} "
           f"(tema {config['appTheme']}, cor {config['primaryColor']}, logo {'sim' if config['useCustomLogo'] else 'não'})")

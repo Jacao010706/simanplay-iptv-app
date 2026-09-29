@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Saídas locais dos apps de TV
+build_tv/
+*.wgt
+*.ipk
+roku_*.zip
+roku_channel/manifest
+roku_channel/images/

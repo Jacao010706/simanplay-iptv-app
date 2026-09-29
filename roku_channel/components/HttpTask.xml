@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Requisição HTTP fora da render thread (exigência do Roku). -->
+<component name="HttpTask" extends="Task">
+  <interface>
+    <field id="url" type="string" />
+    <field id="params" type="assocarray" />
+    <!-- {ok: bool, code: int, body: string, error: string} — setado uma vez ao terminar -->
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/Utils.brs" />
+  <script type="text/brightscript" uri="pkg:/components/HttpTask.brs" />
+</component>

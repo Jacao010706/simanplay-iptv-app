@@ -7,7 +7,7 @@ on:
       app_name:
         description: 'Nome do app'
         required: false
-        default: 'SimanPlay IPTV'
+        default: 'PRIMETV'
       reseller_username:
         description: 'Username do revendedor'
         required: false
@@ -111,17 +111,19 @@ jobs:
           BG_COLOR: "#${{ env.BG_HEX }}"
         run: python3 scripts/generate_tv_assets.py
 
+      # Canal Roku nativo (SceneGraph): valida o BrightScript e empacota para sideload/loja
       - name: Generate Roku channel
         run: |
           python3 scripts/generate_roku_manifest.py
-          cd roku_channel && zip -r ../roku_channel.zip . && cd ..
+          npx -y brighterscript@0 bsc --rootDir roku_channel --createPackage false
+          cd roku_channel && zip -r "../${SLUG}_roku.zip" manifest source components images && cd ..
 
+      # Samsung (Tizen) e LG (webOS): lançadores que abrem o app de TV do painel (/tv)
       - name: Generate Samsung (.wgt) + LG (.ipk)
-        env:
-          APP_LOGO_URL: ${{ env.LOGO_URL || env.BANNER_URL }}
-          PRIMARY_COLOR: "#${{ env.PRIMARY_HEX }}"
-          BG_COLOR: "#${{ env.BG_HEX }}"
-        run: python3 scripts/generate_tv_apps.py
+        run: |
+          python3 scripts/generate_tv_apps.py
+          npx -y -p @webos-tools/cli ares-package build_tv/lg -o build_tv
+          mv build_tv/*.ipk "${SLUG}_lg.ipk"
 
       - name: Flutter pub get
         run: flutter pub get
@@ -158,9 +160,7 @@ jobs:
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk    "${SLUG}.apk"
           mv build/app/outputs/bundle/release/app-release.aab  "${SLUG}.aab"
-          mv simanplay_samsung.wgt "${SLUG}_samsung.wgt" 2>/dev/null || true
-          mv simanplay_lg.ipk      "${SLUG}_lg.ipk"      2>/dev/null || true
-          ls -la *.apk *.aab
+          ls -la *.apk *.aab *.wgt *.ipk *_roku.zip
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -180,7 +180,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Roku
-          path: roku_channel.zip
+          path: "*_roku.zip"
           retention-days: 7
 
       - name: Upload Samsung
@@ -342,9 +342,9 @@ jobs:
             | Google Play | `.aab` | Enviar para o Google Play Console |
             | iOS (iPhone/iPad) | `.ipa` | Instalar via AltStore |
             | Windows | `.zip` | Extrair e executar o .exe |
-            | Roku TV | `roku_channel.zip` | Upload no painel desenvolvedor Roku |
-            | Samsung Smart TV | `.wgt` | Upload via Tizen Studio |
-            | LG Smart TV | `.ipk` | Upload via webOS Dev App |
+            | Roku TV | `_roku.zip` | Modo desenvolvedor da Roku (ver docs/TV_APPS.md) |
+            | Samsung Smart TV | `_samsung_nao_assinado.wgt` | Assinar no Tizen Studio e instalar (ver docs/TV_APPS.md) |
+            | LG Smart TV | `_lg.ipk` | Modo desenvolvedor LG / ares-install (ver docs/TV_APPS.md) |
           files: |
             dist/**/*.apk
             dist/**/*.aab
@@ -366,8 +366,8 @@ jobs:
             echo "DL_GOOGLEPLAY=${BASE}/${SLUG}.aab"
             has "*.ipa"         && echo "DL_IOS=${BASE}/${SLUG}.ipa"
             has "*_windows.zip" && echo "DL_WINDOWS=${BASE}/${SLUG}_windows.zip"
-            has "roku_channel.zip" && echo "DL_ROKU=${BASE}/roku_channel.zip"
-            has "*.wgt"         && echo "DL_SAMSUNG=${BASE}/${SLUG}_samsung.wgt"
+            has "*_roku.zip"    && echo "DL_ROKU=${BASE}/${SLUG}_roku.zip"
+            has "*.wgt"         && echo "DL_SAMSUNG=${BASE}/${SLUG}_samsung_nao_assinado.wgt"
             has "*.ipk"         && echo "DL_LG=${BASE}/${SLUG}_lg.ipk"
             echo "RELEASE_URL=${{ steps.create_release.outputs.url }}"
           } >> "$GITHUB_ENV"
