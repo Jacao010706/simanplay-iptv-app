@@ -29,7 +29,7 @@ from xml.sax.saxutils import escape as xml_escape
 from PIL import Image, ImageDraw
 
 DEFAULT_NAME = "PRIMETV"
-DEFAULT_TV_URL = "https://simanplay-iptv-admin-panel.vercel.app/tv/"
+DEFAULT_TV_URL = "https://simanplay-iptv-admin-panel.vercel.app/tv"
 
 APP_NAME = (os.environ.get("APP_NAME") or DEFAULT_NAME).strip()[:40]
 SLUG = re.sub(r"[^a-z0-9_]", "", (os.environ.get("SLUG") or "primetv").lower()) or "primetv"
