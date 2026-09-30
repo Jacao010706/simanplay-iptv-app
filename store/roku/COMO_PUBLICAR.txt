@@ -1,0 +1,40 @@
+PRIMETV — CANAL ROKU
+(o .zip de cada versão sai nas Releases do GitHub: primetv_roku.zip)
+
+O CANAL (BrightScript/SceneGraph nativo), mesmas telas da Samsung e da LG:
+  - Ativação: MAC + chave do aparelho + QR Code para cadastrar as listas
+  - Início: TV ao Vivo, Filmes, Séries e Favoritos (setas + OK)
+  - Na lista de canais ao vivo, o botão * (asterisco) liga/desliga o favorito
+  - Licença vencida: QR Code do PIX + "Acesse o site para renovar"
+  Cores #e94bff / #0d0b14.
+
+A ROKU NÃO ACEITA O .ZIP — é preciso gerar o pacote assinado (.pkg) num Roku seu:
+  1. Modo desenvolvedor no Roku: no controle, Home 3x, Cima 2x, Direita, Esquerda,
+     Direita, Esquerda, Direita. Ative e crie uma senha.
+  2. No computador (mesma rede), abra http://IP-DA-ROKU (usuário rokudev) e envie
+     o primetv_roku.zip em "Development Application Installer".
+  3. Gere a chave: telnet IP-DA-ROKU 8080  e digite  genkey
+     ANOTE a senha e o DevID e guarde junto com a chave do APK: toda atualização
+     do canal precisa da mesma chave.
+  4. Em http://IP-DA-ROKU > Packager: nome PRIMETV + senha do genkey > Package >
+     baixe o arquivo .pkg.
+
+ENVIO: https://developer.roku.com > Manage Channels > Add Channel (SDK)
+  - Envie o .pkg
+  - Pôster do canal: pasta "poster" (540x405 FHD e 290x218 HD)
+  - Capturas: pasta "capturas-1920x1080" (tiradas no emulador, dados de exemplo)
+  - Política de privacidade: https://simanplay-iptv-admin-panel.vercel.app/privacidade
+  - Desenvolvedor: Akitemtech — suporte: akitemtech@gmail.com
+  - Instruções para os testadores:
+    "O PRIMETV é um player: não traz canais. Ao abrir, o canal mostra o MAC e a chave.
+     Acesse simanplay-iptv-admin-panel.vercel.app/dispositivo, digite o MAC e a chave
+     e adicione a lista M3U de teste https://iptv-org.github.io/iptv/countries/br.m3u
+     (canais abertos, públicos). Em até 20 segundos a lista aparece na TV."
+
+ATENÇÃO — REGRA DA ROKU SOBRE PAGAMENTO:
+  A Roku exige o "Roku Pay" para assinaturas oferecidas dentro do canal. O PRIMETV
+  manda pagar por PIX no site (QR Code), então a publicação PÚBLICA pode ser recusada.
+  Alternativas:
+  - Canal "beta": até 20 aparelhos, instalado por link, sem passar pela loja;
+  - Publicar como player gratuito e cobrar a assinatura só fora da Roku (pelo revendedor).
+  Confira as regras atuais no Developer Dashboard antes de enviar.

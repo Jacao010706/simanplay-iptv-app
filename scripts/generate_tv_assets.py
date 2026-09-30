@@ -99,7 +99,11 @@ def generate_roku_icon(out_path, w, h, logo_size):
         c = tuple(min(255, int(v * factor)) for v in BG_RGB) + (255,)
         draw.rectangle([i, 0, i+1, h], fill=c)
 
-    cx, cy = w // 2, h // 2
+    # Pôsteres grandes levam o nome embaixo (a tela inicial da Roku mostra só o pôster)
+    with_name = h >= 200
+    if with_name:
+        logo_size = int(logo_size * 0.72)
+    cx, cy = w // 2, (h // 2 - int(h * 0.1)) if with_name else h // 2
     logo = load_logo(APP_LOGO_URL, logo_size)
     if logo:
         lw, lh_l = logo.size
@@ -109,6 +113,17 @@ def generate_roku_icon(out_path, w, h, logo_size):
         draw.ellipse([cx-r-2, cy-r-2, cx+r+2, cy+r+2], fill=tuple(int(v*0.6) for v in PRIMARY_RGB) + (255,))
         draw.ellipse([cx-r, cy-r, cx+r, cy+r], fill=BG_RGB + (255,))
         draw_tv_icon(draw, cx, cy, logo_size - 10, PRIMARY_RGB)
+    if with_name:
+        font = None
+        for f in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "arialbd.ttf"):
+            try:
+                font = ImageFont.truetype(f, int(h * 0.13))
+                break
+            except Exception:
+                pass
+        font = font or ImageFont.load_default()
+        b = font.getbbox(APP_NAME)
+        draw.text(((w - (b[2] - b[0])) // 2, cy + logo_size // 2 + int(h * 0.06)), APP_NAME, font=font, fill=PRIMARY_RGB + (255,))
 
     draw.rectangle([0, 0, w, 3], fill=PRIMARY_RGB + (255,))
     draw.rectangle([0, h-3, w, h], fill=PRIMARY_RGB + (255,))
@@ -118,8 +133,8 @@ def generate_roku_icon(out_path, w, h, logo_size):
     img.save(out_path)
     print(f"  ✅ Roku icon ({w}x{h}) → {out_path}")
 
-def generate_roku_splash(out_path):
-    W, H = 1280, 720
+def generate_roku_splash(out_path, W=1280, H=720):
+    k = W / 1280  # escala (1920x1080 = FHD)
     img = Image.new("RGB", (W, H), BG_RGB)
     draw = ImageDraw.Draw(img)
     for i in range(W):
@@ -127,40 +142,47 @@ def generate_roku_splash(out_path):
         c = tuple(min(255, int(v * factor)) for v in BG_RGB)
         draw.rectangle([i, 0, i+1, H], fill=c)
 
-    cx, cy = W // 2, H // 2 - 60
-    logo = load_logo(APP_LOGO_URL, 300)
+    cx, cy = W // 2, H // 2 - int(60 * k)
+    logo = load_logo(APP_LOGO_URL, int(300 * k))
     if logo:
         lw, lh_l = logo.size
         img.paste(logo, (cx - lw//2, cy - lh_l//2), logo)
     else:
         img_rgba = img.convert("RGBA")
         tv_draw = ImageDraw.Draw(img_rgba)
-        r = 150
+        r = int(150 * k)
         tv_draw.ellipse([cx-r-4, cy-r-4, cx+r+4, cy+r+4], fill=tuple(int(v*0.6) for v in PRIMARY_RGB) + (255,))
         tv_draw.ellipse([cx-r, cy-r, cx+r, cy+r], fill=BG_RGB + (255,))
-        draw_tv_icon(tv_draw, cx, cy, 220, PRIMARY_RGB)
+        draw_tv_icon(tv_draw, cx, cy, int(220 * k), PRIMARY_RGB)
         img = img_rgba.convert("RGB")
         draw = ImageDraw.Draw(img)
 
-    try:
-        font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 80)
-    except:
-        font_big = ImageFont.load_default()
+    font_big = None
+    for f in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "arialbd.ttf"):
+        try:
+            font_big = ImageFont.truetype(f, int(80 * k))
+            break
+        except Exception:
+            pass
+    font_big = font_big or ImageFont.load_default()
 
     b = font_big.getbbox(APP_NAME)
     tw = b[2] - b[0]
-    draw.text(((W - tw) // 2, H // 2 + 110), APP_NAME, font=font_big, fill=PRIMARY_RGB)
+    draw.text(((W - tw) // 2, H // 2 + int(110 * k)), APP_NAME, font=font_big, fill=PRIMARY_RGB)
     draw.rectangle([0, 0, W, 4], fill=PRIMARY_RGB)
     draw.rectangle([0, H-4, W, H], fill=PRIMARY_RGB)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     img.save(out_path, quality=95)
-    print(f"  ✅ Roku splash (1280x720) → {out_path}")
+    print(f"  ✅ Roku splash ({W}x{H}) → {out_path}")
 
 if __name__ == "__main__":
     print(f"\n🎨 Gerando assets de TV para: {APP_NAME}\n")
     for density in ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]:
         generate_android_banner(f"android/app/src/main/res/mipmap-{density}/tv_banner.png")
-    generate_roku_icon("roku_channel/images/icon_focus_hd.png", 336, 210, 160)
+    # Tamanhos exigidos hoje pela Roku: pôster do canal FHD 540x405 e HD 290x218
+    generate_roku_icon("roku_channel/images/icon_focus_fhd.png", 540, 405, 260)
+    generate_roku_icon("roku_channel/images/icon_focus_hd.png", 290, 218, 140)
     generate_roku_icon("roku_channel/images/icon_side_hd.png",  108,  69,  50)
+    generate_roku_splash("roku_channel/images/splash_fhd.jpg", 1920, 1080)
     generate_roku_splash("roku_channel/images/splash_hd.jpg")
     print("\n✅ Todos os assets gerados com sucesso!\n")

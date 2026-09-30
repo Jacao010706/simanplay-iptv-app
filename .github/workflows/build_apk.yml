@@ -119,7 +119,7 @@ jobs:
         run: |
           python3 scripts/generate_roku_manifest.py
           npx -y brighterscript@0 bsc --rootDir roku_channel --createPackage false
-          cd roku_channel && zip -r "../${SLUG}_roku.zip" manifest source components images && cd ..
+          cd roku_channel && zip -r "../${SLUG}_roku.zip" manifest source components images assets && cd ..
 
       # Samsung (Tizen) e LG (webOS): lançadores que abrem o app de TV do painel (/tv)
       - name: Generate Samsung (.wgt) + LG (.ipk)

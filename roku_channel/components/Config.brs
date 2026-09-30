@@ -5,7 +5,7 @@ function appConfig() as object
         apiBase: "https://simanplay-iptv-admin-panel.vercel.app"
         backendBase: "https://web-production-d8671.up.railway.app"
         primaryHex: "e94bff"
-        bgHex: "0a0a0f"
+        bgHex: "0d0b14"
         surfaceHex: "1a1625"
     }
 end function

@@ -39,6 +39,7 @@ sub init()
     m.devFoot = m.top.findNode("devFoot")
     m.poll = m.top.findNode("pollTimer")
     m.poll.observeField("fire", "onPollFire")
+    buildHomeGrid(primary)
 
     m.stack = []        ' pilha de telas: {kind, title, items, focus}
     m.busy = false
@@ -134,9 +135,10 @@ sub showBlocked()
     if m.lic.plan <> "" then title = "Sua assinatura venceu"
     m.devL1.text = "MAC do aparelho"
     m.devMac.text = m.mac
-    m.devL2.text = ""
-    m.devKey.text = ""
-    m.devHelp.text = title + Chr(10) + "Assine pelo celular com PIX:" + Chr(10) + "Mensal R$ 5 • Semestral R$ 8 • Anual R$ 13"
+    m.devL2.text = title
+    m.devKey.font = "font:MediumBoldSystemFont"
+    m.devKey.text = "Acesse o site para renovar"
+    m.devHelp.text = "Assine pelo celular com PIX:" + Chr(10) + "Mensal R$ 5 • Semestral R$ 8 • Anual R$ 13" + Chr(10) + Chr(10) + "simanplay-iptv-admin-panel.vercel.app"
     m.devQr.uri = qrUrl("app")
     m.devFoot.text = "Aponte a câmera do celular para o QR Code." + Chr(10) + Chr(10) + "A TV libera sozinha depois do pagamento."
     if m.lic.offline = true then m.devFoot.text = "Sem conexão com o servidor. Verifique a internet."
@@ -168,6 +170,7 @@ sub showDevice(auto as boolean)
     setDeviceLayout(true)
     m.devL1.text = "MAC do aparelho"
     m.devL2.text = "Chave do aparelho"
+    m.devKey.font = "font:LargeBoldSystemFont"
     if m.mac <> "" then
         m.devMac.text = m.mac
         m.devKey.text = m.key
@@ -372,26 +375,214 @@ end sub
 
 sub showMenu()
     m.stack = []
-    items = [
-        {title: "TV ao Vivo", action: "live"}
-        {title: "Filmes", action: "vod"}
-        {title: "Séries", action: "series"}
-        {title: "Trocar conta", action: "logout"}
-    ]
+    loadFavs()
     title = "Início"
+    m.homeOut.text = "Trocar conta / Sair"
     if m.mode = "dev" then
-        items[3].title = "Trocar lista"
         title = "Início — " + m.plName
+        m.homeOut.text = "Trocar lista / Sair"
     end if
-    renderScreen({kind: "menu", title: title, items: items, focus: 0}, true)
+    m.homeFocus = 0
+    renderScreen({kind: "home", title: title, items: [], focus: 0}, true)
+end sub
+
+' ─────────────────────────── Início em grade ───────────────────────────
+' 4 blocos (TV ao Vivo, Filmes, Séries, Favoritos) + "Trocar lista / Sair" embaixo.
+
+sub buildHomeGrid(primary as string)
+    m.homeGrid = m.top.findNode("homeGrid")
+    m.homeOut = m.top.findNode("homeOut")
+    m.homeOutBox = m.top.findNode("homeOutBox")
+    m.homeActions = ["live", "vod", "series", "favs", "out"]
+    titles = ["TV ao Vivo", "Filmes", "Séries", "Favoritos"]
+    icons = ["ico_live", "ico_vod", "ico_series", "ico_favs"]
+    m.homeFrames = []
+    m.primary = primary
+    for i = 0 to 3
+        x = 150 + i * 420
+        frame = m.homeGrid.createChild("Rectangle")
+        frame.translation = [x - 8, 262]
+        frame.width = 396
+        frame.height = 336
+        frame.color = "0x00000000"
+        tile = m.homeGrid.createChild("Rectangle")
+        tile.translation = [x, 270]
+        tile.width = 380
+        tile.height = 320
+        tile.color = sgColor(m.cfg.surfaceHex, "1A1625")
+        ico = tile.createChild("Poster")
+        ico.uri = "pkg:/assets/" + icons[i] + ".png"
+        ico.translation = [130, 50]
+        ico.width = 120
+        ico.height = 120
+        ico.blendColor = primary
+        lbl = tile.createChild("Label")
+        lbl.text = titles[i]
+        lbl.translation = [0, 210]
+        lbl.width = 380
+        lbl.horizAlign = "center"
+        lbl.font = "font:MediumBoldSystemFont"
+        lbl.color = "0xFFFFFFFF"
+        m.homeFrames.Push(frame)
+    end for
+    m.homeFocus = 0
+end sub
+
+sub updateHomeFocus()
+    for i = 0 to 3
+        if i = m.homeFocus then
+            m.homeFrames[i].color = m.primary
+        else
+            m.homeFrames[i].color = "0x00000000"
+        end if
+    end for
+    if m.homeFocus = 4 then
+        m.homeOutBox.color = m.primary
+        m.homeOut.color = "0x000000FF"
+    else
+        m.homeOutBox.color = "0x2A2538FF"
+        m.homeOut.color = "0xCCCCCCFF"
+    end if
+end sub
+
+sub homeSelect()
+    action = m.homeActions[m.homeFocus]
+    if action = "out" then
+        logout()
+    else if action = "favs" then
+        showFavorites()
+    else
+        titles = {live: "TV ao Vivo", vod: "Filmes", series: "Séries"}
+        m.section = action
+        m.sectionTitle = titles[action]
+        loadCategories()
+    end if
+end sub
+
+function homeKey(key as string) as boolean
+    if key = "left" and m.homeFocus > 0 and m.homeFocus < 4 then
+        m.homeFocus = m.homeFocus - 1
+    else if key = "right" and m.homeFocus < 3 then
+        m.homeFocus = m.homeFocus + 1
+    else if key = "down" and m.homeFocus < 4 then
+        m.homeLast = m.homeFocus
+        m.homeFocus = 4
+    else if key = "up" and m.homeFocus = 4 then
+        m.homeFocus = 0
+        if m.homeLast <> invalid then m.homeFocus = m.homeLast
+    else if key = "OK" then
+        if m.homeShown <> invalid and m.homeShown.TotalMilliseconds() < 500 then return true
+        if not m.busy then homeSelect()
+        return true
+    else
+        return false
+    end if
+    updateHomeFocus()
+    return true
+end function
+
+' ─────────────────────────── Favoritos (botão * do controle) ───────────────────────────
+
+function favKey() as string
+    if m.mode = "dev" then return "fav_pl" + m.pl
+    return "fav_si" + m.un
+end function
+
+sub loadFavs()
+    m.favs = []
+    raw = m.reg.Read(favKey())
+    if raw <> "" then
+        data = ParseJson(raw)
+        if type(data) = "roArray" then m.favs = data
+    end if
+end sub
+
+function favIndex(id as string) as integer
+    for i = 0 to m.favs.Count() - 1
+        if m.favs[i].id = id then return i
+    end for
+    return -1
+end function
+
+' Liga/desliga o favorito do canal em foco (na lista de canais ao vivo)
+sub toggleFavorite()
+    screen = m.stack[m.stack.Count() - 1]
+    idx = m.list.itemFocused
+    if idx < 0 or idx >= screen.items.Count() then return
+    it = screen.items[idx]
+    name = it.name
+    if name = invalid then name = it.title
+    favPos = favIndex(it.id)
+    if favPos >= 0 then
+        m.favs.Delete(favPos)
+        it.title = name
+        setStatus("Removido dos favoritos: " + name)
+    else
+        fav = {id: it.id, name: name}
+        if it.liveExt <> invalid then fav.liveExt = it.liveExt
+        m.favs.Unshift(fav)
+        it.title = "★ " + name
+        setStatus("★ Favorito adicionado: " + name)
+    end if
+    it.name = name
+    m.reg.Write(favKey(), FormatJson(m.favs))
+    m.reg.Flush()
+    screen.focus = idx
+    if screen.kind = "items" and m.sectionTitle = "Favoritos" and favPos >= 0 then
+        screen.items.Delete(idx)
+        if screen.focus >= screen.items.Count() then screen.focus = screen.items.Count() - 1
+        if screen.items.Count() = 0 then
+            m.stack.Pop()
+            renderScreen(m.stack[m.stack.Count() - 1], false)
+            setStatus("Nenhum favorito. Na lista de canais, aperte * para adicionar.")
+            return
+        end if
+    end if
+    renderScreen(screen, false)
+end sub
+
+sub showFavorites()
+    if m.favs.Count() = 0 then
+        setStatus("Nenhum favorito ainda. Na lista de canais, aperte * no controle para adicionar.")
+        return
+    end if
+    m.section = "live"
+    m.sectionTitle = "Favoritos"
+    items = []
+    for each f in m.favs
+        item = {title: "★ " + f.name, name: f.name, id: f.id}
+        if f.liveExt <> invalid then item.liveExt = f.liveExt
+        items.Push(item)
+    end for
+    setStatus(anyToStr(items.Count()) + " favorito(s)  •  * = remover")
+    renderScreen({kind: "items", title: "Favoritos", items: items, focus: 0}, true)
 end sub
 
 ' push=true empilha a tela nova; false só redesenha a do topo
 sub renderScreen(screen as object, push as boolean)
     if push then
-        if m.stack.Count() > 0 then m.stack[m.stack.Count() - 1].focus = m.list.itemFocused
+        if m.stack.Count() > 0 then
+            top = m.stack[m.stack.Count() - 1]
+            if top.kind = "home" then
+                top.focus = m.homeFocus
+            else
+                top.focus = m.list.itemFocused
+            end if
+        end if
         m.stack.Push(screen)
     end if
+    if screen.kind = "home" then
+        m.list.visible = false
+        m.homeGrid.visible = true
+        m.homeShown = CreateObject("roTimespan")   ' o OK que abriu a lista não pode acionar a grade
+        if screen.focus <> invalid then m.homeFocus = screen.focus
+        updateHomeFocus()
+        m.crumb.text = screen.title
+        m.top.setFocus(true)
+        return
+    end if
+    m.homeGrid.visible = false
+    m.list.visible = true
     content = CreateObject("roSGNode", "ContentNode")
     for each it in screen.items
         n = content.CreateChild("ContentNode")
@@ -429,14 +620,6 @@ sub onItemSelected()
         else
             askUser()
         end if
-    else if screen.kind = "menu" then
-        if it.action = "logout" then
-            logout()
-        else
-            m.section = it.action
-            m.sectionTitle = it.title
-            loadCategories()
-        end if
     else if screen.kind = "categories" then
         loadItems(it)
     else if screen.kind = "items" then
@@ -469,6 +652,7 @@ sub onCategories()
     for each c in arr
         if c.category_name <> invalid then items.Push({title: anyToStr(c.category_name), id: anyToStr(c.category_id)})
     end for
+    setStatus("")
     renderScreen({kind: "categories", title: m.sectionTitle, items: items, focus: 0}, true)
 end sub
 
@@ -492,8 +676,9 @@ sub onItems()
             else
                 ext = "mp4"
                 if s.container_extension <> invalid and s.container_extension <> "" then ext = anyToStr(s.container_extension)
-                item = {title: anyToStr(s.name), id: anyToStr(s.stream_id), ext: ext}
+                item = {title: anyToStr(s.name), name: anyToStr(s.name), id: anyToStr(s.stream_id), ext: ext}
                 if m.section = "live" and s.container_extension <> invalid and s.container_extension <> "" then item.liveExt = ext
+                if m.section = "live" and favIndex(item.id) >= 0 then item.title = "★ " + item.name
                 items.Push(item)
             end if
         end if
@@ -502,7 +687,11 @@ sub onItems()
         setStatus("Nenhum item nesta categoria")
         return
     end if
-    setStatus(anyToStr(items.Count()) + " itens")
+    if m.section = "live" then
+        setStatus(anyToStr(items.Count()) + " canais  •  * = favorito")
+    else
+        setStatus(anyToStr(items.Count()) + " itens")
+    end if
     renderScreen({kind: "items", title: m.sectionTitle + " › " + m.categoryTitle, items: items, focus: 0}, true)
 end sub
 
@@ -602,6 +791,16 @@ end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
+    if m.homeGrid.visible and not m.video.visible and m.top.dialog = invalid then
+        if homeKey(key) then return true
+    end if
+    if key = "options" and not m.video.visible and m.stack.Count() > 0 then
+        top = m.stack[m.stack.Count() - 1]
+        if top.kind = "items" and m.section = "live" then
+            toggleFavorite()
+            return true
+        end if
+    end if
     if key = "back" then
         if m.video.visible then
             closeVideo()

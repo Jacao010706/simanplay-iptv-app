@@ -8,7 +8,7 @@ as cores e a logo do revendedor. O nome padrão é **PRIMETV**.
 | Android TV / TV Box / Fire TV | `<nome>.apk` | O mesmo app do celular; aparece no menu da TV (Leanback) |
 | Samsung (Tizen 2.3+, TVs de 2015 em diante) | `<nome>_samsung_nao_assinado.wgt` | App **empacotado**: todas as telas dentro do .wgt |
 | LG (webOS 1.0+, TVs de 2014 em diante) | `<nome>_lg.ipk` | App **empacotado**: todas as telas dentro do .ipk |
-| Roku (qualquer Roku com SceneGraph) | `<nome>_roku.zip` | Canal nativo; usa as mesmas rotas do painel |
+| Roku (qualquer Roku com SceneGraph) | `<nome>_roku.zip` | Canal nativo (BrightScript): mesmas telas, grade com Favoritos (botão ✱) |
 
 Todos seguem o mesmo fluxo: a tela inicial mostra o **MAC** e a **chave** do aparelho
 (gerados pelo sistema) e um QR Code para `/dispositivo`, onde o cliente cadastra as
@@ -102,6 +102,30 @@ Galaxy Store (que é de celular).
 
 Só um canal de desenvolvedor por Roku fica instalado por vez. Para distribuir
 (canal público ou não listado), publique no **Roku Developer Dashboard**.
+
+No canal: setas + OK na grade; na lista de canais ao vivo o botão **✱** (asterisco)
+liga/desliga o favorito; Voltar na tela inicial fecha o canal.
+
+#### Publicar na Roku Channel Store
+A Roku **não aceita o .zip**: ele vira um pacote assinado (.pkg) gerado **num Roku seu**.
+1. Instale o `<nome>_roku.zip` no Roku em modo desenvolvedor (passos acima).
+2. No computador: `telnet <IP_DA_ROKU> 8080` e digite `genkey`. Anote a **senha** e o
+   **DevID** que aparecem — guarde junto com a chave do APK: toda atualização do canal
+   precisa ser assinada com a mesma chave (para usar em outro Roku: `rekey`).
+3. No navegador, `http://<IP_DA_ROKU>` > **Packager**: nome PRIMETV, a senha do `genkey` >
+   **Package** e baixe o `.pkg`.
+4. Em `developer.roku.com` > **Manage Channels** > **Add Channel** (tipo SDK):
+   - envie o `.pkg`; pôster do canal 540x405 (FHD) e 290x218 (HD) — os mesmos de
+     `roku_channel/images/icon_focus_*.png`;
+   - **Política de privacidade:** `https://simanplay-iptv-admin-panel.vercel.app/privacidade`;
+   - instruções para os testadores iguais às da Samsung/LG (MAC + chave + lista pública).
+5. A certificação da Roku costuma levar de 1 a 4 semanas.
+
+**Atenção (política da Roku):** a Roku exige o **Roku Pay** para assinaturas oferecidas
+dentro do canal. O PRIMETV manda pagar por PIX no site (QR Code), então a publicação
+**pública** pode ser recusada por isso. Alternativas: canal **beta** (até 20 aparelhos,
+por link, sem loja) ou publicar como player gratuito e cobrar a assinatura só fora
+da Roku (pelo revendedor). Verifique as regras atuais no Developer Dashboard antes de enviar.
 
 ## Lojas (Samsung / LG / Roku / Google Play)
 
