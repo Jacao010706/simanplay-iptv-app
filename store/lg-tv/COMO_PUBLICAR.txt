@@ -1,0 +1,33 @@
+PRIMETV — APP LG SMART TV (webOS)
+(o .wgt/.ipk de cada versão sai nas Releases do GitHub)
+
+ARQUIVO: primetv_lg.ipk
+  App completo empacotado (todas as telas dentro do arquivo), igual ao da Samsung:
+  - Ativação: MAC + chave do aparelho + QR Code para cadastrar as listas
+  - Início: TV ao Vivo, Filmes, Séries e Favoritos (setas + OK, ou Magic Remote)
+  - Licença vencida: QR Code + "Acesse o site para renovar"
+  Cores #e94bff / #0d0b14. Funciona em TVs LG de 2014 em diante (webOS 1.0+).
+
+JÁ ESTÁ PRONTO PARA ENVIAR — a LG não exige assinatura do desenvolvedor
+(ela assina na publicação).
+
+ENVIO: LG Seller Lounge — https://seller.lgappstv.com
+  1. Crie a conta e complete o cadastro de vendedor (a LG pode pedir dados de empresa/CNPJ).
+  2. Apps > App Registration > tipo "Web App", id com.primetv.app, envie o primetv_lg.ipk.
+  3. Preencha:
+     - Nome: PRIMETV   Categoria: Entertainment/Video   País: Brasil   Idioma: Português
+     - Ícones 80x80 e 130x130: já estão dentro do .ipk
+     - Capturas 1920x1080: pasta "capturas-1920x1080" (dados de exemplo)
+     - Política de privacidade: https://simanplay-iptv-admin-panel.vercel.app/privacidade
+     - Vendedor: Akitemtech — suporte: akitemtech@gmail.com
+  4. Instruções para os testadores (cole no campo de teste):
+     "O PRIMETV é um player: não traz canais. Ao abrir, o app mostra o MAC e a chave.
+      Acesse simanplay-iptv-admin-panel.vercel.app/dispositivo, digite o MAC e a chave
+      e adicione a lista M3U de teste https://iptv-org.github.io/iptv/countries/br.m3u
+      (canais abertos, públicos). Em até 20 segundos a lista aparece na TV."
+
+  A análise costuma levar de 2 a 6 semanas.
+
+TESTAR NA SUA TV ANTES (opcional): app "Developer Mode" da LG + ares-install
+  (passo a passo em docs/TV_APPS.md no repositório do app no GitHub).
+Toda nova versão sai em https://github.com/Jacao010706/simanplay-iptv-app/releases

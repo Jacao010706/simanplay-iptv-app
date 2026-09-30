@@ -1,0 +1,33 @@
+PRIMETV — APP SAMSUNG SMART TV (TIZEN)
+(o .wgt/.ipk de cada versão sai nas Releases do GitHub)
+
+ARQUIVO: primetv_samsung_nao_assinado.wgt
+  App completo empacotado (todas as telas dentro do arquivo):
+  - Ativação: MAC + chave do aparelho + QR Code para cadastrar as listas
+  - Início: TV ao Vivo, Filmes, Séries e Favoritos (setas + OK)
+  - Licença vencida: QR Code + "Acesse o site para renovar"
+  Cores #e94bff / #0d0b14. Funciona em TVs Samsung de 2015 em diante (Tizen 2.3+).
+
+ANTES DE ENVIAR: ASSINAR (só você pode fazer, com a sua conta Samsung)
+  1. Instale o Tizen Studio + "Samsung Certificate Extension".
+  2. Tools > Certificate Manager > novo perfil "Samsung"
+     (certificado de autor + distribuidor, privilégio "Public").
+  3. Assine:  tizen package -t wgt -s <seu_perfil> -- primetv_samsung_nao_assinado.wgt
+
+ENVIO: Samsung Apps TV Seller Office — https://seller.samsungapps.com/tv
+  (não é a Galaxy Store; aquela é para celular)
+  - Nome: PRIMETV   Categoria: Video   Idioma: Português
+  - Ícone 512x423: já está dentro do .wgt
+  - Capturas 1920x1080: pasta "capturas-1920x1080" (dados de exemplo)
+  - Política de privacidade: https://simanplay-iptv-admin-panel.vercel.app/privacidade
+  - Instruções para os revisores (cole no campo de teste):
+    "O PRIMETV é um player: não traz canais. Ao abrir, o app mostra o MAC e a chave.
+     Acesse simanplay-iptv-admin-panel.vercel.app/dispositivo, digite o MAC e a chave
+     e adicione a lista M3U de teste https://iptv-org.github.io/iptv/countries/br.m3u
+     (canais abertos, públicos). Em até 20 segundos a lista aparece na TV."
+
+  A Samsung pode pedir dados de empresa (CNPJ) para aprovar a conta de vendedor.
+  A análise do app costuma levar de 2 a 4 semanas.
+
+Detalhes técnicos: docs/TV_APPS.md no repositório do app no GitHub.
+Toda nova versão sai em https://github.com/Jacao010706/simanplay-iptv-app/releases
