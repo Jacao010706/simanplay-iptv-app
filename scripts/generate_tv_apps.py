@@ -3,8 +3,10 @@
 generate_tv_apps.py
 Gera os lançadores das Smart TVs Samsung (Tizen) e LG (webOS).
 
-Os dois são "apps hospedados": um pacote pequeno que abre o app de TV do painel
-(/tv) com a marca do revendedor. Correções no painel chegam às TVs sem reinstalar.
+Samsung: app EMPACOTADO — o app de TV do painel (/tv: MAC + chave, listas, TV ao Vivo,
+Filmes, Séries, Favoritos, assinatura) vai inteiro dentro do .wgt, como a Samsung exige
+para publicar na loja. É baixado do painel no build (TV_URL) com o hls.js e o qrcode.js.
+LG: "app hospedado" — pacote pequeno que abre o /tv do painel (atualiza sem reinstalar).
 
 Saídas:
   build_tv/samsung/  -> empacotado aqui em <SLUG>_samsung_nao_assinado.wgt
@@ -12,7 +14,8 @@ Saídas:
   build_tv/lg/       -> empacotado no CI com `ares-package` (formato .ipk oficial)
 
 Variáveis (vindas de normalize_inputs.py): APP_NAME, SLUG, PRIMARY_HEX, BG_HEX,
-LOGO_URL, TV_URL (opcional), GITHUB_RUN_NUMBER.
+LOGO_URL, TV_URL (opcional), TV_SRC_DIR (opcional: pasta local com index.html e
+qrcode.js, em vez de baixar do painel), GITHUB_RUN_NUMBER.
 """
 import hashlib
 import html
@@ -30,6 +33,7 @@ from PIL import Image, ImageDraw
 
 DEFAULT_NAME = "PRIMETV"
 DEFAULT_TV_URL = "https://simanplay-iptv-admin-panel.vercel.app/tv"
+HLS_JS_URL = "https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"
 
 APP_NAME = (os.environ.get("APP_NAME") or DEFAULT_NAME).strip()[:40]
 SLUG = re.sub(r"[^a-z0-9_]", "", (os.environ.get("SLUG") or "primetv").lower()) or "primetv"
@@ -123,21 +127,71 @@ def lg_app_id():
     return "com.primetv.app" if part == "primetv" else f"com.primetv.{part}"
 
 
+def fetch(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Cache-Control": "no-cache"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.read()
+
+
+def tv_sources():
+    """index.html + qrcode.js do app de TV do painel (ou de TV_SRC_DIR) e o hls.js."""
+    src_dir = os.environ.get("TV_SRC_DIR")
+    if src_dir:
+        with open(os.path.join(src_dir, "index.html"), encoding="utf-8") as f:
+            page = f.read()
+        with open(os.path.join(src_dir, "qrcode.js"), "rb") as f:
+            qr = f.read()
+    else:
+        base = TV_URL.split("?")[0].rstrip("/")
+        page = fetch(base + "/index.html").decode("utf-8")
+        qr = fetch(base + "/qrcode.js")
+    return page, qr, fetch(HLS_JS_URL)
+
+
+def package_page(page):
+    """Ajusta o /tv para rodar de dentro do .wgt: scripts locais e marca embutida."""
+    for old, new in [('<script src="/tv/qrcode.js"></script>', '<script src="qrcode.js"></script>'),
+                     (f'<script src="{HLS_JS_URL}"></script>', '<script src="hls.min.js"></script>')]:
+        if old not in page:
+            raise ValueError(f"app de TV mudou: não achei {old!r}")
+        page = page.replace(old, new)
+    brand = {"name": APP_NAME, "color": PRIMARY, "bg": BG}
+    if LOGO_URL.startswith("https://"):
+        brand["logo"] = LOGO_URL
+    brand_js = json.dumps(brand, ensure_ascii=False).replace("</", "<\\/")
+    inject = "<script>window.PRIMETV_BRAND=" + brand_js + ";</script>\n"
+    page = page.replace('<script src="hls.min.js"></script>', inject + '<script src="hls.min.js"></script>', 1)
+    page = re.sub(r"<title>.*?</title>", "<title>" + html.escape(APP_NAME) + "</title>", page, count=1, flags=re.S)
+    return page
+
+
 def build_samsung():
     d = os.path.join(OUT, "samsung")
     shutil.rmtree(d, ignore_errors=True)
     package, name = tizen_ids()
-    cfg = fill(read("samsung_config.xml"))
+    try:
+        page, qr, hls = tv_sources()
+        files = {"index.html": package_page(page), "qrcode.js": qr, "hls.min.js": hls}
+        template = "samsung_packaged_config.xml"
+        kind = "empacotado"
+    except Exception as e:
+        # Sem acesso ao painel no build: gera o lançador hospedado (funciona, mas a loja pode recusar)
+        print(f"  aviso: não consegui empacotar o app de TV ({e}); gerando lançador hospedado")
+        files = {"index.html": fill(read("index.html"))}
+        template = "samsung_config.xml"
+        kind = "hospedado"
+    cfg = fill(read(template))
     cfg = (cfg.replace("__TIZEN_PACKAGE__", package).replace("__TIZEN_NAME__", name)
               .replace("__WIDGET_ID__", f"http://primetv.lat/{package}"))
     write(os.path.join(d, "config.xml"), cfg)
-    write(os.path.join(d, "index.html"), fill(read("index.html")))
+    for fname, data in files.items():
+        write(os.path.join(d, fname), data)
     write(os.path.join(d, "icon.png"), make_image(512, 423))
     out = f"{SLUG}_samsung_nao_assinado.wgt"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
         for fname in sorted(os.listdir(d)):
             zf.write(os.path.join(d, fname), fname)
-    print(f"  Samsung: {out} (package {package}.{name}) — precisa ser assinado")
+    print(f"  Samsung ({kind}): {out} (package {package}.{name}) — precisa ser assinado")
 
 
 def build_lg():

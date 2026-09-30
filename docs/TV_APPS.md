@@ -6,13 +6,20 @@ as cores e a logo do revendedor. O nome padrão é **PRIMETV**.
 | Plataforma | Arquivo gerado | Como funciona |
 |---|---|---|
 | Android TV / TV Box / Fire TV | `<nome>.apk` | O mesmo app do celular; aparece no menu da TV (Leanback) |
-| Samsung (Tizen 2.3+, TVs de 2015 em diante) | `<nome>_samsung_nao_assinado.wgt` | Lançador que abre o app de TV do painel (`/tv`) |
+| Samsung (Tizen 2.3+, TVs de 2015 em diante) | `<nome>_samsung_nao_assinado.wgt` | App **empacotado**: todas as telas dentro do .wgt |
 | LG (webOS 1.0+, TVs de 2014 em diante) | `<nome>_lg.ipk` | Lançador que abre o app de TV do painel (`/tv`) |
 | Roku (qualquer Roku com SceneGraph) | `<nome>_roku.zip` | Canal nativo; usa as mesmas rotas do painel |
 
-Samsung e LG são **apps hospedados**: o pacote instalado só abre
-`https://simanplay-iptv-admin-panel.vercel.app/tv/?name=...&color=...`. Correções
-no painel chegam a todas as TVs sem reinstalar nada.
+Todos seguem o mesmo fluxo: a tela inicial mostra o **MAC** e a **chave** do aparelho
+(gerados pelo sistema) e um QR Code para `/dispositivo`, onde o cliente cadastra as
+listas; o revendedor ativa pelo MAC no painel. Depois: grade TV ao Vivo, Filmes,
+Séries e Favoritos. Com a licença vencida aparece o QR Code do PIX ("Acesse o site para renovar").
+
+- **Samsung:** app **empacotado** (exigência da loja). O build baixa o app de TV do painel
+  (`public/tv/index.html` + `qrcode.js`) e o `hls.min.js` e coloca tudo dentro do `.wgt`
+  (`scripts/generate_tv_apps.py`). Mudanças no `/tv` só chegam à TV numa versão nova do `.wgt`.
+- **LG:** app hospedado: o pacote abre `https://simanplay-iptv-admin-panel.vercel.app/tv/?name=...`,
+  então correções no painel chegam às TVs sem reinstalar.
 
 ## Compatibilidade com TVs antigas
 
@@ -53,7 +60,24 @@ sai do build como `_nao_assinado.wgt`.
    sdb connect <IP_DA_TV>
    tizen install -n <nome>_samsung_nao_assinado.wgt -t <id_da_tv>
    ```
-Para lojas, envie ao **Samsung Seller Office**, que faz a assinatura de distribuição.
+#### Publicar na Samsung (Seller Office — apps de TV)
+A loja de TVs é o **Samsung Apps TV Seller Office** (`seller.samsungapps.com/tv`), não a
+Galaxy Store (que é de celular).
+1. Crie a conta no Seller Office e peça a parceria de **distribuição** (a Samsung pode
+   pedir dados de empresa/CNPJ e leva alguns dias para aprovar).
+2. No Tizen Studio, crie o certificado **Samsung** com privilégio **Public** para
+   distribuição e assine o `.wgt` (passo 4 acima, sem DUID de TV).
+3. Em **Applications > Create App**, preencha:
+   - nome **PRIMETV**, categoria **Video**, idioma Português;
+   - ícone 512x423 (já está dentro do `.wgt`) e capturas 1920x1080;
+   - **Política de privacidade:** `https://simanplay-iptv-admin-panel.vercel.app/privacidade`;
+   - envie o `.wgt` **assinado**.
+4. **Instruções para os revisores** (sem isso o app é recusado por "não funciona"):
+   "O PRIMETV é um player: não traz canais. Ao abrir, o app mostra o MAC e a chave.
+   Acesse simanplay-iptv-admin-panel.vercel.app/dispositivo, digite o MAC e a chave e
+   adicione a lista M3U de teste https://iptv-org.github.io/iptv/countries/br.m3u
+   (canais abertos, públicos). Em até 20 s a lista aparece na TV."
+5. A Samsung testa em TVs de vários anos; a análise costuma levar de 2 a 4 semanas.
 
 ### Roku
 1. No controle da Roku: Home 3x, Cima 2x, Direita, Esquerda, Direita, Esquerda,

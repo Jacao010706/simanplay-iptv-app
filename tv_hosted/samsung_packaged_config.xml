@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- App Samsung EMPACOTADO: todas as telas ficam dentro do .wgt (ativação por MAC,
+     listas, TV ao Vivo, Filmes, Séries, Favoritos e assinatura). Só os dados vêm da internet. -->
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="__WIDGET_ID__"
+        version="__VERSION__"
+        viewmodes="maximized">
+
+    <!-- package: exatamente 10 caracteres [A-Za-z0-9]; application id = package.nome -->
+    <tizen:application id="__TIZEN_PACKAGE__.__TIZEN_NAME__"
+                       package="__TIZEN_PACKAGE__"
+                       required_version="2.3"/>
+
+    <content src="index.html"/>
+
+    <!-- Acesso à API (licença/listas) e aos servidores de vídeo que o usuário cadastra -->
+    <access origin="*" subdomains="true"/>
+    <tizen:content-security-policy>default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;</tizen:content-security-policy>
+
+    <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
+
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:privilege name="http://developer.samsung.com/privilege/network.public"/>
+
+    <tizen:profile name="tv-samsung"/>
+
+    <name>__APP_NAME_XML__</name>
+    <description>Reprodutor de listas IPTV (Xtream e M3U) do próprio usuário. Não inclui conteúdo.</description>
+    <author email="akitemtech@gmail.com" href="https://simanplay-iptv-admin-panel.vercel.app/privacidade">Akitemtech</author>
+    <icon src="icon.png"/>
+
+    <tizen:setting screen-orientation="landscape"
+                   context-menu="disable"
+                   background-support="disable"
+                   encryption="disable"
+                   install-location="auto"
+                   hwkey-event="enable"/>
+</widget>
