@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'core/providers/theme_provider.dart';
-import 'screens/activation_screen_v3.dart';
+import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/app_config.dart';
 
@@ -25,8 +25,11 @@ class IptvPlayerApp extends StatelessWidget {
             title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
-            // Teste grátis de 7 dias; depois exige plano pago no site (PIX)
-            home: const LicenseGate(child: ActivationScreen()),
+            // Tela inicial estilo IBO: MAC + chave do aparelho e as listas cadastradas no site
+            home: const DeviceHomeScreen(),
+            // Teste grátis de 7 dias; depois exige plano pago no site (PIX).
+            // Envolve o app inteiro, então o bloqueio vale em qualquer tela.
+            builder: (context, child) => LicenseGate(child: child ?? const SizedBox.shrink()),
           );
         },
       ),

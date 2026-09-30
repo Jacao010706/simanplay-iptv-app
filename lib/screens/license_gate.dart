@@ -49,7 +49,7 @@ class _LicenseGateState extends State<LicenseGate> with WidgetsBindingObserver {
         final messenger = ScaffoldMessenger.maybeOf(context);
         messenger?.showSnackBar(SnackBar(
           duration: const Duration(seconds: 6),
-          content: Text('Teste grátis: ${st.daysLeft} dia(s) restante(s). Código do aparelho: ${st.deviceCode}'),
+          content: Text('Teste grátis: ${st.daysLeft} dia(s) restante(s). MAC: ${st.displayId}'),
         ));
       });
     }
@@ -141,10 +141,10 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
           style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
         ),
         const SizedBox(height: 16),
-        const Text('Código do aparelho', style: TextStyle(color: Colors.white54, fontSize: 13)),
+        const Text('MAC do aparelho', style: TextStyle(color: Colors.white54, fontSize: 13)),
         const SizedBox(height: 4),
-        SelectableText(st.deviceCode,
-            style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold, letterSpacing: 4)),
+        Text(st.displayId,
+            style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold, letterSpacing: 2)),
         const SizedBox(height: 18),
         Wrap(spacing: 12, runSpacing: 12, children: [
           ElevatedButton.icon(

@@ -8,7 +8,7 @@ import '../models/channel.dart';
 import '../models/movie.dart';
 import '../models/series.dart';
 import '../widgets/banner_background.dart';
-import 'activation_screen_v3.dart';
+import 'device_home_screen.dart';
 import 'live_tv_screen.dart';
 import 'movies_screen.dart';
 import 'series_screen.dart';
@@ -42,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('session');
     if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ActivationScreen()));
+    // Volta para a tela do aparelho (MAC + listas), sem entrar sozinho de novo
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const DeviceHomeScreen(autoEnter: false)), (_) => false);
   }
 
   @override

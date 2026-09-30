@@ -10,7 +10,9 @@ import '../core/app_config.dart';
 
 /// Situação da licença de uso do app neste aparelho.
 class LicenseState {
-  final String deviceCode; // ex.: K7M4-Q2XP
+  final String deviceCode; // código interno (credencial do app no /check)
+  final String mac; // ex.: 7A:3F:91:C2:0B:E4 — mostrado ao cliente
+  final String deviceKey; // 6 dígitos: com o MAC, libera o cadastro de listas no site
   final String status; // trial | active | expired
   final bool allowed;
   final int daysLeft;
@@ -21,6 +23,8 @@ class LicenseState {
 
   const LicenseState({
     required this.deviceCode,
+    this.mac = '',
+    this.deviceKey = '',
     required this.status,
     required this.allowed,
     required this.daysLeft,
@@ -33,6 +37,8 @@ class LicenseState {
   factory LicenseState.fromJson(Map<String, dynamic> j, {bool offline = false}) {
     return LicenseState(
       deviceCode: (j['device_code'] ?? '').toString(),
+      mac: (j['mac'] ?? '').toString(),
+      deviceKey: (j['device_key'] ?? '').toString(),
       status: (j['status'] ?? 'expired').toString(),
       allowed: j['allowed'] == true,
       daysLeft: (j['days_left'] is int) ? j['days_left'] as int : int.tryParse('${j['days_left']}') ?? 0,
@@ -44,6 +50,9 @@ class LicenseState {
   }
 
   bool get isTrial => status == 'trial';
+
+  /// Identificação para mostrar ao cliente (MAC; código antigo se o servidor ainda não mandou).
+  String get displayId => mac.isNotEmpty ? mac : deviceCode;
 }
 
 /// Teste grátis de 7 dias + planos pagos no site (PIX). O app só consulta o servidor.
@@ -52,6 +61,9 @@ class LicenseService {
   static const _kCache = 'license_last_state';
   static const _channel = MethodChannel('primetv/device');
   static const _timeout = Duration(seconds: 15);
+
+  /// Última situação conhecida (a tela inicial usa o MAC e a chave daqui).
+  static LicenseState? current;
 
   static String get _platform {
     if (kIsWeb) return 'web';
@@ -113,6 +125,8 @@ class LicenseService {
       }
       await prefs.setString(_kCache, jsonEncode({
         'device_code': st.deviceCode,
+        'mac': st.mac,
+        'device_key': st.deviceKey,
         'status': st.status,
         'allowed': st.allowed,
         'days_left': st.daysLeft,
@@ -120,9 +134,9 @@ class LicenseService {
         'pay_url': st.payUrl,
         'plan': st.plan,
       }));
-      return st;
+      return current = st;
     } catch (_) {
-      return _fromCache(prefs);
+      return current = _fromCache(prefs);
     }
   }
 
@@ -144,6 +158,8 @@ class LicenseService {
     final stillValid = cached.until != null && cached.until!.isAfter(DateTime.now().toUtc());
     return LicenseState(
       deviceCode: cached.deviceCode,
+      mac: cached.mac,
+      deviceKey: cached.deviceKey,
       status: stillValid ? cached.status : 'expired',
       allowed: cached.allowed && stillValid,
       daysLeft: cached.daysLeft,

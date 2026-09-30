@@ -1,13 +1,11 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:network_info_plus/network_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/app_config.dart';
 import '../models/app_session.dart';
 import '../services/api_service.dart';
+import '../services/license_service.dart';
 import '../services/xtream_service.dart';
-import 'home_screen_v2.dart';
+import 'device_home_screen.dart';
 
 class ActivationScreen extends StatefulWidget {
   const ActivationScreen({super.key});
@@ -39,14 +37,16 @@ class _ActivationScreenState extends State<ActivationScreen>
   bool _m3uLoading = false;
   String? _m3uError;
 
-  String? _macAddress;
-  bool _checkingMac = true;
+  // MAC do aparelho gerado pelo sistema (o mesmo mostrado na tela inicial)
+  String? get _macAddress {
+    final mac = LicenseService.current?.mac ?? '';
+    return mac.isEmpty ? null : mac;
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _initMacAndLogin();
   }
 
   @override
@@ -59,67 +59,6 @@ class _ActivationScreenState extends State<ActivationScreen>
     _xPassCtrl.dispose();
     _m3uUrlCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _initMacAndLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final sessionJson = prefs.getString('session');
-    if (sessionJson != null) {
-      try {
-        final session = AppSession.fromJson(
-            jsonDecode(sessionJson) as Map<String, dynamic>);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
-        );
-        return;
-      } catch (_) {}
-    }
-    String? mac;
-    try {
-      final info = NetworkInfo();
-      mac = await info.getWifiBSSID();
-      mac = mac?.toUpperCase().trim();
-      if (mac == null || mac.isEmpty || mac == '02:00:00:00:00:00') {
-        mac = null;
-      }
-    } catch (_) {
-      mac = null;
-    }
-    setState(() {
-      _macAddress = mac;
-      _checkingMac = false;
-    });
-    if (mac != null) {
-      try {
-        final clientSession = await ApiService.activateByMac(macAddress: mac);
-        if (clientSession.status == 'ativo' &&
-            clientSession.allPlaylistUrls.isNotEmpty) {
-          final session = AppSession.simanplay(
-            username: 'mac:$mac',
-            password: '',
-            primaryM3uUrl: clientSession.primaryUrl ?? '',
-            backupM3uUrls: clientSession.backupPlaylists
-                .map((b) => b.playlistUrl ?? '')
-                .where((u) => u.isNotEmpty)
-                .toList(),
-            expiresAt: clientSession.expiresAt,
-            xtreamHost: clientSession.xtreamHost,
-            xtreamUsername: clientSession.xtreamUsername,
-            xtreamPassword: clientSession.xtreamPassword,
-          );
-          final prefs2 = await SharedPreferences.getInstance();
-          await prefs2.setString('session', jsonEncode(session.toJson()));
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
-          );
-          return;
-        }
-      } catch (_) {}
-    }
   }
 
   Future<void> _loginSimanPlay() async {
@@ -160,13 +99,8 @@ class _ActivationScreenState extends State<ActivationScreen>
         xtreamUsername: clientSession.xtreamUsername,
         xtreamPassword: clientSession.xtreamPassword,
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session', jsonEncode(session.toJson()));
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
-      );
+      await openHome(context, session);
     } catch (e) {
       setState(() {
         _spError = e.toString().replaceFirst('Exception: ', '');
@@ -197,13 +131,8 @@ class _ActivationScreenState extends State<ActivationScreen>
         username: _xUserCtrl.text.trim(),
         password: _xPassCtrl.text,
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session', jsonEncode(session.toJson()));
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
-      );
+      await openHome(context, session);
     } catch (e) {
       setState(() {
         _xError = e.toString().replaceFirst('Exception: ', '');
@@ -232,13 +161,8 @@ class _ActivationScreenState extends State<ActivationScreen>
         password: '',
         primaryM3uUrl: url,
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session', jsonEncode(session.toJson()));
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen(session: session)),
-      );
+      await openHome(context, session);
     } catch (e) {
       setState(() {
         _m3uError = e.toString().replaceFirst('Exception: ', '');
@@ -267,25 +191,6 @@ class _ActivationScreenState extends State<ActivationScreen>
     final bg = Color(AppConfig.backgroundColor);
     final surface = Color(AppConfig.surfaceColor);
 
-    if (_checkingMac) {
-      return Scaffold(
-        backgroundColor: bg,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLogo(primary),
-              const SizedBox(height: 24),
-              CircularProgressIndicator(color: primary),
-              const SizedBox(height: 16),
-              const Text('Verificando dispositivo...',
-                  style: TextStyle(color: Colors.white54)),
-            ],
-          ),
-        ),
-      );
-    }
-
     final hasBanner = AppConfig.bannerUrl.isNotEmpty;
 
     return Scaffold(
@@ -302,6 +207,13 @@ class _ActivationScreenState extends State<ActivationScreen>
             ),
           if (hasBanner)
             Container(color: Colors.black.withOpacity(0.55)),
+          if (Navigator.of(context).canPop())
+            const SafeArea(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(padding: EdgeInsets.all(8), child: BackButton(color: Colors.white70)),
+              ),
+            ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
