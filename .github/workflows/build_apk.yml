@@ -125,7 +125,7 @@ jobs:
       - name: Generate Samsung (.wgt) + LG (.ipk)
         run: |
           python3 scripts/generate_tv_apps.py
-          npx -y -p @webos-tools/cli ares-package build_tv/lg -o build_tv
+          npx -y -p @webos-tools/cli ares-package --no-minify build_tv/lg -o build_tv
           mv build_tv/*.ipk "${SLUG}_lg.ipk"
 
       - name: Flutter pub get

@@ -6,7 +6,8 @@ Gera os lançadores das Smart TVs Samsung (Tizen) e LG (webOS).
 Samsung: app EMPACOTADO — o app de TV do painel (/tv: MAC + chave, listas, TV ao Vivo,
 Filmes, Séries, Favoritos, assinatura) vai inteiro dentro do .wgt, como a Samsung exige
 para publicar na loja. É baixado do painel no build (TV_URL) com o hls.js e o qrcode.js.
-LG: "app hospedado" — pacote pequeno que abre o /tv do painel (atualiza sem reinstalar).
+LG: também EMPACOTADO (mesmo app, dentro do .ipk), para publicar na LG Content Store.
+Se o painel estiver fora do ar no build, os dois caem para o lançador hospedado.
 
 Saídas:
   build_tv/samsung/  -> empacotado aqui em <SLUG>_samsung_nao_assinado.wgt
@@ -165,21 +166,32 @@ def package_page(page):
     return page
 
 
+_PACKAGED = {}
+
+
+def packaged_files():
+    """Arquivos do app de TV empacotado (baixados uma vez e usados na Samsung e na LG).
+    None = sem acesso ao painel no build: usa o lançador hospedado (funciona, mas a loja pode recusar)."""
+    if "files" not in _PACKAGED:
+        try:
+            page, qr, hls = tv_sources()
+            _PACKAGED["files"] = {"index.html": package_page(page), "qrcode.js": qr, "hls.min.js": hls}
+        except Exception as e:
+            print(f"  aviso: não consegui empacotar o app de TV ({e}); gerando lançador hospedado")
+            _PACKAGED["files"] = None
+    return _PACKAGED["files"]
+
+
 def build_samsung():
     d = os.path.join(OUT, "samsung")
     shutil.rmtree(d, ignore_errors=True)
     package, name = tizen_ids()
-    try:
-        page, qr, hls = tv_sources()
-        files = {"index.html": package_page(page), "qrcode.js": qr, "hls.min.js": hls}
-        template = "samsung_packaged_config.xml"
-        kind = "empacotado"
-    except Exception as e:
-        # Sem acesso ao painel no build: gera o lançador hospedado (funciona, mas a loja pode recusar)
-        print(f"  aviso: não consegui empacotar o app de TV ({e}); gerando lançador hospedado")
+    files = packaged_files()
+    if files:
+        template, kind = "samsung_packaged_config.xml", "empacotado"
+    else:
         files = {"index.html": fill(read("index.html"))}
-        template = "samsung_config.xml"
-        kind = "hospedado"
+        template, kind = "samsung_config.xml", "hospedado"
     cfg = fill(read(template))
     cfg = (cfg.replace("__TIZEN_PACKAGE__", package).replace("__TIZEN_NAME__", name)
               .replace("__WIDGET_ID__", f"http://primetv.lat/{package}"))
@@ -199,11 +211,14 @@ def build_lg():
     shutil.rmtree(d, ignore_errors=True)
     info = json.loads(fill(read("lg_appinfo.json")).replace("__LG_APP_ID__", lg_app_id()))
     write(os.path.join(d, "appinfo.json"), json.dumps(info, ensure_ascii=False, indent=2))
-    write(os.path.join(d, "index.html"), fill(read("index.html")))
+    files = packaged_files() or {"index.html": fill(read("index.html"))}
+    for fname, data in files.items():
+        write(os.path.join(d, fname), data)
     write(os.path.join(d, "icon.png"), make_image(80, 80))
     write(os.path.join(d, "largeIcon.png"), make_image(130, 130))
     write(os.path.join(d, "bgImage.png"), make_image(1920, 1080, logo_ratio=0.35))
-    print(f"  LG: {d}/ (id {info['id']}) — empacotar com: ares-package {d}")
+    kind = "empacotado" if packaged_files() else "hospedado"
+    print(f"  LG ({kind}): {d}/ (id {info['id']}) — empacotar com: ares-package --no-minify {d}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 {
   "id": "__LG_APP_ID__",
   "version": "__VERSION__",
-  "vendor": "__APP_NAME_JSON__",
+  "vendor": "Akitemtech",
   "type": "web",
   "main": "index.html",
   "title": "__APP_NAME_JSON__",

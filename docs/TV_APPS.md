@@ -7,7 +7,7 @@ as cores e a logo do revendedor. O nome padrão é **PRIMETV**.
 |---|---|---|
 | Android TV / TV Box / Fire TV | `<nome>.apk` | O mesmo app do celular; aparece no menu da TV (Leanback) |
 | Samsung (Tizen 2.3+, TVs de 2015 em diante) | `<nome>_samsung_nao_assinado.wgt` | App **empacotado**: todas as telas dentro do .wgt |
-| LG (webOS 1.0+, TVs de 2014 em diante) | `<nome>_lg.ipk` | Lançador que abre o app de TV do painel (`/tv`) |
+| LG (webOS 1.0+, TVs de 2014 em diante) | `<nome>_lg.ipk` | App **empacotado**: todas as telas dentro do .ipk |
 | Roku (qualquer Roku com SceneGraph) | `<nome>_roku.zip` | Canal nativo; usa as mesmas rotas do painel |
 
 Todos seguem o mesmo fluxo: a tela inicial mostra o **MAC** e a **chave** do aparelho
@@ -15,11 +15,10 @@ Todos seguem o mesmo fluxo: a tela inicial mostra o **MAC** e a **chave** do apa
 listas; o revendedor ativa pelo MAC no painel. Depois: grade TV ao Vivo, Filmes,
 Séries e Favoritos. Com a licença vencida aparece o QR Code do PIX ("Acesse o site para renovar").
 
-- **Samsung:** app **empacotado** (exigência da loja). O build baixa o app de TV do painel
-  (`public/tv/index.html` + `qrcode.js`) e o `hls.min.js` e coloca tudo dentro do `.wgt`
-  (`scripts/generate_tv_apps.py`). Mudanças no `/tv` só chegam à TV numa versão nova do `.wgt`.
-- **LG:** app hospedado: o pacote abre `https://simanplay-iptv-admin-panel.vercel.app/tv/?name=...`,
-  então correções no painel chegam às TVs sem reinstalar.
+- **Samsung e LG:** apps **empacotados** (as lojas recusam apps que só abrem um site). O build
+  baixa o app de TV do painel (`public/tv/index.html` + `qrcode.js`) e o `hls.min.js` e coloca
+  tudo dentro do `.wgt` e do `.ipk` (`scripts/generate_tv_apps.py`). Mudanças no `/tv` só
+  chegam às TVs numa versão nova do pacote. A versão no navegador (`/tv`) continua igual.
 
 ## Compatibilidade com TVs antigas
 
@@ -45,6 +44,22 @@ Em aparelhos com APK antigo de outra assinatura, desinstale o antigo antes.
 
 O Developer Mode expira a cada 1000 horas (renovável no app). Para distribuição
 sem essa limitação é preciso publicar na LG Content Store (LG Seller Lounge).
+
+#### Publicar na LG Content Store (LG Seller Lounge)
+O `.ipk` já sai pronto para envio: a LG **não** exige assinatura do desenvolvedor
+(ela assina na publicação).
+1. Crie a conta em `seller.lgappstv.com` (LG Seller Lounge) e complete o cadastro de
+   vendedor (a LG pode pedir dados de empresa/CNPJ).
+2. **Apps > App Registration** > tipo **Web App**, id `com.primetv.app`, e envie o `.ipk`.
+3. Preencha:
+   - nome **PRIMETV**, categoria **Entertainment/Video**, países Brasil, idioma Português;
+   - ícones 80x80 e 130x130 (já estão dentro do `.ipk`) e capturas 1920x1080;
+   - **Política de privacidade:** `https://simanplay-iptv-admin-panel.vercel.app/privacidade`;
+   - vendedor/desenvolvedor: **Akitemtech**, suporte `akitemtech@gmail.com`.
+4. **Instruções para os testadores** (as mesmas da Samsung): o app não traz canais; ao abrir
+   mostra MAC e chave; em `simanplay-iptv-admin-panel.vercel.app/dispositivo` digite o MAC e a
+   chave e adicione a lista pública `https://iptv-org.github.io/iptv/countries/br.m3u`.
+5. A LG testa com controle comum e Magic Remote; a análise costuma levar de 2 a 6 semanas.
 
 ### Samsung (Tizen)
 A Samsung **exige assinatura** com certificado emitido pela Samsung; o arquivo
