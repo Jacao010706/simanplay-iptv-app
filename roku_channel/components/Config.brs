@@ -3,6 +3,7 @@ function appConfig() as object
     return {
         appName: "PRIMETV"
         apiBase: "https://simanplay-iptv-admin-panel.vercel.app"
+        backendBase: "https://web-production-d8671.up.railway.app"
         primaryHex: "e94bff"
         bgHex: "0a0a0f"
         surfaceHex: "1a1625"

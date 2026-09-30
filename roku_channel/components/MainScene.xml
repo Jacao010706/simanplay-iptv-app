@@ -16,9 +16,22 @@
                focusBitmapBlendColor="0xE94BFFFF" color="0xFFFFFFFF" focusedColor="0x000000FF"
                font="font:MediumSystemFont" focusedFont="font:MediumBoldSystemFont" vertFocusAnimationStyle="floatingFocus" />
 
+    <!-- Painel do aparelho (MAC + chave + QR) e da assinatura vencida -->
+    <Group id="devPanel" translation="[90,170]" visible="false">
+      <Rectangle id="devBox" width="740" height="800" color="0x1A1625FF" />
+      <Label id="devL1" translation="[40,30]" width="660" height="36" font="font:SmallSystemFont" color="0x999999FF" />
+      <Label id="devMac" translation="[40,66]" width="660" height="70" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+      <Label id="devL2" translation="[40,150]" width="660" height="36" font="font:SmallSystemFont" color="0x999999FF" />
+      <Label id="devKey" translation="[40,186]" width="660" height="70" font="font:LargeBoldSystemFont" color="0xE94BFFFF" />
+      <Label id="devHelp" translation="[40,275]" width="660" height="170" wrap="true" font="font:SmallSystemFont" color="0xDDDDDDFF" />
+      <Poster id="devQr" translation="[40,460]" width="290" height="290" />
+      <Label id="devFoot" translation="[360,470]" width="340" height="280" wrap="true" font="font:SmallSystemFont" color="0xFFD54FFF" />
+    </Group>
+
     <Label id="status" translation="[90,1000]" width="1740" height="50"
            font="font:SmallSystemFont" color="0xCCCCCCFF" />
 
+    <Timer id="pollTimer" duration="20" repeat="true" />
     <Video id="video" width="1920" height="1080" visible="false" />
   </children>
   <script type="text/brightscript" uri="pkg:/components/Utils.brs" />

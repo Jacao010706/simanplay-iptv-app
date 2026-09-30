@@ -4,6 +4,8 @@
   <interface>
     <field id="url" type="string" />
     <field id="params" type="assocarray" />
+    <!-- POST com corpo JSON quando body <> "" (licença e listas do aparelho) -->
+    <field id="body" type="string" />
     <!-- {ok: bool, code: int, body: string, error: string} — setado uma vez ao terminar -->
     <field id="result" type="assocarray" />
   </interface>

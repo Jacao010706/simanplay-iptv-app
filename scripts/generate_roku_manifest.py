@@ -5,7 +5,8 @@ Gera roku_channel/manifest e roku_channel/components/Config.brs com a marca do
 revendedor. As imagens vêm de scripts/generate_tv_assets.py.
 
 Variáveis: APP_NAME (padrão PRIMETV), PRIMARY_HEX, BG_HEX, SURFACE_HEX,
-TV_API_BASE (padrão: painel na Vercel), GITHUB_RUN_NUMBER.
+TV_API_BASE (padrão: painel na Vercel), API_URL (backend: licença, MAC e listas),
+GITHUB_RUN_NUMBER.
 """
 import os
 import re
@@ -15,6 +16,7 @@ PRIMARY = re.sub(r"[^0-9a-fA-F]", "", os.environ.get("PRIMARY_HEX") or "e94bff")
 BG = re.sub(r"[^0-9a-fA-F]", "", os.environ.get("BG_HEX") or "0a0a0f")[:6] or "0a0a0f"
 SURFACE = re.sub(r"[^0-9a-fA-F]", "", os.environ.get("SURFACE_HEX") or "1a1625")[:6] or "1a1625"
 API_BASE = (os.environ.get("TV_API_BASE") or "https://simanplay-iptv-admin-panel.vercel.app").rstrip("/")
+BACKEND = (os.environ.get("API_URL") or "https://web-production-d8671.up.railway.app").rstrip("/")
 RUN = int(re.sub(r"\D", "", os.environ.get("GITHUB_RUN_NUMBER", "")) or 1)
 
 
@@ -46,6 +48,7 @@ function appConfig() as object
     return {{
         appName: {brs_str(APP_NAME)}
         apiBase: {brs_str(API_BASE)}
+        backendBase: {brs_str(BACKEND)}
         primaryHex: {brs_str(PRIMARY.lower())}
         bgHex: {brs_str(BG.lower())}
         surfaceHex: {brs_str(SURFACE.lower())}

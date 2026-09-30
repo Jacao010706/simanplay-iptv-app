@@ -9,11 +9,19 @@ sub doRequest()
     xfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
     xfer.InitClientCertificates()
     xfer.EnableEncodings(true)
+    xfer.RetainBodyOnError(true)
     xfer.AddHeader("Accept", "application/json")
     xfer.SetUrl(buildUrl(m.top.url, m.top.params))
 
     result = {ok: false, code: 0, body: "", error: ""}
-    if xfer.AsyncGetToString() then
+    started = false
+    if m.top.body <> invalid and m.top.body <> "" then
+        xfer.AddHeader("Content-Type", "application/json")
+        started = xfer.AsyncPostFromString(m.top.body)
+    else
+        started = xfer.AsyncGetToString()
+    end if
+    if started then
         msg = wait(30000, port)
         if type(msg) = "roUrlEvent" then
             result.code = msg.GetResponseCode()
