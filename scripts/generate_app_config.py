@@ -135,6 +135,16 @@ def set_launcher_name(name):
             with open(plist, "w", encoding="utf-8", newline="") as f:
                 f.write(p2)
         print(f"  iOS display name: {'ok' if n else 'NÃO encontrado'}")
+    runner = "windows/runner/main.cpp"
+    if os.path.exists(runner):
+        with open(runner, encoding="utf-8") as f:
+            c = f.read()
+        safe = name.replace("\\", "").replace('"', "'")
+        c2, n = re.subn(r'window\.Create\(L"[^"]*"', lambda g: 'window.Create(L"' + safe + '"', c, count=1)
+        if n:
+            with open(runner, "w", encoding="utf-8", newline="") as f:
+                f.write(c2)
+        print(f"  Windows título: {'ok' if n else 'NÃO encontrado'}")
 
 
 if __name__ == "__main__":

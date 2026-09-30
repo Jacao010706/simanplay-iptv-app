@@ -547,7 +547,7 @@ class _IBO6Home extends StatelessWidget {
                 : Container(color: const Color(0xFF1a1a2e))),
             Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xFF0d0d0d)])))),
             Positioned(top: 8, right: 8, child: SafeArea(child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (session.expiresAt != null) Text('Vence: \${_fmtDate(session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
+              if (session.expiresAt != null) Text('Vence: ${_fmtDate(session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
               const SizedBox(width: 4),
               GestureDetector(onTap: onLogout, child: const Icon(Icons.logout, color: Colors.white54, size: 20)),
               const SizedBox(width: 8),
