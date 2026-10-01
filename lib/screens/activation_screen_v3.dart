@@ -151,18 +151,10 @@ class _ActivationScreenState extends State<ActivationScreen>
         });
         return;
       }
-      final session = AppSession.simanplay(
-        username: _spUserCtrl.text.trim(),
-        password: _spPassCtrl.text,
-        primaryM3uUrl: clientSession.primaryUrl ?? '',
-        backupM3uUrls: clientSession.backupPlaylists
-            .map((b) => b.playlistUrl ?? '')
-            .where((u) => u.isNotEmpty)
-            .toList(),
-        expiresAt: clientSession.expiresAt,
-        xtreamHost: clientSession.xtreamHost,
-        xtreamUsername: clientSession.xtreamUsername,
-        xtreamPassword: clientSession.xtreamPassword,
+      final session = ApiService.buildSession(
+        clientSession,
+        manualUsername: _spUserCtrl.text.trim(),
+        manualPassword: _spPassCtrl.text,
       );
       if (!mounted) return;
       await openHome(context, session);

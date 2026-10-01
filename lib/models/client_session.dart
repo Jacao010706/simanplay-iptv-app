@@ -50,6 +50,11 @@ class ClientSession {
   final String? m3uUrl;
   final List<BackupPlaylist> backupPlaylists;
 
+  // NOVOS — retornados pelo backend em /app/login e /app/activate
+  final int? clientId;
+  final String? resellerSlug;
+  final String? username;
+
   const ClientSession({
     required this.status,
     this.expiresAt,
@@ -59,6 +64,9 @@ class ClientSession {
     this.xtreamPassword,
     this.m3uUrl,
     this.backupPlaylists = const [],
+    this.clientId,
+    this.resellerSlug,
+    this.username,
   });
 
   factory ClientSession.fromJson(Map<String, dynamic> json) {
@@ -75,6 +83,10 @@ class ClientSession {
       backupPlaylists: (json['backup_playlists'] as List<dynamic>? ?? [])
           .map((e) => BackupPlaylist.fromJson(e as Map<String, dynamic>))
           .toList(),
+      // NOVOS — sem breaking change: se o backend ainda não retorna, fica null
+      clientId: json['client_id'] as int?,
+      resellerSlug: json['reseller_slug'] as String?,
+      username: json['username'] as String?,
     );
   }
 
@@ -85,7 +97,9 @@ class ClientSession {
       final username = uri.queryParameters['username'];
       final password = uri.queryParameters['password'];
       if (username != null && password != null) {
-        final port = uri.port != 0 && uri.port != 80 && uri.port != 443 ? ':${uri.port}' : '';
+        final port = uri.port != 0 && uri.port != 80 && uri.port != 443
+            ? ':${uri.port}'
+            : '';
         final host = '${uri.scheme}://${uri.host}$port';
         return {'host': host, 'username': username, 'password': password};
       }

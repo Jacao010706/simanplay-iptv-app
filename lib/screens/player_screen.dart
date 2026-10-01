@@ -32,8 +32,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
       DeviceOrientation.landscapeRight,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _player = Player();
-    _controller = VideoController(_player);
+
+    _player = Player(
+      configuration: const PlayerConfiguration(
+        // Libera buffers maiores para streams ao vivo
+        bufferSize: 32 * 1024 * 1024,
+        logLevel: MPVLogLevel.warn,
+      ),
+    );
+
+    _controller = VideoController(
+      _player,
+      configuration: const VideoControllerConfiguration(
+        // Força decodificação por software — resolve tela preta em muitos dispositivos
+        enableHardwareAcceleration: false,
+      ),
+    );
+
     _player.stream.error.listen(_onPlayerError);
     _tryPlayUrl(0);
   }
@@ -49,7 +64,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _currentUrlIndex = index;
       _errorMessage = null;
     });
-    _player.open(Media(widget.urls[index]));
+    _player.open(
+      Media(widget.urls[index]),
+      play: true,
+    );
   }
 
   void _onPlayerError(String error) {
@@ -80,10 +98,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
         onTap: () => setState(() => _showControls = !_showControls),
         child: Stack(
           children: [
-            // Vídeo ocupa 100% da tela
+            // Player de vídeo
             SizedBox.expand(
-              child: Video(controller: _controller),
+              child: Video(
+                controller: _controller,
+                fill: Colors.black,
+                fit: BoxFit.fill,
+              ),
             ),
+
+            // Tela de erro
             if (_errorMessage != null)
               Center(
                 child: Padding(
@@ -91,10 +115,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 64),
+                      const Icon(Icons.error_outline,
+                          color: Colors.redAccent, size: 64),
                       const SizedBox(height: 16),
                       Text(_errorMessage!,
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16),
                           textAlign: TextAlign.center),
                       const SizedBox(height: 24),
                       Row(
@@ -121,33 +147,49 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ),
                 ),
               ),
+
+            // Controles superiores
             if (_showControls && _errorMessage == null)
               Positioned(
-                top: 0, left: 0, right: 0,
+                top: 0,
+                left: 0,
+                right: 0,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+                      colors: [
+                        Colors.black.withValues(alpha: 0.8),
+                        Colors.transparent
+                      ],
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back,
+                            color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(widget.title,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                            overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          widget.title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (widget.urls.length > 1)
-                        Text('Fonte ${_currentUrlIndex + 1}/${widget.urls.length}',
-                            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text(
+                          'Fonte ${_currentUrlIndex + 1}/${widget.urls.length}',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12),
+                        ),
                     ],
                   ),
                 ),

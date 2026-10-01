@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/text_fix.dart';
 import '../models/client_session.dart';
+import '../models/app_session.dart';
 import '../core/app_config.dart';
 
 class ApiService {
@@ -45,5 +46,30 @@ class ApiService {
     } else {
       throw Exception('Erro ao conectar ao servidor (${response.statusCode})');
     }
+  }
+
+  /// Converte ClientSession → AppSession com todos os campos necessários.
+  /// Use este método nos dois lugares do activation_screen_v3.dart
+  /// onde hoje você monta AppSession.simanplay() manualmente.
+  static AppSession buildSession(
+    ClientSession cs, {
+    String? manualUsername,
+    String? manualPassword,
+  }) {
+    return AppSession.simanplay(
+      username: manualUsername ?? cs.username ?? '',
+      password: manualPassword ?? '',
+      primaryM3uUrl: cs.primaryUrl ?? '',
+      backupM3uUrls: cs.backupPlaylists
+          .map((b) => b.playlistUrl ?? '')
+          .where((u) => u.isNotEmpty)
+          .toList(),
+      expiresAt: cs.expiresAt,
+      xtreamHost: cs.xtreamHost,
+      xtreamUsername: cs.xtreamUsername,
+      xtreamPassword: cs.xtreamPassword,
+      clientId: cs.clientId,
+      resellerSlug: cs.resellerSlug,
+    );
   }
 }

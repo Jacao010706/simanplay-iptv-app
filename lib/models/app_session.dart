@@ -15,6 +15,10 @@ class AppSession {
   final List<String> backupM3uUrls;
   final DateTime? expiresAt;
 
+  // Novos: id do cliente para buscar playlists e verificar update
+  final int? clientId;
+  final String? resellerSlug;
+
   const AppSession({
     required this.type,
     this.xtreamHost,
@@ -25,9 +29,13 @@ class AppSession {
     this.primaryM3uUrl,
     this.backupM3uUrls = const [],
     this.expiresAt,
+    this.clientId,
+    this.resellerSlug,
   });
 
-  bool get isXtream => type == SessionType.xtream || (type == SessionType.simanplay && xtreamHost != null);
+  bool get isXtream =>
+      type == SessionType.xtream ||
+      (type == SessionType.simanplay && xtreamHost != null);
 
   static Map<String, String>? extractXtreamFromUrl(String? url) {
     if (url == null) return null;
@@ -36,7 +44,9 @@ class AppSession {
       final username = uri.queryParameters['username'];
       final password = uri.queryParameters['password'];
       if (username != null && password != null) {
-        final port = uri.port != 0 && uri.port != 80 && uri.port != 443 ? ':${uri.port}' : '';
+        final port = uri.port != 0 && uri.port != 80 && uri.port != 443
+            ? ':${uri.port}'
+            : '';
         final host = '${uri.scheme}://${uri.host}$port';
         return {'host': host, 'username': username, 'password': password};
       }
@@ -63,6 +73,7 @@ class AppSession {
       effectiveXtreamHost != null &&
       effectiveXtreamUsername != null &&
       effectiveXtreamPassword != null;
+
   bool get isSimanplay => type == SessionType.simanplay;
 
   factory AppSession.xtream({
@@ -87,6 +98,8 @@ class AppSession {
     String? xtreamHost,
     String? xtreamUsername,
     String? xtreamPassword,
+    int? clientId,
+    String? resellerSlug,
   }) {
     return AppSession(
       type: SessionType.simanplay,
@@ -98,6 +111,8 @@ class AppSession {
       xtreamHost: xtreamHost,
       xtreamUsername: xtreamUsername,
       xtreamPassword: xtreamPassword,
+      clientId: clientId,
+      resellerSlug: resellerSlug,
     );
   }
 
@@ -112,6 +127,8 @@ class AppSession {
       'primaryM3uUrl': primaryM3uUrl,
       'backupM3uUrls': backupM3uUrls,
       'expiresAt': expiresAt?.toIso8601String(),
+      'clientId': clientId,
+      'resellerSlug': resellerSlug,
     };
   }
 
@@ -125,9 +142,10 @@ class AppSession {
       simanplayPassword: json['simanplayPassword'],
       primaryM3uUrl: json['primaryM3uUrl'],
       backupM3uUrls: List<String>.from(json['backupM3uUrls'] ?? []),
-      expiresAt: json['expiresAt'] != null
-          ? DateTime.parse(json['expiresAt'])
-          : null,
+      expiresAt:
+          json['expiresAt'] != null ? DateTime.parse(json['expiresAt']) : null,
+      clientId: json['clientId'],
+      resellerSlug: json['resellerSlug'],
     );
   }
 }
