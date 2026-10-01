@@ -37,29 +37,21 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Future<void> _loadContent() async {
-    if (!widget.session.isXtream) {
-      setState(() {
-        _error = 'Filmes disponíveis apenas em conexões Xtream Codes.';
-        _loading = false;
-      });
+    if (!widget.session.hasXtreamAccess) {
+      setState(() { _error = 'Filmes não disponíveis para esta playlist.'; _loading = false; });
       return;
     }
     setState(() { _loading = true; _error = null; });
     try {
       final service = XtreamService(
-        host: widget.session.xtreamHost!,
-        username: widget.session.xtreamUsername!,
-        password: widget.session.xtreamPassword!,
+        host: widget.session.effectiveXtreamHost!,
+        username: widget.session.effectiveXtreamUsername!,
+        password: widget.session.effectiveXtreamPassword!,
       );
-      final cats = await service.getMovieCategories();
-      final List<Movie> allMovies = [];
-      for (final cat in cats) {
-        final movies = await service.getMovies(cat.id, cat.name);
-        allMovies.addAll(movies);
-      }
+      final results = await Future.wait([service.getMovieCategories(), service.getAllMovies()]);
       setState(() {
-        _categories = cats;
-        _allMovies = allMovies;
+        _categories = results[0] as List<Category>;
+        _allMovies = results[1] as List<Movie>;
         _loading = false;
       });
     } catch (e) {
