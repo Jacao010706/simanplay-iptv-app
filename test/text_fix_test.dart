@@ -16,6 +16,12 @@ void main() {
       expect(fixMojibake('SÃ©ries'), 'Séries');
       expect(fixMojibake('Greyâ€™s Anatomy'), 'Grey’s Anatomy');
     });
+    test('corrupção dupla (nome já salvo corrompido no painel)', () {
+      expect(fixMojibake('BrasileirÃƒÂ£o'), 'Brasileirão');
+      expect(fixMojibake('SDÃ‚Â²'), 'SD²');
+      expect(fixMojibake('AÃƒÂ§ÃƒÂ£o'), 'Ação');
+      expect(fixMojibake('BrasileirÃ\u0083Â£o'), 'Brasileirão'); // Latin-1 puro
+    });
     test('texto correto não muda', () {
       for (final s in ['Brasileirão', 'SD²', 'Ação', 'Canal 24h', 'ÂNGULO', 'Ângela', 'Ã']) {
         expect(fixMojibake(s), s);

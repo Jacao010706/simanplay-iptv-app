@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_config.dart';
+import '../core/text_fix.dart';
 import '../models/app_session.dart';
 
 /// Lista cadastrada no site para este aparelho (MAC + chave), estilo IBO Player.
@@ -67,7 +68,7 @@ class DeviceListsService {
               headers: {'Content-Type': 'application/json'}, body: jsonEncode({'mac': mac, 'key': key}))
           .timeout(const Duration(seconds: 15));
       if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final data = decodeJson(res) as Map<String, dynamic>;
       final items = (data['playlists'] as List? ?? [])
           .map((e) => DevicePlaylist.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -76,7 +77,7 @@ class DeviceListsService {
     } catch (_) {
       final raw = prefs.getString(_kCache);
       if (raw == null) rethrow;
-      return (jsonDecode(raw) as List).map((e) => DevicePlaylist.fromJson(e as Map<String, dynamic>)).toList();
+      return (fixTextTree(jsonDecode(raw)) as List).map((e) => DevicePlaylist.fromJson(e as Map<String, dynamic>)).toList();
     }
   }
 

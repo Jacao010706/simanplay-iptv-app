@@ -32,11 +32,25 @@ const Map<int, int> _cp1252 = {
   0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F,
 };
 
-final RegExp _mojibake = RegExp('[ÂÃâ][\u0080-¿€‘-„™ŒœŠšŸŽž]');
+// "Â", "Ã" ou "â" seguido de um byte de continuação do UTF-8 lido como Latin-1/Windows-1252.
+final RegExp _mojibake =
+    RegExp('[ÂÃâ][\u0080-¿${String.fromCharCodes(_cp1252.keys)}]');
 
 /// Conserta texto que já veio corrompido do provedor (UTF-8 lido como Latin-1):
 /// "BrasileirÃ£o" -> "Brasileirão", "FHDÂ²" -> "FHD²". Texto correto não é alterado.
+/// Também desfaz corrupção dupla ("BrasileirÃƒÂ£o"), comum quando o painel já
+/// salvou o nome corrompido e ele é corrompido de novo no caminho.
 String fixMojibake(String text) {
+  var current = text;
+  for (var i = 0; i < 3; i++) {
+    final next = _fixMojibakeOnce(current);
+    if (next == current) break;
+    current = next;
+  }
+  return current;
+}
+
+String _fixMojibakeOnce(String text) {
   if (!_mojibake.hasMatch(text)) return text;
   final bytes = <int>[];
   for (final rune in text.runes) {

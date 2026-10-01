@@ -102,8 +102,10 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   /// Rola a tela (e a aba) até o botão da aba ficar visível acima do teclado.
   void _revealButton(GlobalKey buttonKey) {
-    // Espera o teclado terminar de abrir e o Scaffold encolher o body.
-    Future.delayed(const Duration(milliseconds: 350), () {
+    // Espera o teclado terminar de abrir e o Scaffold encolher o body; o
+    // endOfFrame garante que o layout já está com a altura nova da tela.
+    Future.delayed(const Duration(milliseconds: 350), () async {
+      await WidgetsBinding.instance.endOfFrame;
       final ctx = buttonKey.currentContext;
       if (!mounted || ctx == null) return;
       Scrollable.ensureVisible(
@@ -532,25 +534,29 @@ class _ActivationScreenState extends State<ActivationScreen>
     required VoidCallback onPressed,
     required Color primary,
   }) {
-    return SizedBox(
+    // A folga embaixo também entra na rolagem: o botão não fica colado no teclado.
+    return Padding(
       key: key,
-      width: double.infinity,
-      height: 46,
-      child: ElevatedButton(
-        onPressed: loading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SizedBox(
+        width: double.infinity,
+        height: 46,
+        child: ElevatedButton(
+          onPressed: loading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primary,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+          child: loading
+              ? const CircularProgressIndicator(
+                  color: Colors.white, strokeWidth: 2)
+              : Text(label,
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
         ),
-        child: loading
-            ? const CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2)
-            : Text(label,
-                style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
       ),
     );
   }
