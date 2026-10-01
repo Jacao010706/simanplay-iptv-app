@@ -61,6 +61,10 @@ class _ActivationScreenState extends State<ActivationScreen>
     super.dispose();
   }
 
+  /// Só para testes: mostra a mensagem de erro do login.
+  @visibleForTesting
+  void debugSetError(String message) => setState(() => _spError = message);
+
   Future<void> _loginSimanPlay() async {
     setState(() {
       _spLoading = true;
@@ -269,7 +273,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                             ],
                           ),
                           SizedBox(
-                            height: 260,
+                            height: 340,
                             child: TabBarView(
                               controller: _tabController,
                               children: [
@@ -297,8 +301,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildSimanPlayTab(Color primary) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
         children: [
           _buildTextField(
@@ -332,8 +336,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildXtreamTab(Color primary) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
         children: [
           _buildTextField(
@@ -374,8 +378,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildM3UTab(Color primary) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

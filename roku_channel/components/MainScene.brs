@@ -55,7 +55,9 @@ sub init()
     checkLicense()
 end sub
 
-' ─────────────────────────── Licença (teste grátis / plano) ───────────────────────────
+' ─────────────────────────── Ativação do aparelho (feita pelo MAC no site) ───────────────────────────
+' O canal Roku é gratuito: não mostra preços nem cobrança. Aparelho não ativado vê só
+' o MAC e o endereço do site de ativação.
 
 sub checkLicense()
     code = m.reg.Read("code")
@@ -131,18 +133,16 @@ end sub
 sub showBlocked()
     m.stack = []
     setDeviceLayout(true)
-    title = "Seu período de teste grátis terminou"
-    if m.lic.plan <> "" then title = "Sua assinatura venceu"
     m.devL1.text = "MAC do aparelho"
     m.devMac.text = m.mac
-    m.devL2.text = title
+    m.devL2.text = "Este aparelho ainda não está ativado"
     m.devKey.font = "font:MediumBoldSystemFont"
-    m.devKey.text = "Acesse o site para renovar"
-    m.devHelp.text = "Assine pelo celular com PIX:" + Chr(10) + "Mensal R$ 5 • Semestral R$ 8 • Anual R$ 13" + Chr(10) + Chr(10) + "simanplay-iptv-admin-panel.vercel.app"
-    m.devQr.uri = qrUrl("app")
-    m.devFoot.text = "Aponte a câmera do celular para o QR Code." + Chr(10) + Chr(10) + "A TV libera sozinha depois do pagamento."
+    m.devKey.text = "Ative pelo site"
+    m.devHelp.text = "Para usar o canal, ative este aparelho no site com o MAC acima:" + Chr(10) + Chr(10) + "simanplay-iptv-admin-panel.vercel.app/dispositivo"
+    m.devQr.uri = qrUrl("dispositivo")
+    m.devFoot.text = "Ou aponte a câmera do celular para o QR Code." + Chr(10) + Chr(10) + "A tela libera sozinha depois da ativação."
     if m.lic.offline = true then m.devFoot.text = "Sem conexão com o servidor. Verifique a internet."
-    renderScreen({kind: "blocked", title: "Assinatura", items: [{title: "Já paguei — verificar", action: "check"}], focus: 0}, true)
+    renderScreen({kind: "blocked", title: "Ativação", items: [{title: "Verificar ativação", action: "check"}], focus: 0}, true)
     m.poll.duration = 15
     m.poll.control = "start"
 end sub
@@ -181,9 +181,6 @@ sub showDevice(auto as boolean)
     end if
     m.devHelp.text = "Para adicionar suas listas, acesse pelo celular:" + Chr(10) + "simanplay-iptv-admin-panel.vercel.app/dispositivo" + Chr(10) + "e digite o MAC e a chave acima."
     m.devFoot.text = "Ou aponte a câmera do celular para o QR Code."
-    if m.lic <> invalid and m.lic.status = "trial" and m.lic.days > 0 then
-        m.devFoot.text = m.devFoot.text + Chr(10) + Chr(10) + "Teste grátis: " + anyToStr(m.lic.days) + " dia(s) restante(s)"
-    end if
     m.autoEnter = auto
     renderScreen({kind: "device", title: "Suas listas", items: deviceItems(), focus: 0}, true)
     loadLists()

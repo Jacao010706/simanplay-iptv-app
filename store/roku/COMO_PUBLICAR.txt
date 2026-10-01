@@ -5,7 +5,9 @@ O CANAL (BrightScript/SceneGraph nativo), mesmas telas da Samsung e da LG:
   - Ativação: MAC + chave do aparelho + QR Code para cadastrar as listas
   - Início: TV ao Vivo, Filmes, Séries e Favoritos (setas + OK)
   - Na lista de canais ao vivo, o botão * (asterisco) liga/desliga o favorito
-  - Licença vencida: QR Code do PIX + "Acesse o site para renovar"
+  - Aparelho não ativado: "Ative pelo site" com o MAC e QR Code para /dispositivo
+  O CANAL É GRATUITO: não mostra preços, planos, PIX nem cobrança. A ativação do
+  aparelho é feita pelo MAC no site (ou pelo revendedor no painel).
   Cores #e94bff / #0d0b14.
 
 A ROKU NÃO ACEITA O .ZIP — é preciso gerar o pacote assinado (.pkg) num Roku seu:
@@ -31,10 +33,6 @@ ENVIO: https://developer.roku.com > Manage Channels > Add Channel (SDK)
      e adicione a lista M3U de teste https://iptv-org.github.io/iptv/countries/br.m3u
      (canais abertos, públicos). Em até 20 segundos a lista aparece na TV."
 
-ATENÇÃO — REGRA DA ROKU SOBRE PAGAMENTO:
-  A Roku exige o "Roku Pay" para assinaturas oferecidas dentro do canal. O PRIMETV
-  manda pagar por PIX no site (QR Code), então a publicação PÚBLICA pode ser recusada.
-  Alternativas:
-  - Canal "beta": até 20 aparelhos, instalado por link, sem passar pela loja;
-  - Publicar como player gratuito e cobrar a assinatura só fora da Roku (pelo revendedor).
-  Confira as regras atuais no Developer Dashboard antes de enviar.
+MONETIZAÇÃO NO DEVELOPER DASHBOARD: marque o canal como GRATUITO (sem compras no canal).
+  O canal não vende nada: só mostra o MAC para ativar no site. Mesmo assim a Roku pode
+  questionar a ativação externa na certificação; confira as regras atuais antes de enviar.

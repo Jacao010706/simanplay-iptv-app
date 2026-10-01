@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/text_fix.dart';
 import '../models/client_session.dart';
 import '../core/app_config.dart';
 
@@ -13,7 +14,7 @@ class ApiService {
       body: jsonEncode({'mac_address': macAddress}),
     );
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = jsonDecode(decodeBody(response)) as Map<String, dynamic>;
       return ClientSession.fromJson(json);
     } else if (response.statusCode == 403) {
       throw Exception('Dispositivo não ativado');
@@ -37,7 +38,7 @@ class ApiService {
       }),
     );
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = jsonDecode(decodeBody(response)) as Map<String, dynamic>;
       return ClientSession.fromJson(json);
     } else if (response.statusCode == 401) {
       throw Exception('Usuário ou senha inválidos');

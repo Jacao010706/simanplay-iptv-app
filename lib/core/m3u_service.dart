@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'text_fix.dart';
 import '../models/channel.dart';
 
 /// Serviço responsável por baixar e interpretar listas M3U/M3U8.
@@ -9,7 +10,7 @@ class M3uService {
     if (response.statusCode != 200) {
       throw Exception('Falha ao baixar a lista (${response.statusCode})');
     }
-    return response.body;
+    return decodeBody(response);
   }
 
   /// Interpreta o conteúdo M3U e retorna uma lista de canais.
@@ -28,7 +29,7 @@ class M3uService {
     int autoId = 0;
 
     for (var rawLine in lines) {
-      final line = rawLine.trim();
+      final line = fixMojibake(rawLine.trim()); // nomes já corrompidos no provedor
       if (line.isEmpty) continue;
 
       if (line.startsWith('#EXTINF')) {

@@ -16,7 +16,7 @@
                focusBitmapBlendColor="0xE94BFFFF" color="0xFFFFFFFF" focusedColor="0x000000FF"
                font="font:MediumSystemFont" focusedFont="font:MediumBoldSystemFont" vertFocusAnimationStyle="floatingFocus" />
 
-    <!-- Painel do aparelho (MAC + chave + QR) e da assinatura vencida -->
+    <!-- Painel do aparelho (MAC + chave + QR) e da ativação pelo site -->
     <Group id="devPanel" translation="[90,170]" visible="false">
       <Rectangle id="devBox" width="740" height="800" color="0x1A1625FF" />
       <Label id="devL1" translation="[40,30]" width="660" height="36" font="font:SmallSystemFont" color="0x999999FF" />

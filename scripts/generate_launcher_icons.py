@@ -3,10 +3,12 @@
 generate_launcher_icons.py
 Ícone do aplicativo (Android, iOS e Windows) no build do white-label.
 
-- Com LOGO_URL: logo do revendedor centralizado sobre um degradê da cor principal.
-- Sem logo: ícone PRIMETV (TV com botão play) sobre o degradê.
+- Sem logo: fundo escuro (BG_HEX, padrão #0d0b14), símbolo de play em cima e o nome do
+  app (APP_NAME, padrão PRIMETV) grande na cor principal (PRIMARY_HEX, padrão #e94bff).
+- Com LOGO_URL: logo do revendedor centralizado sobre o mesmo fundo escuro.
+Também grava store/android/icone-512.png (ícone da Google Play, 512x512).
 
-Variáveis: LOGO_URL, PRIMARY_HEX (sem #). Rodar da raiz do projeto.
+Variáveis: APP_NAME, LOGO_URL, PRIMARY_HEX, BG_HEX (sem #). Rodar da raiz do projeto.
 """
 import glob
 import io
@@ -14,10 +16,13 @@ import os
 import re
 import urllib.request
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 PRIMARY = re.sub(r"[^0-9a-fA-F]", "", os.environ.get("PRIMARY_HEX") or "e94bff")[:6] or "e94bff"
 LOGO_URL = os.environ.get("LOGO_URL", "")
+BG = re.sub(r"[^0-9a-fA-F]", "", os.environ.get("BG_HEX") or "0d0b14")[:6] or "0d0b14"
+APP_NAME = (os.environ.get("APP_NAME") or "PRIMETV").strip()[:30] or "PRIMETV"
+FONTS = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"]
 
 
 def rgb(h):
@@ -62,11 +67,50 @@ def load_logo(max_size):
         return None
 
 
+def font_that_fits(text, max_width, max_size):
+    """Maior fonte (negrito) em que o texto cabe na largura."""
+    for path in FONTS:
+        try:
+            ImageFont.truetype(path, 10)
+        except OSError:
+            continue
+        size = max_size
+        while size > 10:
+            f = ImageFont.truetype(path, size)
+            box = f.getbbox(text)
+            if box[2] - box[0] <= max_width:
+                return f
+            size -= 4
+        return ImageFont.truetype(path, size)
+    return ImageFont.load_default()
+
+
+def play_symbol(size, color):
+    """Círculo com triângulo de play (desenhado em 4x e reduzido para ficar liso)."""
+    S = size * 4
+    im = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse([S * 0.04, S * 0.04, S * 0.96, S * 0.96], outline=color, width=S // 14)
+    cx, cy, r = S * 0.54, S * 0.5, S * 0.24
+    d.polygon([(cx - r * 0.85, cy - r), (cx - r * 0.85, cy + r), (cx + r, cy)], fill=color)
+    return im.resize((size, size), Image.LANCZOS)
+
+
 def base_icon(size=1024):
-    img = gradient(size, rgb(PRIMARY)).convert("RGBA")
+    img = Image.new("RGBA", (size, size), rgb(BG) + (255,))
     logo = load_logo(int(size * 0.66))
-    sym = logo or tv_symbol(int(size * 0.62))
-    img.paste(sym, ((size - sym.width) // 2, (size - sym.height) // 2 + (0 if logo else size // 40)), sym)
+    if logo:
+        img.paste(logo, ((size - logo.width) // 2, (size - logo.height) // 2), logo)
+        return img
+    color = rgb(PRIMARY) + (255,)
+    sym = play_symbol(int(size * 0.40), color)
+    img.paste(sym, ((size - sym.width) // 2, int(size * 0.14)), sym)
+    d = ImageDraw.Draw(img)
+    font = font_that_fits(APP_NAME, int(size * 0.84), int(size * 0.22))
+    box = d.textbbox((0, 0), APP_NAME, font=font)
+    x = (size - (box[2] - box[0])) // 2 - box[0]
+    y = int(size * 0.62) - box[1]
+    d.text((x, y), APP_NAME, font=font, fill=color)
     return img
 
 
@@ -104,6 +148,10 @@ def main():
     if os.path.exists(ico):
         rounded(base).save(ico, format="ICO", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
         n += 1
+    # Google Play: ícone 512x512 quadrado, sem transparência
+    os.makedirs("store/android", exist_ok=True)
+    base.convert("RGB").resize((512, 512), Image.LANCZOS).save("store/android/icone-512.png", "PNG")
+    n += 1
     print(f"Ícones do app gerados ({'logo do revendedor' if LOGO_URL else 'ícone PRIMETV'}): {n} arquivos")
 
 

@@ -121,11 +121,10 @@ A Roku **não aceita o .zip**: ele vira um pacote assinado (.pkg) gerado **num R
    - instruções para os testadores iguais às da Samsung/LG (MAC + chave + lista pública).
 5. A certificação da Roku costuma levar de 1 a 4 semanas.
 
-**Atenção (política da Roku):** a Roku exige o **Roku Pay** para assinaturas oferecidas
-dentro do canal. O PRIMETV manda pagar por PIX no site (QR Code), então a publicação
-**pública** pode ser recusada por isso. Alternativas: canal **beta** (até 20 aparelhos,
-por link, sem loja) ou publicar como player gratuito e cobrar a assinatura só fora
-da Roku (pelo revendedor). Verifique as regras atuais no Developer Dashboard antes de enviar.
+**Canal gratuito:** o Roku não mostra preços, planos, PIX nem cobrança (a Roku exige o
+Roku Pay para vendas dentro do canal). Aparelho não ativado vê só o MAC e "Ative pelo site"
+(QR para `/dispositivo`); a ativação é feita no site ou pelo revendedor. No Developer
+Dashboard, cadastre o canal como **gratuito**.
 
 ## Lojas (Samsung / LG / Roku / Google Play)
 
