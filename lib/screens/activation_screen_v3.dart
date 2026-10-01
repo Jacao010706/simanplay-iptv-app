@@ -14,8 +14,22 @@ class ActivationScreen extends StatefulWidget {
 }
 
 class _ActivationScreenState extends State<ActivationScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
+
+  // Botões de cada aba: rolamos até eles quando o teclado abre, para que os
+  // campos e o botão fiquem sempre acima do teclado.
+  final _spButtonKey = GlobalKey();
+  final _xButtonKey = GlobalKey();
+  final _m3uButtonKey = GlobalKey();
+
+  late final FocusNode _spUserFocus = _fieldFocusNode(_spButtonKey);
+  late final FocusNode _spPassFocus = _fieldFocusNode(_spButtonKey);
+  late final FocusNode _xHostFocus = _fieldFocusNode(_xButtonKey);
+  late final FocusNode _xUserFocus = _fieldFocusNode(_xButtonKey);
+  late final FocusNode _xPassFocus = _fieldFocusNode(_xButtonKey);
+  late final FocusNode _m3uUrlFocus = _fieldFocusNode(_m3uButtonKey);
+  GlobalKey? _focusedButtonKey;
 
   // SimanPlay
   final _spUserCtrl = TextEditingController();
@@ -47,11 +61,23 @@ class _ActivationScreenState extends State<ActivationScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
+    for (final node in [
+      _spUserFocus,
+      _spPassFocus,
+      _xHostFocus,
+      _xUserFocus,
+      _xPassFocus,
+      _m3uUrlFocus,
+    ]) {
+      node.dispose();
+    }
     _spUserCtrl.dispose();
     _spPassCtrl.dispose();
     _xHostCtrl.dispose();
@@ -59,6 +85,41 @@ class _ActivationScreenState extends State<ActivationScreen>
     _xPassCtrl.dispose();
     _m3uUrlCtrl.dispose();
     super.dispose();
+  }
+
+  FocusNode _fieldFocusNode(GlobalKey buttonKey) {
+    final node = FocusNode();
+    node.addListener(() {
+      if (node.hasFocus) {
+        _focusedButtonKey = buttonKey;
+        _revealButton(buttonKey);
+      } else if (_focusedButtonKey == buttonKey) {
+        _focusedButtonKey = null;
+      }
+    });
+    return node;
+  }
+
+  /// Rola a tela (e a aba) até o botão da aba ficar visível acima do teclado.
+  void _revealButton(GlobalKey buttonKey) {
+    // Espera o teclado terminar de abrir e o Scaffold encolher o body.
+    Future.delayed(const Duration(milliseconds: 350), () {
+      final ctx = buttonKey.currentContext;
+      if (!mounted || ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
+  }
+
+  // O teclado da TV pode abrir (ou mudar de altura) depois do foco: rola de novo.
+  @override
+  void didChangeMetrics() {
+    final key = _focusedButtonKey;
+    if (key != null) _revealButton(key);
   }
 
   /// Só para testes: mostra a mensagem de erro do login.
@@ -199,6 +260,7 @@ class _ActivationScreenState extends State<ActivationScreen>
 
     return Scaffold(
       backgroundColor: bg,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -306,10 +368,14 @@ class _ActivationScreenState extends State<ActivationScreen>
       child: Column(
         children: [
           _buildTextField(
-              controller: _spUserCtrl, label: 'Usuário', icon: Icons.person),
+              controller: _spUserCtrl,
+              focusNode: _spUserFocus,
+              label: 'Usuário',
+              icon: Icons.person),
           const SizedBox(height: 12),
           _buildTextField(
             controller: _spPassCtrl,
+            focusNode: _spPassFocus,
             label: 'Senha',
             icon: Icons.lock,
             obscure: !_spShowPass,
@@ -326,6 +392,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           ],
           const SizedBox(height: 12),
           _buildButton(
+              key: _spButtonKey,
               label: 'Entrar',
               loading: _spLoading,
               onPressed: _loginSimanPlay,
@@ -342,16 +409,19 @@ class _ActivationScreenState extends State<ActivationScreen>
         children: [
           _buildTextField(
               controller: _xHostCtrl,
+              focusNode: _xHostFocus,
               label: 'URL do servidor',
               icon: Icons.link),
           const SizedBox(height: 10),
           _buildTextField(
               controller: _xUserCtrl,
+              focusNode: _xUserFocus,
               label: 'Usuário',
               icon: Icons.person),
           const SizedBox(height: 10),
           _buildTextField(
             controller: _xPassCtrl,
+            focusNode: _xPassFocus,
             label: 'Senha',
             icon: Icons.lock,
             obscure: !_xShowPass,
@@ -368,6 +438,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           ],
           const SizedBox(height: 12),
           _buildButton(
+              key: _xButtonKey,
               label: 'Conectar',
               loading: _xLoading,
               onPressed: _loginXtream,
@@ -390,6 +461,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           const SizedBox(height: 10),
           _buildTextField(
             controller: _m3uUrlCtrl,
+            focusNode: _m3uUrlFocus,
             label: 'https://servidor.com/lista.m3u',
             icon: Icons.playlist_play,
             keyboardType: TextInputType.url,
@@ -400,6 +472,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           ],
           const SizedBox(height: 16),
           _buildButton(
+              key: _m3uButtonKey,
               label: 'Carregar lista',
               loading: _m3uLoading,
               onPressed: _loginM3U,
@@ -417,6 +490,7 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   Widget _buildTextField({
     required TextEditingController controller,
+    FocusNode? focusNode,
     required String label,
     required IconData icon,
     bool obscure = false,
@@ -425,6 +499,7 @@ class _ActivationScreenState extends State<ActivationScreen>
   }) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscure,
       keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
@@ -459,12 +534,14 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildButton({
+    Key? key,
     required String label,
     required bool loading,
     required VoidCallback onPressed,
     required Color primary,
   }) {
     return SizedBox(
+      key: key,
       width: double.infinity,
       height: 46,
       child: ElevatedButton(
