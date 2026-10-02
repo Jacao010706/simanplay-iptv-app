@@ -118,6 +118,29 @@ jobs:
             print(f"✓ {folder}: {size}x{size}")
           PYEOF
 
+      - name: Download and resize TV banner
+        if: ${{ inputs.banner_url != '' }}
+        run: |
+          pip install Pillow -q
+          curl -L "${{ inputs.banner_url }}" -o /tmp/banner_source.png
+          python3 - <<'PYEOF'
+          from PIL import Image
+          import os
+          img = Image.open("/tmp/banner_source.png").convert("RGBA")
+          sizes = {
+            "mipmap-mdpi":    (320, 180),
+            "mipmap-hdpi":    (480, 270),
+            "mipmap-xhdpi":   (640, 360),
+            "mipmap-xxhdpi":  (960, 540),
+            "mipmap-xxxhdpi": (1280, 720),
+          }
+          base = "android/app/src/main/res"
+          for folder, (w, h) in sizes.items():
+            out = f"{base}/{folder}/tv_banner.png"
+            img.resize((w, h), Image.LANCZOS).save(out)
+            print(f"✓ {folder}: {w}x{h}")
+          PYEOF
+
       - name: Update app name in AndroidManifest
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ inputs.app_name }}"/' android/app/src/main/AndroidManifest.xml
