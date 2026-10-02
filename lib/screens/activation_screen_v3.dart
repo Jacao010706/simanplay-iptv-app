@@ -329,7 +329,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                             ],
                           ),
                           SizedBox(
-                            height: 340,
+                            height: 420,
                             child: TabBarView(
                               controller: _tabController,
                               children: [
