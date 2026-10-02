@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:simanplay_iptv/screens/activation_screen_v3.dart';
 
 void main() {
-  for (final size in [const Size(360, 640), const Size(1280, 720)]) {
+  for (final size in [const Size(360, 640), const Size(1280, 720), const Size(960, 540), const Size(853, 480)]) {
     testWidgets('botão Entrar inteiro visível em ${size.width.toInt()}x${size.height.toInt()} (com mensagem de erro)',
         (tester) async {
       tester.view.physicalSize = size;

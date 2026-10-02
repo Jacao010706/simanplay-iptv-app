@@ -70,9 +70,14 @@ String _fixMojibakeOnce(String text) {
 }
 
 /// Aplica [fixMojibake] em todos os textos de um JSON (listas e mapas).
+/// Objetos saem como `Map<String, dynamic>`, o mesmo tipo do `json.decode`,
+/// que é o que os modelos (`Movie.fromXtream` etc.) esperam.
 dynamic fixTextTree(dynamic value) {
   if (value is String) return fixMojibake(value);
   if (value is List) return value.map(fixTextTree).toList();
-  if (value is Map) return value.map((k, v) => MapEntry(k, fixTextTree(v)));
+  if (value is Map) {
+    return value.map<String, dynamic>(
+        (k, v) => MapEntry(k.toString(), fixTextTree(v)));
+  }
   return value;
 }

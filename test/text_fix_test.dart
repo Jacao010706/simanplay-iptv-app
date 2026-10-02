@@ -40,6 +40,14 @@ void main() {
       final r = http.Response.bytes(latin1.encode('Ação'), 200);
       expect(decodeBody(r), 'Ação');
     });
+    test('objetos continuam Map<String, dynamic> (os modelos exigem esse tipo)', () {
+      final r = http.Response.bytes(
+          utf8.encode('[{"name":"BrasileirÃ£o","info":{"plot":"AÃ§Ã£o"}}]'), 200);
+      final data = decodeJson(r) as List;
+      expect(data[0], isA<Map<String, dynamic>>());
+      expect(data[0]['info'], isA<Map<String, dynamic>>());
+      expect(data[0]['info']['plot'], 'Ação');
+    });
     test('BOM é ignorado', () {
       final r = http.Response.bytes([0xEF, 0xBB, 0xBF, ...utf8.encode('{"a":"é"}')], 200);
       expect(decodeJson(r)['a'], 'é');

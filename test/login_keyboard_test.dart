@@ -4,7 +4,7 @@ import 'package:simanplay_iptv/screens/activation_screen_v3.dart';
 
 void main() {
   // Teclado ocupando ~45% da altura, como nas TVs Android e celulares.
-  for (final size in [const Size(360, 640), const Size(1280, 720)]) {
+  for (final size in [const Size(360, 640), const Size(1280, 720), const Size(960, 540), const Size(853, 480)]) {
     for (final field in ['Usuário', 'Senha']) {
       testWidgets(
           'teclado aberto: campo "$field" e botão Entrar acima do teclado em ${size.width.toInt()}x${size.height.toInt()}',
