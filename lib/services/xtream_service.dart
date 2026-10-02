@@ -1,12 +1,13 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../core/text_fix.dart';
 import '../models/channel.dart';
 import '../models/movie.dart';
 import '../models/series.dart';
 import '../models/category.dart';
 
+/// Serviço responsável por toda comunicação com servidores Xtream Codes.
 class XtreamService {
-  final String host;
+  final String host; // ex: http://meuiptv.com:8080
   final String username;
   final String password;
 
@@ -19,109 +20,130 @@ class XtreamService {
   String get _baseApiUrl =>
       '$host/player_api.php?username=$username&password=$password';
 
+  /// Testa o login e retorna os dados do usuário (ou lança erro se inválido).
   Future<Map<String, dynamic>> authenticate() async {
     final response = await http.get(Uri.parse(_baseApiUrl));
     if (response.statusCode != 200) {
       throw Exception('Falha ao conectar ao servidor (${response.statusCode})');
     }
-    final data = decodeJson(response);
+    final data = json.decode(response.body);
     if (data['user_info'] == null || data['user_info']['auth'] != 1) {
       throw Exception('Usuário ou senha inválidos');
     }
     return data;
   }
 
+  /// Categorias de canais (TV ao vivo)
   Future<List<Category>> getLiveCategories() async {
     final url = '$_baseApiUrl&action=get_live_categories';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
-    return data.map((e) => Category.fromXtream(json: e, type: 'live')).toList();
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Category.fromXtream(json: Map<String, dynamic>.from(e as Map), type: 'live'))
+        .toList();
   }
 
-  Future<List<Channel>> getLiveStreams(String categoryId, String categoryName) async {
+  /// Canais de uma categoria específica
+  Future<List<Channel>> getLiveStreams(
+    String categoryId,
+    String categoryName,
+  ) async {
     final url = '$_baseApiUrl&action=get_live_streams&category_id=$categoryId';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
+    final List data = json.decode(response.body);
     return data
         .map((e) => Channel.fromXtream(
-              json: e, host: host,
-              username: username, password: password,
+              json: Map<String, dynamic>.from(e as Map),
+              host: host,
+              username: username,
+              password: password,
               categoryName: categoryName,
             ))
         .toList();
   }
 
+  /// Categorias de filmes (VOD)
   Future<List<Category>> getMovieCategories() async {
     final url = '$_baseApiUrl&action=get_vod_categories';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
-    return data.map((e) => Category.fromXtream(json: e, type: 'movie')).toList();
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Category.fromXtream(json: Map<String, dynamic>.from(e as Map), type: 'movie'))
+        .toList();
   }
 
+  /// Todos os filmes de uma vez (sem filtro de categoria)
   Future<List<Movie>> getAllMovies() async {
     final url = '$_baseApiUrl&action=get_vod_streams';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
+    final List data = json.decode(response.body);
     return data
         .map((e) => Movie.fromXtream(
-              json: e, host: host,
-              username: username, password: password,
+              json: Map<String, dynamic>.from(e as Map),
+              host: host,
+              username: username,
+              password: password,
               categoryName: '',
             ))
         .toList();
   }
 
-  Future<List<Movie>> getMovies(String categoryId, String categoryName) async {
+  /// Filmes de uma categoria específica
+  Future<List<Movie>> getMovies(
+    String categoryId,
+    String categoryName,
+  ) async {
     final url = '$_baseApiUrl&action=get_vod_streams&category_id=$categoryId';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
+    final List data = json.decode(response.body);
     return data
         .map((e) => Movie.fromXtream(
-              json: e, host: host,
-              username: username, password: password,
+              json: Map<String, dynamic>.from(e as Map),
+              host: host,
+              username: username,
+              password: password,
               categoryName: categoryName,
             ))
         .toList();
   }
 
+  /// Categorias de séries
   Future<List<Category>> getSeriesCategories() async {
     final url = '$_baseApiUrl&action=get_series_categories';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
-    return data.map((e) => Category.fromXtream(json: e, type: 'series')).toList();
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Category.fromXtream(json: Map<String, dynamic>.from(e as Map), type: 'series'))
+        .toList();
   }
 
+  /// Todas as séries de uma vez (sem filtro de categoria)
   Future<List<Series>> getAllSeries() async {
     final url = '$_baseApiUrl&action=get_series';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
-    return data.map((e) => Series.fromXtream(json: e, categoryName: '')).toList();
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Series.fromXtream(json: Map<String, dynamic>.from(e as Map), categoryName: ''))
+        .toList();
   }
 
-  Future<List<Series>> getSeries(String categoryId, String categoryName) async {
+  /// Séries de uma categoria específica
+  Future<List<Series>> getSeries(
+    String categoryId,
+    String categoryName,
+  ) async {
     final url = '$_baseApiUrl&action=get_series&category_id=$categoryId';
     final response = await http.get(Uri.parse(url));
-    final List data = decodeJson(response);
-    return data.map((e) => Series.fromXtream(json: e, categoryName: categoryName)).toList();
+    final List data = json.decode(response.body);
+    return data
+        .map((e) => Series.fromXtream(json: Map<String, dynamic>.from(e as Map), categoryName: categoryName))
+        .toList();
   }
 
+  /// Detalhes de uma série específica (temporadas e episódios)
   Future<Map<String, dynamic>> getSeriesInfo(String seriesId) async {
     final url = '$_baseApiUrl&action=get_series_info&series_id=$seriesId';
     final response = await http.get(Uri.parse(url));
-    return decodeJson(response);
-  }
-
-  /// EPG resumido: programa atual + próximo do canal
-  Future<Map<String, dynamic>> getShortEpg(String streamId) async {
-    final url = '$_baseApiUrl&action=get_short_epg&stream_id=$streamId&limit=2';
-    final response = await http.get(Uri.parse(url));
-    return decodeJson(response);
-  }
-
-  /// Detalhes completos de um filme (sinopse, elenco, diretor, etc.)
-  Future<Map<String, dynamic>> getVodInfo(String vodId) async {
-    final url = '$_baseApiUrl&action=get_vod_info&vod_id=$vodId';
-    final response = await http.get(Uri.parse(url));
-    return decodeJson(response);
+    return json.decode(response.body);
   }
 }
