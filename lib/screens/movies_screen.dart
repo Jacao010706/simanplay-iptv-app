@@ -72,6 +72,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
       context: context,
       backgroundColor: const Color(0xFF1a1625),
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => _MovieDetailSheet(
@@ -351,7 +352,7 @@ class _MovieDetailSheetState extends State<_MovieDetailSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
               ]),
             ),
           ]),
