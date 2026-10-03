@@ -6,6 +6,9 @@ import '../services/api_service.dart';
 import '../services/license_service.dart';
 import '../services/xtream_service.dart';
 import 'device_home_screen.dart';
+import '../utils/tv_utils.dart';
+import '../widgets/tv_keyboard_dialog.dart';
+import 'package:flutter/services.dart';
 
 class ActivationScreen extends StatefulWidget {
   const ActivationScreen({super.key});
@@ -49,6 +52,7 @@ class _ActivationScreenState extends State<ActivationScreen>
   // M3U URL
   final _m3uUrlCtrl = TextEditingController();
   bool _m3uLoading = false;
+  bool _isTV = false;
   String? _m3uError;
 
   // MAC do aparelho gerado pelo sistema (o mesmo mostrado na tela inicial)
@@ -62,6 +66,7 @@ class _ActivationScreenState extends State<ActivationScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addObserver(this);
+    TvUtils.isAndroidTV().then((val) { if (mounted) setState(() => _isTV = val); });
   }
 
   @override
@@ -482,6 +487,20 @@ class _ActivationScreenState extends State<ActivationScreen>
     );
   }
 
+  /// Abre o teclado customizado navegável por controle remoto (Android TV).
+  Future<void> _showTvKeyboard(
+      TextEditingController ctrl, String label, {bool obscure = false}) async {
+    final result = await TvKeyboardDialog.show(
+      context,
+      title: label,
+      initialValue: ctrl.text,
+      obscure: obscure,
+    );
+    if (result != null && mounted) {
+      setState(() => ctrl.text = result);
+    }
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     FocusNode? focusNode,
@@ -491,25 +510,55 @@ class _ActivationScreenState extends State<ActivationScreen>
     Widget? suffixIcon,
     TextInputType? keyboardType,
   }) {
+    final decoration = InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+      filled: true,
+      fillColor: Color(AppConfig.backgroundColor),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none),
+      prefixIcon: Icon(icon, color: Colors.white54, size: 20),
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    );
+
+    if (_isTV) {
+      // No Android TV o teclado do sistema nao responde ao D-pad.
+      // Usamos campo somente-leitura + teclado customizado navegavel por controle.
+      return Focus(
+        focusNode: focusNode,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent &&
+              (event.logicalKey == LogicalKeyboardKey.select ||
+               event.logicalKey == LogicalKeyboardKey.enter ||
+               event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
+            _showTvKeyboard(controller, label, obscure: obscure);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: () => _showTvKeyboard(controller, label, obscure: obscure),
+          child: TextField(
+            controller: controller,
+            readOnly: true,
+            showCursor: false,
+            obscureText: obscure,
+            style: const TextStyle(color: Colors.white),
+            decoration: decoration,
+          ),
+        ),
+      );
+    }
+
     return TextField(
       controller: controller,
       focusNode: focusNode,
       obscureText: obscure,
       keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-        filled: true,
-        fillColor: Color(AppConfig.backgroundColor),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none),
-        prefixIcon: Icon(icon, color: Colors.white54, size: 20),
-        suffixIcon: suffixIcon,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      ),
+      decoration: decoration,
     );
   }
 
