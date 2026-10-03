@@ -81,7 +81,7 @@ class ClientSession {
       xtreamPassword: json['xtream_password'] as String?,
       m3uUrl: json['m3u_url'] as String?,
       backupPlaylists: (json['backup_playlists'] as List<dynamic>? ?? [])
-          .map((e) => BackupPlaylist.fromJson(e as Map<String, dynamic>))
+          .map((e) => BackupPlaylist.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
       // NOVOS — sem breaking change: se o backend ainda não retorna, fica null
       clientId: json['client_id'] as int?,

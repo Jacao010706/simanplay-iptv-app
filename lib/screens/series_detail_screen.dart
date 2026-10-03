@@ -63,7 +63,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     if (_seriesInfo == null) return [];
     final episodes = _seriesInfo!['episodes'];
     if (episodes == null) return [];
-    final keys = (episodes as Map<String, dynamic>)
+    final keys = Map<String, dynamic>.from(episodes as Map)
         .keys
         .map((k) => int.tryParse(k) ?? 0)
         .where((n) => n > 0)
@@ -77,9 +77,9 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final episodes = _seriesInfo!['episodes'];
     if (episodes == null) return [];
     final seasonEps =
-        (episodes as Map<String, dynamic>)[season.toString()];
+        Map<String, dynamic>.from(episodes as Map)[season.toString()];
     if (seasonEps == null) return [];
-    return List<Map<String, dynamic>>.from(seasonEps);
+    return (seasonEps as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   void _playEpisode(Map<String, dynamic> ep) {
@@ -312,7 +312,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     final title = (ep['title'] as String?)?.isNotEmpty == true
         ? ep['title'] as String
         : 'Episódio $epNum';
-    final info = ep['info'] as Map<String, dynamic>? ?? {};
+    final info = ep['info'] != null ? Map<String, dynamic>.from(ep['info'] as Map) : <String, dynamic>{};
     final duration = info['duration']?.toString() ?? '';
     final plot = info['plot']?.toString() ?? '';
     final cover = info['movie_image']?.toString().isNotEmpty == true

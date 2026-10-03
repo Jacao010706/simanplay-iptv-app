@@ -239,7 +239,7 @@ class _MovieDetailSheetState extends State<_MovieDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final movieInfo = _info?['info'] as Map<String, dynamic>? ?? {};
+    final movieInfo = _info?['info'] != null ? Map<String, dynamic>.from(_info!['info'] as Map) : <String, dynamic>{};
     final plot = _decode(movieInfo['plot']?.toString()).isNotEmpty
         ? _decode(movieInfo['plot'].toString())
         : (movieInfo['description']?.toString() ?? '');

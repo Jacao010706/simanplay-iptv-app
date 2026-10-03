@@ -125,6 +125,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       context: context,
       backgroundColor: const Color(0xFF1a1625),
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => _ChannelEpgSheet(
