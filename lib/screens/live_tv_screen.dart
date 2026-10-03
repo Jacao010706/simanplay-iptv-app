@@ -227,7 +227,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       ),
       const SizedBox(height: 8),
       Expanded(child: Row(children: [
-        SizedBox(width: 130, child: _buildCategoryList(primary)),
+        SizedBox(width: 155, child: _buildCategoryList(primary)),
         const VerticalDivider(color: Color(0xFF2a2538), width: 1),
         Expanded(child: _buildChannelList(primary)),
       ])),
@@ -270,7 +270,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
-                maxLines: 2, overflow: TextOverflow.ellipsis,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
               Text(count.toString(),
                   style: const TextStyle(color: Colors.white38, fontSize: 10)),
@@ -607,7 +607,7 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
                 Expanded(child: Text(
                   title.isNotEmpty ? title : 'Sem informação',
                   style: const TextStyle(color: Colors.white, fontSize: 13),
-                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
                 )),
               ]),
             );
