@@ -59,3 +59,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // FileProvider usado na instalacao da atualizacao (OTA)
+    implementation("androidx.core:core:1.13.1")
+}

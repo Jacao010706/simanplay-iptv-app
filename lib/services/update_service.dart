@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:open_file_plus/open_file_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
@@ -168,11 +168,14 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       setState(() => _progress = 1.0);
 
       // Abre o instalador do sistema (mostra dialog "Instalar?" ao usuário)
-      final result = await OpenFile.open(filePath, type: 'application/vnd.android.package-archive');
-      if (result.type != ResultType.done && mounted) {
-        setState(() { _error = 'Não foi possível abrir o instalador: ${result.message}'; _progress = null; });
-      } else if (mounted) {
-        Navigator.of(context).pop();
+      try {
+        await const MethodChannel('primetv/device')
+            .invokeMethod('installApk', {'path': filePath});
+        if (mounted) Navigator.of(context).pop();
+      } on PlatformException catch (e) {
+        if (mounted) {
+          setState(() { _error = 'Não foi possível abrir o instalador: ${e.message}'; _progress = null; });
+        }
       }
     } catch (e) {
       if (mounted) {
