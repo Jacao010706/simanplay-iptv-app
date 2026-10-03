@@ -5,11 +5,14 @@ import 'core/providers/theme_provider.dart';
 import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/app_config.dart';
+import 'services/update_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized(); // necessário para o player de vídeo
   runApp(const IptvPlayerApp());
+  // Novidades da versao + verificacao de atualizacao (em segundo plano)
+  UpdateService.runStartupChecks();
 }
 
 class IptvPlayerApp extends StatelessWidget {
@@ -22,6 +25,7 @@ class IptvPlayerApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
+            navigatorKey: appNavigatorKey,
             title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,

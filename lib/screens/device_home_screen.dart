@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
 import '../models/app_session.dart';
 import '../services/device_lists_service.dart';
-import '../services/update_service.dart';
 import '../services/license_service.dart';
 import '../services/xtream_service.dart';
 import 'activation_screen_v3.dart';
@@ -74,8 +73,6 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
     if (!mounted) return;
     setState(() => _lic = lic);
     await _refresh(first: true);
-    // Verifica atualizacao do APK em background (nao bloqueia a tela)
-    if (mounted) UpdateService.checkForUpdate(context);
     // Enquanto a tela está aberta, confere se o cliente cadastrou/alterou listas no site
     _poll = Timer.periodic(const Duration(seconds: 20), (_) => _refresh());
   }
