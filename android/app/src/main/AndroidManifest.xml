@@ -2,6 +2,8 @@
 <!--  ─── Permissões ───────────────────────────────────────────────  -->
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 <!--  ─── Suporte Android TV ──────────────────────────────────────  -->
 <!--  required="false" mantém compatibilidade com celulares  -->
 <uses-feature android:name="android.software.leanback" android:required="false"/>
@@ -21,12 +23,29 @@
 </intent-filter>
 </activity>
 <meta-data android:name="flutterEmbedding" android:value="2"/>
+<!-- FileProvider: compartilha o APK baixado com o instalador do sistema -->
+<provider
+    android:name="androidx.core.content.FileProvider"
+    android:authorities="${applicationId}.provider"
+    android:exported="false"
+    android:grantUriPermissions="true">
+    <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/file_paths"/>
+</provider>
 </application>
 <!-- Abrir o site de pagamento no navegador (url_launcher, Android 11+) -->
 <queries>
 <intent>
 <action android:name="android.intent.action.VIEW"/>
 <data android:scheme="https"/>
+</intent>
+<intent>
+<action android:name="android.intent.action.VIEW"/>
+<data android:scheme="file"/>
+</intent>
+<intent>
+<action android:name="android.intent.action.INSTALL_PACKAGE"/>
 </intent>
 </queries>
 </manifest>

@@ -4,6 +4,7 @@ class AppConfig {
   static const String appName = 'SimanPlay IPTV';
   static const String appSubtitle = 'Conecte sua lista';
   static const String appVersion = 'v1.0';
+  static const int buildNumber = 0; // preenchido automaticamente pelo CI
 
   // Cores (ARGB)
   static const int primaryColor = 0xFFE94BFF;
