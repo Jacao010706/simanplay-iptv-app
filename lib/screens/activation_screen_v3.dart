@@ -32,6 +32,10 @@ class _ActivationScreenState extends State<ActivationScreen>
   late final FocusNode _xUserFocus = _fieldFocusNode(_xButtonKey);
   late final FocusNode _xPassFocus = _fieldFocusNode(_xButtonKey);
   late final FocusNode _m3uUrlFocus = _fieldFocusNode(_m3uButtonKey);
+  // Foco dos botoes: na TV, depois de digitar a senha o controle ja cai no botao
+  final FocusNode _spButtonFocus = FocusNode();
+  final FocusNode _xButtonFocus = FocusNode();
+  final FocusNode _m3uButtonFocus = FocusNode();
   GlobalKey? _focusedButtonKey;
 
   // SimanPlay
@@ -80,6 +84,9 @@ class _ActivationScreenState extends State<ActivationScreen>
       _xUserFocus,
       _xPassFocus,
       _m3uUrlFocus,
+      _spButtonFocus,
+      _xButtonFocus,
+      _m3uButtonFocus,
     ]) {
       node.dispose();
     }
@@ -377,6 +384,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           _buildTextField(
             controller: _spPassCtrl,
             focusNode: _spPassFocus,
+            nextFocus: _spButtonFocus,
             label: 'Senha',
             icon: Icons.lock,
             obscure: !_spShowPass,
@@ -394,6 +402,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           const SizedBox(height: 12),
           _buildButton(
               key: _spButtonKey,
+              focusNode: _spButtonFocus,
               label: 'Entrar',
               loading: _spLoading,
               onPressed: _loginSimanPlay,
@@ -423,6 +432,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           _buildTextField(
             controller: _xPassCtrl,
             focusNode: _xPassFocus,
+            nextFocus: _xButtonFocus,
             label: 'Senha',
             icon: Icons.lock,
             obscure: !_xShowPass,
@@ -440,6 +450,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           const SizedBox(height: 12),
           _buildButton(
               key: _xButtonKey,
+              focusNode: _xButtonFocus,
               label: 'Conectar',
               loading: _xLoading,
               onPressed: _loginXtream,
@@ -463,6 +474,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           _buildTextField(
             controller: _m3uUrlCtrl,
             focusNode: _m3uUrlFocus,
+            nextFocus: _m3uButtonFocus,
             label: 'https://servidor.com/lista.m3u',
             icon: Icons.playlist_play,
             keyboardType: TextInputType.url,
@@ -474,6 +486,7 @@ class _ActivationScreenState extends State<ActivationScreen>
           const SizedBox(height: 16),
           _buildButton(
               key: _m3uButtonKey,
+              focusNode: _m3uButtonFocus,
               label: 'Carregar lista',
               loading: _m3uLoading,
               onPressed: _loginM3U,
@@ -491,7 +504,8 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   /// Abre o teclado customizado navegável por controle remoto (Android TV).
   Future<void> _showTvKeyboard(
-      TextEditingController ctrl, String label, {bool obscure = false}) async {
+      TextEditingController ctrl, String label,
+      {bool obscure = false, FocusNode? next}) async {
     final result = await TvKeyboardDialog.show(
       context,
       title: label,
@@ -500,12 +514,19 @@ class _ActivationScreenState extends State<ActivationScreen>
     );
     if (result != null && mounted) {
       setState(() => ctrl.text = result);
+      if (next != null) {
+        // espera o dialogo fechar e devolver o foco ao campo, depois pula
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) next.requestFocus();
+        });
+      }
     }
   }
 
   Widget _buildTextField({
     required TextEditingController controller,
     FocusNode? focusNode,
+    FocusNode? nextFocus,
     required String label,
     required IconData icon,
     bool obscure = false,
@@ -528,29 +549,46 @@ class _ActivationScreenState extends State<ActivationScreen>
     if (_isTV) {
       // No Android TV o teclado do sistema nao responde ao D-pad.
       // Usamos campo somente-leitura + teclado customizado navegavel por controle.
+      // O TextField fica FORA da navegacao (ExcludeFocus): antes ele recebia o
+      // foco e "prendia" as setas, e o controle nunca chegava no botao Entrar.
       return Focus(
         focusNode: focusNode,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent &&
               (event.logicalKey == LogicalKeyboardKey.select ||
                event.logicalKey == LogicalKeyboardKey.enter ||
+               event.logicalKey == LogicalKeyboardKey.numpadEnter ||
                event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
-            _showTvKeyboard(controller, label, obscure: obscure);
+            _showTvKeyboard(controller, label, obscure: obscure, next: nextFocus);
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
         },
-        child: GestureDetector(
-          onTap: () => _showTvKeyboard(controller, label, obscure: obscure),
-          child: TextField(
-            controller: controller,
-            readOnly: true,
-            showCursor: false,
-            obscureText: obscure,
-            style: const TextStyle(color: Colors.white),
-            decoration: decoration,
-          ),
-        ),
+        child: Builder(builder: (ctx) {
+          final focused = Focus.of(ctx).hasFocus;
+          return GestureDetector(
+            onTap: () => _showTvKeyboard(controller, label,
+                obscure: obscure, next: nextFocus),
+            child: ExcludeFocus(
+              child: TextField(
+                controller: controller,
+                readOnly: true,
+                showCursor: false,
+                obscureText: obscure,
+                style: const TextStyle(color: Colors.white),
+                decoration: decoration.copyWith(
+                  // Borda branca no campo selecionado pelo controle
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: focused
+                        ? const BorderSide(color: Colors.white, width: 2)
+                        : BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       );
     }
 
@@ -580,6 +618,7 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   Widget _buildButton({
     Key? key,
+    FocusNode? focusNode,
     required String label,
     required bool loading,
     required VoidCallback onPressed,
@@ -591,11 +630,14 @@ class _ActivationScreenState extends State<ActivationScreen>
       padding: const EdgeInsets.only(bottom: 12),
       child: SizedBox(
         width: double.infinity,
-        height: 46,
         child: ElevatedButton(
+          focusNode: focusNode,
           onPressed: loading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: primary,
+            // Altura minima, mas cresce com o texto (fonte maior na TV)
+            minimumSize: const Size.fromHeight(46),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10)),
           ).copyWith(
@@ -606,8 +648,11 @@ class _ActivationScreenState extends State<ActivationScreen>
                     : null),
           ),
           child: loading
-              ? const CircularProgressIndicator(
-                  color: Colors.white, strokeWidth: 2)
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
               : Text(label,
                   style: const TextStyle(
                       fontSize: 15,
