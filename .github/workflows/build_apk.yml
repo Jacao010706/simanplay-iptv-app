@@ -98,11 +98,13 @@ jobs:
           mkdir -p assets
           curl -L "${{ inputs.logo_url }}" -o assets/logo.png || true
 
-      - name: Generate APK icon and TV banner from logo
+      - name: Generate APK icon (logo) and TV banner (banner)
         if: ${{ inputs.icon_url != '' || inputs.logo_url != '' }}
         run: |
           pip install Pillow -q
           curl -L "${{ inputs.icon_url != '' && inputs.icon_url || inputs.logo_url }}" -o /tmp/icon_source.png
+          # Banner da TV: usa o Banner do painel (imagem larga); sem banner, usa a logo
+          curl -L "${{ inputs.banner_url != '' && inputs.banner_url || inputs.logo_url }}" -o /tmp/banner_source.png
           python3 - <<'PYEOF'
           from PIL import Image
           bg_hex = "${{ inputs.background_color }}".lstrip("#")
@@ -124,12 +126,13 @@ jobs:
           for folder, size in icons.items():
               fit(src, size, size, 0.06, bg).save(f"{base}/{folder}/ic_launcher.png")
               print(f"icon {folder}: {size}x{size}")
-          # Banner da tela inicial da Android TV: logo centralizada na cor de fundo
+          # Banner da tela inicial da Android TV: imagem inteira centralizada na cor de fundo
+          banner_src = Image.open("/tmp/banner_source.png").convert("RGBA")
           banners = {"mipmap-mdpi": (320, 180), "mipmap-hdpi": (480, 270),
                      "mipmap-xhdpi": (640, 360), "mipmap-xxhdpi": (960, 540),
                      "mipmap-xxxhdpi": (1280, 720)}
           for folder, (w, h) in banners.items():
-              fit(src, w, h, 0.10, bg).save(f"{base}/{folder}/tv_banner.png")
+              fit(banner_src, w, h, 0.04, bg).save(f"{base}/{folder}/tv_banner.png")
               print(f"banner {folder}: {w}x{h}")
           PYEOF
 
