@@ -4,9 +4,8 @@
 // Lista vazia = nao mostra nenhum aviso.
 class ReleaseNotes {
   static const List<String> items = [
-    'Botao "Entrar" da tela de login agora aparece inteiro',
-    'Botao "Assistir" dos filmes nao fica mais cortado',
-    'Nomes das categorias da TV ao vivo aparecem completos',
-    'O app agora avisa e se atualiza sozinho quando houver versao nova',
+    'Tela de login ajustada para a TV: o botao "Entrar" aparece inteiro',
+    'Botao selecionado pelo controle agora fica destacado',
+    'Logo do seu provedor aparece no app e no icone da TV',
   ];
 }

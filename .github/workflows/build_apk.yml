@@ -87,6 +87,7 @@ jobs:
           sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = ${{ inputs.logo_url != '' }};/" lib/core/app_config.dart
           sed -i "s/static const int appTheme = .*/static const int appTheme = ${{ inputs.app_theme }};/" lib/core/app_config.dart
           sed -i "s|static const String bannerUrl = .*|static const String bannerUrl = '${{ inputs.banner_url }}';|" lib/core/app_config.dart
+          sed -i "s|static const String logoUrl = .*|static const String logoUrl = '${{ inputs.logo_url }}';|" lib/core/app_config.dart
           sed -i "s/static const int buildNumber = .*/static const int buildNumber = ${{ github.run_number }};/" lib/core/app_config.dart
           sed -i "s/static const String resellerUsername = .*/static const String resellerUsername = '${{ inputs.reseller_username }}';/" lib/core/app_config.dart
           cat lib/core/app_config.dart
@@ -97,50 +98,39 @@ jobs:
           mkdir -p assets
           curl -L "${{ inputs.logo_url }}" -o assets/logo.png || true
 
-      - name: Download and resize APK icon
-        if: ${{ inputs.icon_url != '' }}
+      - name: Generate APK icon and TV banner from logo
+        if: ${{ inputs.icon_url != '' || inputs.logo_url != '' }}
         run: |
           pip install Pillow -q
-          curl -L "${{ inputs.icon_url }}" -o /tmp/icon_source.png
+          curl -L "${{ inputs.icon_url != '' && inputs.icon_url || inputs.logo_url }}" -o /tmp/icon_source.png
           python3 - <<'PYEOF'
           from PIL import Image
-          import os
-          img = Image.open("/tmp/icon_source.png").convert("RGBA")
-          sizes = {
-            "mipmap-mdpi":    48,
-            "mipmap-hdpi":    72,
-            "mipmap-xhdpi":   96,
-            "mipmap-xxhdpi":  144,
-            "mipmap-xxxhdpi": 192,
-          }
-          base = "android/app/src/main/res"
-          for folder, size in sizes.items():
-            out = f"{base}/{folder}/ic_launcher.png"
-            img.resize((size, size), Image.LANCZOS).save(out)
-            print(f"✓ {folder}: {size}x{size}")
-          PYEOF
+          bg_hex = "${{ inputs.background_color }}".lstrip("#")
+          bg = tuple(int(bg_hex[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+          src = Image.open("/tmp/icon_source.png").convert("RGBA")
 
-      - name: Download and resize TV banner
-        if: ${{ inputs.banner_url != '' }}
-        run: |
-          pip install Pillow -q
-          curl -L "${{ inputs.banner_url }}" -o /tmp/banner_source.png
-          python3 - <<'PYEOF'
-          from PIL import Image
-          import os
-          img = Image.open("/tmp/banner_source.png").convert("RGBA")
-          sizes = {
-            "mipmap-mdpi":    (320, 180),
-            "mipmap-hdpi":    (480, 270),
-            "mipmap-xhdpi":   (640, 360),
-            "mipmap-xxhdpi":  (960, 540),
-            "mipmap-xxxhdpi": (1280, 720),
-          }
+          def fit(img, w, h, pad, fill):
+              # encaixa a logo inteira (sem distorcer) no centro de um fundo w x h
+              canvas = Image.new("RGBA", (w, h), fill)
+              box_w, box_h = int(w * (1 - 2 * pad)), int(h * (1 - 2 * pad))
+              im = img.copy()
+              im.thumbnail((box_w, box_h), Image.LANCZOS)
+              canvas.alpha_composite(im, ((w - im.width) // 2, (h - im.height) // 2))
+              return canvas
+
           base = "android/app/src/main/res"
-          for folder, (w, h) in sizes.items():
-            out = f"{base}/{folder}/tv_banner.png"
-            img.resize((w, h), Image.LANCZOS).save(out)
-            print(f"✓ {folder}: {w}x{h}")
+          icons = {"mipmap-mdpi": 48, "mipmap-hdpi": 72, "mipmap-xhdpi": 96,
+                   "mipmap-xxhdpi": 144, "mipmap-xxxhdpi": 192}
+          for folder, size in icons.items():
+              fit(src, size, size, 0.06, bg).save(f"{base}/{folder}/ic_launcher.png")
+              print(f"icon {folder}: {size}x{size}")
+          # Banner da tela inicial da Android TV: logo centralizada na cor de fundo
+          banners = {"mipmap-mdpi": (320, 180), "mipmap-hdpi": (480, 270),
+                     "mipmap-xhdpi": (640, 360), "mipmap-xxhdpi": (960, 540),
+                     "mipmap-xxxhdpi": (1280, 720)}
+          for folder, (w, h) in banners.items():
+              fit(src, w, h, 0.10, bg).save(f"{base}/{folder}/tv_banner.png")
+              print(f"banner {folder}: {w}x{h}")
           PYEOF
 
       - name: Update app name in AndroidManifest

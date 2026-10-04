@@ -238,13 +238,13 @@ class _ActivationScreenState extends State<ActivationScreen>
   Widget _buildLogo(Color primary) {
     if (AppConfig.useCustomLogo) {
       return Image.network(AppConfig.logoUrl,
-          height: AppConfig.logoSize,
+          height: _isTV ? AppConfig.logoSize * 0.6 : AppConfig.logoSize,
           errorBuilder: (_, __, ___) => Icon(Icons.live_tv,
               size: AppConfig.logoSize * 0.75, color: primary));
     }
     return Icon(
       AppConfig.usePlayIcon ? Icons.play_circle : Icons.live_tv,
-      size: AppConfig.logoSize * 0.75,
+      size: AppConfig.logoSize * (_isTV ? 0.45 : 0.75),
       color: primary,
     );
   }
@@ -282,8 +282,10 @@ class _ActivationScreenState extends State<ActivationScreen>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
+                padding: EdgeInsets.all(_isTV ? 16 : 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Column(
                   children: [
                     _buildLogo(primary),
                     if (_macAddress != null) ...[
@@ -311,7 +313,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                         ),
                       ),
                     ],
-                    const SizedBox(height: 32),
+                    SizedBox(height: _isTV ? 12 : 32),
                     Container(
                       decoration: BoxDecoration(
                         color: surface,
@@ -333,16 +335,15 @@ class _ActivationScreenState extends State<ActivationScreen>
                               Tab(text: 'URL M3U'),
                             ],
                           ),
-                          SizedBox(
-                            height: 520,
-                            child: TabBarView(
-                              controller: _tabController,
-                              children: [
-                                _buildSimanPlayTab(primary),
-                                _buildXtreamTab(primary),
-                                _buildM3UTab(primary),
-                              ],
-                            ),
+                          // Sem altura fixa: a aba ativa ocupa so o que precisa e
+                          // rola junto com a tela (antes cortava o botao na TV).
+                          AnimatedBuilder(
+                            animation: _tabController,
+                            builder: (_, __) => [
+                              _buildSimanPlayTab(primary),
+                              _buildXtreamTab(primary),
+                              _buildM3UTab(primary),
+                            ][_tabController.index],
                           ),
                         ],
                       ),
@@ -353,6 +354,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                             color: Colors.white24, fontSize: 11)),
                   ],
                 ),
+                ),
               ),
             ),
           ),
@@ -362,8 +364,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildSimanPlayTab(Color primary) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         children: [
           _buildTextField(
@@ -402,8 +404,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildXtreamTab(Color primary) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         children: [
           _buildTextField(
@@ -448,8 +450,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildM3UTab(Color primary) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -596,6 +598,12 @@ class _ActivationScreenState extends State<ActivationScreen>
             backgroundColor: primary,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10)),
+          ).copyWith(
+            // Borda branca quando o controle remoto esta no botao
+            side: WidgetStateProperty.resolveWith((states) =>
+                states.contains(WidgetState.focused)
+                    ? const BorderSide(color: Colors.white, width: 3)
+                    : null),
           ),
           child: loading
               ? const CircularProgressIndicator(
