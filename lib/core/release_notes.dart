@@ -4,8 +4,8 @@
 // Lista vazia = nao mostra nenhum aviso.
 class ReleaseNotes {
   static const List<String> items = [
-    'Login pela TV corrigido: depois de digitar a senha o controle vai direto para "Entrar"',
-    'Texto dos botoes nao fica mais cortado na TV',
-    'Campo selecionado pelo controle agora fica destacado',
+    'Login pela TV corrigido: o controle agora chega no botao "Entrar"',
+    'Ao confirmar a senha no teclado, o login ja e feito',
+    'Textos e botoes ajustados para nao ficarem cortados na TV',
   ];
 }

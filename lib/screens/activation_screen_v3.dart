@@ -140,6 +140,30 @@ class _ActivationScreenState extends State<ActivationScreen>
   @visibleForTesting
   void debugSetError(String message) => setState(() => _spError = message);
 
+  /// Só para testes: força o modo TV (teclado customizado).
+  @visibleForTesting
+  void debugSetTv(bool value) => setState(() => _isTV = value);
+
+  /// Seta para cima/baixo do controle remoto sai do campo de texto.
+  /// Sem isso o TextField "prende" as setas (move o cursor) e o controle
+  /// nunca chega no botão Entrar.
+  KeyEventResult _dpadOutOfField(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      focus.focusInDirection(TraversalDirection.down);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      focus.focusInDirection(TraversalDirection.up);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   Future<void> _loginSimanPlay() async {
     setState(() {
       _spLoading = true;
@@ -385,6 +409,7 @@ class _ActivationScreenState extends State<ActivationScreen>
             controller: _spPassCtrl,
             focusNode: _spPassFocus,
             nextFocus: _spButtonFocus,
+            onSubmit: _loginSimanPlay,
             label: 'Senha',
             icon: Icons.lock,
             obscure: !_spShowPass,
@@ -433,6 +458,7 @@ class _ActivationScreenState extends State<ActivationScreen>
             controller: _xPassCtrl,
             focusNode: _xPassFocus,
             nextFocus: _xButtonFocus,
+            onSubmit: _loginXtream,
             label: 'Senha',
             icon: Icons.lock,
             obscure: !_xShowPass,
@@ -475,6 +501,7 @@ class _ActivationScreenState extends State<ActivationScreen>
             controller: _m3uUrlCtrl,
             focusNode: _m3uUrlFocus,
             nextFocus: _m3uButtonFocus,
+            onSubmit: _loginM3U,
             label: 'https://servidor.com/lista.m3u',
             icon: Icons.playlist_play,
             keyboardType: TextInputType.url,
@@ -527,6 +554,7 @@ class _ActivationScreenState extends State<ActivationScreen>
     required TextEditingController controller,
     FocusNode? focusNode,
     FocusNode? nextFocus,
+    VoidCallback? onSubmit,
     required String label,
     required IconData icon,
     bool obscure = false,
@@ -592,13 +620,22 @@ class _ActivationScreenState extends State<ActivationScreen>
       );
     }
 
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      obscureText: obscure,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: Colors.white),
-      decoration: decoration,
+    return Focus(
+      // So escuta as setas; quem recebe o foco continua sendo o TextField
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (_, event) => _dpadOutOfField(event),
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        obscureText: obscure,
+        keyboardType: keyboardType,
+        textInputAction:
+            onSubmit != null ? TextInputAction.done : TextInputAction.next,
+        onSubmitted: onSubmit == null ? null : (_) => onSubmit(),
+        style: const TextStyle(color: Colors.white),
+        decoration: decoration,
+      ),
     );
   }
 
@@ -653,11 +690,16 @@ class _ActivationScreenState extends State<ActivationScreen>
                   height: 22,
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2))
-              : Text(label,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(label,
+                      maxLines: 1,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.2,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ),
         ),
       ),
     );

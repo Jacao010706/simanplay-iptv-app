@@ -1,6 +1,9 @@
 package com.simanplay.iptvplayer.iptv_player
 
+import android.app.UiModeManager
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
@@ -16,8 +19,19 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "androidId" ->
                         result.success(Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID))
-                    "isTvDevice" ->
-                        result.success(packageManager.hasSystemFeature("android.software.leanback"))
+                    "isTvDevice" -> {
+                        // Muitas TVs/TV box nao declaram "leanback": checa tambem
+                        // o modo de TV e a ausencia de tela de toque.
+                        val uiMode = (getSystemService(Context.UI_MODE_SERVICE) as UiModeManager)
+                            .currentModeType
+                        val pm = packageManager
+                        result.success(
+                            uiMode == Configuration.UI_MODE_TYPE_TELEVISION ||
+                            pm.hasSystemFeature("android.software.leanback") ||
+                            pm.hasSystemFeature("android.hardware.type.television") ||
+                            !pm.hasSystemFeature("android.hardware.touchscreen")
+                        )
+                    }
                     "installApk" -> {
                         try {
                             val path = call.argument<String>("path")!!

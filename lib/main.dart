@@ -33,7 +33,16 @@ class IptvPlayerApp extends StatelessWidget {
             home: const DeviceHomeScreen(),
             // Teste grátis de 7 dias; depois exige plano pago no site (PIX).
             // Envolve o app inteiro, então o bloqueio vale em qualquer tela.
-            builder: (context, child) => LicenseGate(child: child ?? const SizedBox.shrink()),
+            builder: (context, child) {
+              // TVs costumam vir com fonte do sistema bem grande: limita o
+              // aumento para o texto nao estourar botoes e campos.
+              final mq = MediaQuery.of(context);
+              return MediaQuery(
+                data: mq.copyWith(
+                    textScaler: mq.textScaler.clamp(maxScaleFactor: 1.15)),
+                child: LicenseGate(child: child ?? const SizedBox.shrink()),
+              );
+            },
           );
         },
       ),
