@@ -10,10 +10,20 @@ class SeriesDetailScreen extends StatefulWidget {
   final AppSession session;
   final Series series;
 
+  /// Só para testes: resposta do get_series_info já pronta (não acessa a rede).
+  @visibleForTesting
+  final Map<String, dynamic>? debugSeriesInfo;
+
+  /// Só para testes: chamado no lugar de abrir o player.
+  @visibleForTesting
+  final void Function(Episode episode)? debugOnPlay;
+
   const SeriesDetailScreen({
     super.key,
     required this.session,
     required this.series,
+    this.debugSeriesInfo,
+    this.debugOnPlay,
   });
 
   @override
@@ -21,15 +31,29 @@ class SeriesDetailScreen extends StatefulWidget {
 }
 
 class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
-  Map<String, dynamic>? _seriesInfo;
+  List<SeriesSeason> _seasons = const [];
   bool _loading = true;
   String? _error;
-  int _selectedSeason = 1;
+  int? _selectedSeason;
 
   @override
   void initState() {
     super.initState();
-    _loadSeriesInfo();
+    if (widget.debugSeriesInfo != null) {
+      _applyInfo(widget.debugSeriesInfo!);
+      _loading = false;
+    } else {
+      _loadSeriesInfo();
+    }
+  }
+
+  void _applyInfo(Map<String, dynamic> info) {
+    _seasons = parseSeriesSeasons(info);
+    // Abre na primeira temporada que tem episódios
+    final firstWithEpisodes = _seasons.where((s) => s.episodes.isNotEmpty);
+    _selectedSeason = firstWithEpisodes.isNotEmpty
+        ? firstWithEpisodes.first.number
+        : (_seasons.isNotEmpty ? _seasons.first.number : null);
   }
 
   Future<void> _loadSeriesInfo() async {
@@ -44,15 +68,13 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
         password: widget.session.effectiveXtreamPassword!,
       );
       final info = await service.getSeriesInfo(widget.series.id);
+      if (!mounted) return;
       setState(() {
-        _seriesInfo = info;
+        _applyInfo(info);
         _loading = false;
       });
-      final seasons = _getSeasons();
-      if (seasons.isNotEmpty) {
-        setState(() => _selectedSeason = seasons.first);
-      }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
@@ -60,47 +82,29 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
     }
   }
 
-  List<int> _getSeasons() {
-    if (_seriesInfo == null) return [];
-    final episodes = _seriesInfo!['episodes'];
-    if (episodes == null) return [];
-    final keys = Map<String, dynamic>.from(episodes as Map)
-        .keys
-        .map((k) => int.tryParse(k) ?? 0)
-        .where((n) => n > 0)
-        .toList();
-    keys.sort();
-    return keys;
+  List<Episode> get _episodes {
+    for (final s in _seasons) {
+      if (s.number == _selectedSeason) return s.episodes;
+    }
+    return const [];
   }
 
-  List<Map<String, dynamic>> _getEpisodes(int season) {
-    if (_seriesInfo == null) return [];
-    final episodes = _seriesInfo!['episodes'];
-    if (episodes == null) return [];
-    final seasonEps =
-        Map<String, dynamic>.from(episodes as Map)[season.toString()];
-    if (seasonEps == null) return [];
-    return (seasonEps as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-  }
-
-  void _playEpisode(Map<String, dynamic> ep) {
-    final host = widget.session.effectiveXtreamHost!;
-    final user = widget.session.effectiveXtreamUsername!;
-    final pass = widget.session.effectiveXtreamPassword!;
-    final epId = ep['id'].toString();
-    final ext = ep['container_extension'] ?? 'mp4';
-    final url = '$host/series/$user/$pass/$epId.$ext';
-    final epNum = ep['episode_num']?.toString() ?? '?';
-    final title = (ep['title'] as String?)?.isNotEmpty == true
-        ? ep['title'] as String
-        : 'Ep. $epNum';
-
+  void _playEpisode(Episode ep) {
+    if (widget.debugOnPlay != null) {
+      widget.debugOnPlay!(ep);
+      return;
+    }
+    final url = ep.streamUrl(
+      host: widget.session.effectiveXtreamHost!,
+      username: widget.session.effectiveXtreamUsername!,
+      password: widget.session.effectiveXtreamPassword!,
+    );
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => PlayerScreen(
           urls: [url],
-          title: '${widget.series.name} · $title',
+          title: '${widget.series.name} · ${ep.title}',
         ),
       ),
     );
@@ -250,17 +254,17 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
   }
 
   Widget _buildEpisodesSliver(Color primary) {
-    final seasons = _getSeasons();
-    if (seasons.isEmpty) {
+    if (_seasons.every((s) => s.episodes.isEmpty)) {
       return const SliverFillRemaining(
+        hasScrollBody: false,
         child: Center(
-          child: Text('Nenhum episódio disponível',
+          child: Text('Nenhum episódio encontrado',
               style: TextStyle(color: Colors.white54)),
         ),
       );
     }
 
-    final episodes = _getEpisodes(_selectedSeason);
+    final episodes = _episodes;
 
     return SliverList(
       delegate: SliverChildListDelegate([
@@ -269,11 +273,14 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: seasons.length,
+            itemCount: _seasons.length,
             itemBuilder: (_, i) {
-              final s = seasons[i];
+              final s = _seasons[i].number;
               final isSelected = s == _selectedSeason;
               return TvTap(
+                key: ValueKey('season-$s'),
+                // No controle remoto a tela já abre com a temporada selecionada focada
+                autofocus: isSelected,
                 onTap: () => setState(() => _selectedSeason = s),
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
@@ -302,25 +309,26 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
           ),
         ),
         const SizedBox(height: 10),
+        if (episodes.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text('Nenhum episódio nesta temporada',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+          ),
         ...episodes.map((ep) => _buildEpisodeTile(ep, primary)),
         const SizedBox(height: 24),
       ]),
     );
   }
 
-  Widget _buildEpisodeTile(Map<String, dynamic> ep, Color primary) {
-    final epNum = ep['episode_num']?.toString() ?? '?';
-    final title = (ep['title'] as String?)?.isNotEmpty == true
-        ? ep['title'] as String
-        : 'Episódio $epNum';
-    final info = ep['info'] != null ? Map<String, dynamic>.from(ep['info'] as Map) : <String, dynamic>{};
-    final duration = info['duration']?.toString() ?? '';
-    final plot = info['plot']?.toString() ?? '';
-    final cover = info['movie_image']?.toString().isNotEmpty == true
-        ? info['movie_image'] as String
-        : (info['cover_big']?.toString() ?? '');
+  Widget _buildEpisodeTile(Episode ep, Color primary) {
+    final epNum = ep.episodeNumber > 0 ? '${ep.episodeNumber}' : '?';
+    final cover = ep.coverUrl ?? '';
 
-    return InkWell(
+    return TvTap(
+      key: ValueKey('episode-${ep.season}-${ep.id}'),
       onTap: () => _playEpisode(ep),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -352,7 +360,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    ep.title,
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 13,
@@ -360,15 +368,15 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (duration.isNotEmpty) ...[
+                  if (ep.duration != null) ...[
                     const SizedBox(height: 2),
-                    Text(duration,
+                    Text(ep.duration!,
                         style: const TextStyle(
                             color: Colors.white38, fontSize: 11)),
                   ],
-                  if (plot.isNotEmpty) ...[
+                  if (ep.plot != null) ...[
                     const SizedBox(height: 2),
-                    Text(plot,
+                    Text(ep.plot!,
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 11),
                         maxLines: 2,
