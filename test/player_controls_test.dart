@@ -44,6 +44,8 @@ Future<_Estado> _abrir(WidgetTester tester, {required bool aoVivo, bool gravavel
 
 Future<void> _tecla(WidgetTester tester, LogicalKeyboardKey k) async {
   await tester.sendKeyEvent(k);
+  // 2 quadros: um para os botoes/foco, outro para o destaque acompanhar
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.pump(const Duration(milliseconds: 300));
 }
 

@@ -94,11 +94,17 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
   }
 
   void _show({bool focusPlay = true}) {
-    if (!_visible) setState(() => _visible = true);
-    if (focusPlay) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _visible) _playFocus.requestFocus();
-      });
+    if (_visible) {
+      // Botoes ja estao na tela: foca agora (nao depende de um novo quadro)
+      if (focusPlay) _playFocus.requestFocus();
+    } else {
+      setState(() => _visible = true);
+      if (focusPlay) {
+        // Botoes aparecem no proximo quadro; foca logo depois
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _visible) _playFocus.requestFocus();
+        });
+      }
     }
     _scheduleHide();
   }
