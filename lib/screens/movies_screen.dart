@@ -7,6 +7,7 @@ import '../core/app_config.dart';
 import '../services/xtream_service.dart';
 import 'player_screen.dart';
 import '../widgets/tv_focus.dart';
+import '../widgets/tv_search_field.dart';
 
 class MoviesScreen extends StatefulWidget {
   final AppSession session;
@@ -107,7 +108,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.all(12),
-        child: TextField(
+        child: TvSearchField(
           controller: _searchCtrl,
           style: const TextStyle(color: Colors.white),
           onChanged: (v) => setState(() => _search = v),

@@ -11,6 +11,7 @@ import '../services/recording_service.dart';
 import 'player_screen.dart';
 import 'recordings_screen.dart';
 import '../widgets/tv_focus.dart';
+import '../widgets/tv_search_field.dart';
 import '../widgets/record_options.dart';
 
 class LiveTvScreen extends StatefulWidget {
@@ -186,7 +187,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 8, 0),
         child: Row(children: [
-          Expanded(child: TextField(
+          Expanded(child: TvSearchField(
             controller: _searchCtrl,
             style: const TextStyle(color: Colors.white),
             onChanged: (v) => setState(() => _search = v),

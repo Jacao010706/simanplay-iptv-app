@@ -6,6 +6,7 @@ import '../models/category.dart';
 import '../services/xtream_service.dart';
 import 'series_detail_screen.dart';
 import '../widgets/tv_focus.dart';
+import '../widgets/tv_search_field.dart';
 
 class SeriesScreen extends StatefulWidget {
   final AppSession session;
@@ -118,7 +119,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
       // Barra de busca
       Padding(
         padding: const EdgeInsets.all(12),
-        child: TextField(
+        child: TvSearchField(
           controller: _searchCtrl,
           style: const TextStyle(color: Colors.white),
           onChanged: (v) => setState(() => _search = v),
