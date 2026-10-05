@@ -46,12 +46,23 @@ class PlayerRemoteControls extends StatefulWidget {
 }
 
 class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
+  // O player controla sozinho qual botao esta selecionado (nao usa o foco do
+  // Flutter nos botoes): o foco fica sempre aqui e as teclas sao tratadas
+  // de forma previsivel em qualquer TV.
   final FocusNode _rootFocus = FocusNode(debugLabel: 'player-root');
-  final FocusNode _playFocus = FocusNode(debugLabel: 'player-play');
   bool _visible = true;
+  String? _selected; // 'back', 'rew', 'play', 'fwd', 'rec' ou null
   Timer? _hideTimer;
 
   bool get controlsVisible => _visible;
+  String? get selectedButton => _visible ? _selected : null;
+
+  List<String> get _bottomRow => [
+        if (widget.onSeek != null) 'rew',
+        'play',
+        if (widget.onSeek != null) 'fwd',
+        if (widget.onRecord != null) 'rec',
+      ];
 
   @override
   void initState() {
@@ -73,13 +84,15 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
         _scheduleHide();
       }
     }
+    if (_selected != null && _selected != 'back' && !_bottomRow.contains(_selected)) {
+      _selected = 'play';
+    }
   }
 
   @override
   void dispose() {
     _hideTimer?.cancel();
     _rootFocus.dispose();
-    _playFocus.dispose();
     super.dispose();
   }
 
@@ -88,24 +101,55 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
     if (widget.paused) return;
     _hideTimer = Timer(PlayerRemoteControls.hideAfter, () {
       if (!mounted || widget.paused) return;
-      setState(() => _visible = false);
-      _rootFocus.requestFocus();
+      setState(() {
+        _visible = false;
+        _selected = null;
+      });
     });
   }
 
-  void _show({bool focusPlay = true}) {
-    if (_visible) {
-      // Botoes ja estao na tela: foca agora (nao depende de um novo quadro)
-      if (focusPlay) _playFocus.requestFocus();
-    } else {
-      setState(() => _visible = true);
-      if (focusPlay) {
-        // Botoes aparecem no proximo quadro; foca logo depois
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _visible) _playFocus.requestFocus();
-        });
-      }
+  void _show({bool select = true}) {
+    setState(() {
+      _visible = true;
+      if (select) _selected ??= 'play';
+    });
+    _scheduleHide();
+  }
+
+  void _activate(String id) {
+    switch (id) {
+      case 'back':
+        widget.onBack();
+        break;
+      case 'rew':
+        widget.onSeek?.call(-10);
+        break;
+      case 'fwd':
+        widget.onSeek?.call(10);
+        break;
+      case 'rec':
+        widget.onRecord?.call();
+        break;
+      default:
+        widget.onPlayPause();
     }
+    _scheduleHide();
+  }
+
+  void _move(LogicalKeyboardKey k) {
+    final row = _bottomRow;
+    setState(() {
+      final cur = _selected ?? 'play';
+      if (k == LogicalKeyboardKey.arrowUp) {
+        _selected = 'back';
+      } else if (k == LogicalKeyboardKey.arrowDown) {
+        if (cur == 'back') _selected = 'play';
+      } else if (cur != 'back') {
+        final i = row.indexOf(cur);
+        final d = k == LogicalKeyboardKey.arrowRight ? 1 : -1;
+        _selected = row[(i + d).clamp(0, row.length - 1)];
+      }
+    });
     _scheduleHide();
   }
 
@@ -114,6 +158,12 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
       k == LogicalKeyboardKey.enter ||
       k == LogicalKeyboardKey.numpadEnter ||
       k == LogicalKeyboardKey.gameButtonA;
+
+  static bool _isArrow(LogicalKeyboardKey k) =>
+      k == LogicalKeyboardKey.arrowUp ||
+      k == LogicalKeyboardKey.arrowDown ||
+      k == LogicalKeyboardKey.arrowLeft ||
+      k == LogicalKeyboardKey.arrowRight;
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) return KeyEventResult.ignored;
@@ -126,67 +176,77 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
         k == LogicalKeyboardKey.mediaPause) {
       if (down) {
         widget.onPlayPause();
-        _show(focusPlay: false);
+        _show(select: false);
       }
       return KeyEventResult.handled;
     }
     if (widget.onSeek != null &&
         (k == LogicalKeyboardKey.mediaFastForward || k == LogicalKeyboardKey.mediaRewind)) {
       widget.onSeek!(k == LogicalKeyboardKey.mediaFastForward ? 30 : -30);
-      _show(focusPlay: false);
+      _show(select: false);
       return KeyEventResult.handled;
     }
 
-    // Um botao esta selecionado: navegacao normal entre os botoes
-    if (!_rootFocus.hasPrimaryFocus) {
-      _scheduleHide();
-      return KeyEventResult.ignored;
-    }
+    final hasSelection = _visible && _selected != null;
 
     if (_isOk(k)) {
-      if (down) {
+      if (!down) return KeyEventResult.handled;
+      if (hasSelection) {
+        _activate(_selected!);
+      } else {
         widget.onPlayPause();
-        _show(focusPlay: false);
+        _show(select: false);
       }
       return KeyEventResult.handled;
     }
-    if (widget.onSeek != null &&
-        (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowRight)) {
-      widget.onSeek!(k == LogicalKeyboardKey.arrowRight ? 10 : -10);
-      _show(focusPlay: false);
-      return KeyEventResult.handled;
-    }
-    if (k == LogicalKeyboardKey.arrowUp ||
-        k == LogicalKeyboardKey.arrowDown ||
-        k == LogicalKeyboardKey.arrowLeft ||
-        k == LogicalKeyboardKey.arrowRight) {
-      _show();
+
+    if (_isArrow(k)) {
+      if (hasSelection) {
+        _move(k);
+      } else if (widget.onSeek != null &&
+          (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.arrowRight)) {
+        widget.onSeek!(k == LogicalKeyboardKey.arrowRight ? 10 : -10);
+        _show(select: false);
+      } else {
+        _show();
+      }
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
 
   Widget _button({
+    required String id,
     required IconData icon,
     required String label,
-    required VoidCallback onPressed,
-    FocusNode? focusNode,
     double size = 30,
     Color? color,
   }) {
+    final sel = selectedButton == id;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Tooltip(
-        message: label,
-        child: IconButton(
-          focusNode: focusNode,
-          iconSize: size,
-          style: IconButton.styleFrom(backgroundColor: Colors.black54),
-          icon: Icon(icon, color: color ?? Colors.white),
-          onPressed: () {
-            onPressed();
-            _scheduleHide();
+      child: Semantics(
+        button: true,
+        label: label,
+        child: GestureDetector(
+          onTap: () {
+            setState(() => _selected = id);
+            _activate(id);
           },
+          child: AnimatedScale(
+            scale: sel ? 1.15 : 1.0,
+            duration: const Duration(milliseconds: 120),
+            child: Container(
+              key: ValueKey('player-btn-$id'),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: sel ? Colors.white24 : Colors.black54,
+                shape: BoxShape.circle,
+                border: Border.all(color: sel ? Colors.white : Colors.transparent, width: 3),
+              ),
+              child: Icon(icon, size: size, color: color ?? Colors.white),
+            ),
+          ),
         ),
       ),
     );
@@ -197,16 +257,19 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
     final rec = widget.recordingInfo;
     return Focus(
       focusNode: _rootFocus,
+      autofocus: true,
       onKeyEvent: _onKey,
       child: Stack(fit: StackFit.expand, children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
             if (_visible) {
-              setState(() => _visible = false);
-              _rootFocus.requestFocus();
+              setState(() {
+                _visible = false;
+                _selected = null;
+              });
             } else {
-              _show(focusPlay: false);
+              _show(select: false);
             }
           },
           child: widget.child,
@@ -251,7 +314,7 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
                 ),
               ),
               child: Row(children: [
-                _button(icon: Icons.arrow_back, label: 'Voltar', onPressed: widget.onBack, size: 24),
+                _button(id: 'back', icon: Icons.arrow_back, label: 'Voltar', size: 22),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(widget.title,
@@ -261,7 +324,7 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
                 if (widget.subtitle != null)
                   Text(widget.subtitle!,
                       style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                if (rec != null) const SizedBox(width: 110),
+                if (rec != null) const SizedBox(width: 130),
               ]),
             ),
           ),
@@ -271,21 +334,20 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
             bottom: 24,
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               if (widget.onSeek != null)
-                _button(icon: Icons.replay_10, label: 'Voltar 10s', onPressed: () => widget.onSeek!(-10)),
+                _button(id: 'rew', icon: Icons.replay_10, label: 'Voltar 10s'),
               _button(
+                id: 'play',
                 icon: widget.paused ? Icons.play_arrow : Icons.pause,
                 label: widget.paused ? 'Continuar' : 'Pausar',
-                onPressed: widget.onPlayPause,
-                focusNode: _playFocus,
-                size: 44,
+                size: 40,
               ),
               if (widget.onSeek != null)
-                _button(icon: Icons.forward_10, label: 'Avancar 10s', onPressed: () => widget.onSeek!(10)),
+                _button(id: 'fwd', icon: Icons.forward_10, label: 'Avancar 10s'),
               if (widget.onRecord != null)
                 _button(
+                  id: 'rec',
                   icon: widget.recording ? Icons.stop : Icons.fiber_manual_record,
                   label: widget.recording ? 'Parar gravacao' : 'Gravar',
-                  onPressed: widget.onRecord!,
                   color: Colors.redAccent,
                 ),
             ]),

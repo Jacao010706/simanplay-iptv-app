@@ -107,32 +107,63 @@ void main() {
   testWidgets('com controles na tela: setas andam ate Gravar e OK grava', (tester) async {
     final e = await _abrir(tester, aoVivo: true);
     await _esconder(tester);
-    // Seta para baixo mostra os controles e seleciona o pausar
+    // Seta para baixo mostra os controles com o Pausar selecionado
     await _tecla(tester, LogicalKeyboardKey.arrowDown);
-    expect(find.byKey(FocusRing.ringKey), findsOneWidget, reason: 'sem destaque no botao');
-    // Anda para a direita ate o botao Gravar
-    for (var i = 0; i < 3 && e.gravar == 0; i++) {
-      await _tecla(tester, LogicalKeyboardKey.arrowRight);
-      final focado = FocusManager.instance.primaryFocus?.context;
-      final noGravar = focado != null &&
-          find
-              .descendant(
-                  of: find.byWidget(focado.widget), matching: find.byIcon(Icons.fiber_manual_record))
-              .evaluate()
-              .isNotEmpty;
-      if (noGravar) await _tecla(tester, LogicalKeyboardKey.select);
-    }
-    expect(e.gravar, 1, reason: 'nao foi possivel acionar Gravar pelo controle');
+    expect(_controles(tester).selectedButton, 'play');
+    final borda = tester.widget<Container>(find.byKey(const ValueKey('player-btn-play')));
+    expect((borda.decoration as BoxDecoration).border, isNotNull,
+        reason: 'botao selecionado sem destaque');
+    // Direita ate o Gravar
+    await _tecla(tester, LogicalKeyboardKey.arrowRight);
+    expect(_controles(tester).selectedButton, 'rec', reason: 'seta direita nao chegou no Gravar');
+    await _tecla(tester, LogicalKeyboardKey.arrowRight); // ja e o ultimo: fica nele
+    expect(_controles(tester).selectedButton, 'rec');
+    await _tecla(tester, LogicalKeyboardKey.select);
+    expect(e.gravar, 1, reason: 'OK no Gravar nao gravou');
     expect(e.pausas, 0, reason: 'OK no Gravar nao deve pausar');
+    // Volta para o Pausar e OK pausa
+    await _tecla(tester, LogicalKeyboardKey.arrowLeft);
+    expect(_controles(tester).selectedButton, 'play');
+    await _tecla(tester, LogicalKeyboardKey.select);
+    expect(e.pausas, 1);
+    await _tecla(tester, LogicalKeyboardKey.select);
+    expect(e.pausas, 2);
+    await _esconder(tester);
+  });
+
+  testWidgets('filme: botoes voltar/avancar 10s pelo controle', (tester) async {
+    final e = await _abrir(tester, aoVivo: false, gravavel: false);
+    await _tecla(tester, LogicalKeyboardKey.arrowDown); // mostra e seleciona o Pausar
+    expect(_controles(tester).selectedButton, 'play');
+    await _tecla(tester, LogicalKeyboardKey.arrowLeft);
+    expect(_controles(tester).selectedButton, 'rew');
+    await _tecla(tester, LogicalKeyboardKey.select);
+    await _tecla(tester, LogicalKeyboardKey.arrowRight);
+    await _tecla(tester, LogicalKeyboardKey.arrowRight);
+    expect(_controles(tester).selectedButton, 'fwd');
+    await _tecla(tester, LogicalKeyboardKey.select);
+    expect(e.saltos, [-10, 10]);
     await _esconder(tester);
   });
 
   testWidgets('botao Voltar acessivel pelo controle', (tester) async {
     final e = await _abrir(tester, aoVivo: true);
-    await _tecla(tester, LogicalKeyboardKey.arrowDown); // foca o pausar
-    await _tecla(tester, LogicalKeyboardKey.arrowUp); // sobe para a barra de cima
+    await _tecla(tester, LogicalKeyboardKey.arrowDown); // seleciona o Pausar
+    await _tecla(tester, LogicalKeyboardKey.arrowUp); // sobe para o Voltar
+    expect(_controles(tester).selectedButton, 'back');
     await _tecla(tester, LogicalKeyboardKey.select);
-    expect(e.voltar, 1, reason: 'nao chegou no Voltar com a seta para cima');
+    expect(e.voltar, 1, reason: 'OK no Voltar nao voltou');
+    await _tecla(tester, LogicalKeyboardKey.arrowDown);
+    expect(_controles(tester).selectedButton, 'play');
     await _esconder(tester);
+  });
+
+  testWidgets('controles somem sozinhos e a selecao reinicia', (tester) async {
+    await _abrir(tester, aoVivo: true);
+    await _tecla(tester, LogicalKeyboardKey.arrowDown);
+    expect(_controles(tester).selectedButton, 'play');
+    await _esconder(tester);
+    expect(_controles(tester).controlsVisible, isFalse);
+    expect(_controles(tester).selectedButton, isNull);
   });
 }
