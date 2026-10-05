@@ -125,12 +125,27 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '${activeRec.elapsedFormatted}  •  ${activeRec.sizeFormatted}',
+                    '${activeRec.elapsedFormatted}  •  ${activeRec.sizeFormatted}'
+                    '${activeRec.stopAtFormatted != null ? '  •  para as ${activeRec.stopAtFormatted}' : ''}',
                     style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ],
               )),
               const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Assistir enquanto grava',
+                icon: Icon(Icons.play_circle_fill, color: primary, size: 32),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PlayerScreen(
+                      urls: ['file://${activeRec.filePath}'],
+                      title: activeRec.channelName,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               ElevatedButton.icon(
                 onPressed: () async {
                   await RecordingService.instance.stopRecording();
@@ -146,6 +161,9 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
               ),
             ]),
           ),
+
+        // ── Gravações agendadas ─────────────────────────────────────────────
+        ..._buildSchedules(primary),
 
         // ── Lista de gravações ──────────────────────────────────────────────
         Expanded(child: _loading
@@ -163,6 +181,48 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
                   )),
       ]),
     );
+  }
+
+  List<Widget> _buildSchedules(Color primary) {
+    final list = RecordingService.instance.schedules;
+    if (list.isEmpty) return const [];
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text('AGENDADAS',
+              style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+        ),
+      ),
+      for (final s in list)
+        Container(
+          margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1a1625),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.alarm, color: Colors.redAccent),
+            title: Text(
+              s.title?.isNotEmpty == true ? '${s.channelName} • ${s.title}' : s.channelName,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(s.whenFormatted,
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            trailing: TextButton.icon(
+              onPressed: () async {
+                await RecordingService.instance.removeSchedule(s.id);
+                if (mounted) setState(() {});
+              },
+              icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+              label: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            ),
+          ),
+        ),
+    ];
   }
 
   Widget _buildEmpty() {

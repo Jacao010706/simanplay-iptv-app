@@ -3,6 +3,11 @@
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+<!-- Gravacao continua com a TV na tela inicial / tela apagada -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+<uses-permission android:name="android.permission.WAKE_LOCK"/>
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 <!--  ─── Suporte Android TV ──────────────────────────────────────  -->
 <!--  required="false" mantém compatibilidade com celulares  -->
@@ -24,6 +29,10 @@
 </activity>
 <meta-data android:name="flutterEmbedding" android:value="2"/>
 <!-- FileProvider: compartilha o APK baixado com o instalador do sistema -->
+<service
+    android:name=".RecordingKeepAliveService"
+    android:exported="false"
+    android:foregroundServiceType="dataSync"/>
 <provider
     android:name="androidx.core.content.FileProvider"
     android:authorities="${applicationId}.provider"

@@ -32,7 +32,8 @@ void main() {
           child: Container(width: w, height: 60, color: Colors.blue, child: Text(id)),
         );
     await tester.pumpWidget(MaterialApp(
-      builder: (c, child) => FocusRing(child: child!),
+      shortcuts: appShortcuts,
+    builder: (c, child) => FocusRing(child: child!),
       home: Scaffold(
         body: SingleChildScrollView(
           child: Column(children: [
@@ -105,7 +106,8 @@ void main() {
       };
       try {
         await tester.pumpWidget(MaterialApp(
-          builder: (c, child) => FocusRing(child: child!),
+          shortcuts: appShortcuts,
+    builder: (c, child) => FocusRing(child: child!),
           home: HomeScreen(
             session: const AppSession(type: SessionType.simanplay),
             debugTheme: tema,

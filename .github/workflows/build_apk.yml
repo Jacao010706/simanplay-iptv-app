@@ -67,11 +67,11 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Testes de controle remoto (login, home, listas) e layout
+      - name: Testes de controle remoto (login, home, listas, player), gravacao e layout
         run: |
           flutter pub get
           set +e
-          flutter test test/login_dpad_test.dart test/login_layout_test.dart test/tv_navigation_test.dart --reporter expanded 2>&1 | tee /tmp/test.log
+          flutter test test/login_dpad_test.dart test/login_layout_test.dart test/tv_navigation_test.dart test/player_controls_test.dart test/recording_schedule_test.dart --reporter expanded 2>&1 | tee /tmp/test.log
           code=${PIPESTATUS[0]}
           if [ "$code" != "0" ]; then
             grep -E "\[E\]|Expected:|Actual:|Which:|reason|Error:|error:" /tmp/test.log | head -10 | while IFS= read -r l; do echo "::error::$l"; done

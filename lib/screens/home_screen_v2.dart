@@ -319,7 +319,7 @@ class _SmartersHome extends StatelessWidget {
                 : Icon(Icons.live_tv, color: p, size: 28),
               title: Text(c.name ?? '', style: const TextStyle(color: Colors.white, fontSize: 13)),
               subtitle: Text(c.categoryName ?? '', style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(urls: [c.streamUrl], title: c.name ?? ''))),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(urls: [c.streamUrl], title: c.name ?? '', isLive: true, recordName: c.name))),
             );
           })),
       ])),

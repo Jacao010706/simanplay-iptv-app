@@ -11,6 +11,7 @@ import '../services/recording_service.dart';
 import 'player_screen.dart';
 import 'recordings_screen.dart';
 import '../widgets/tv_focus.dart';
+import '../widgets/record_options.dart';
 
 class LiveTvScreen extends StatefulWidget {
   final AppSession session;
@@ -117,7 +118,12 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   void _openPlayer(Channel channel) {
     Navigator.push(context, MaterialPageRoute(
-      builder: (_) => PlayerScreen(urls: [channel.streamUrl], title: channel.name),
+      builder: (_) => PlayerScreen(
+        urls: [channel.streamUrl],
+        title: channel.name,
+        isLive: true,
+        recordName: channel.name,
+      ),
     ));
   }
 
@@ -445,6 +451,51 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
     } catch (_) { return ''; }
   }
 
+  /// Data/hora de um item da grade (usa o timestamp quando existe).
+  DateTime? _epgDate(Map<String, dynamic> ep, String key) {
+    final ts = ep[key == 'start' ? 'start_timestamp' : 'stop_timestamp'];
+    final n = ts is num ? ts.toInt() : int.tryParse('${ts ?? ''}');
+    if (n != null && n > 0) return DateTime.fromMillisecondsSinceEpoch(n * 1000);
+    final raw = ep[key]?.toString() ?? (key == 'end' ? ep['stop']?.toString() : null);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return DateTime.parse(raw).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Widget _scheduleButton(Map<String, dynamic> ep, String title) {
+    final start = _epgDate(ep, 'start');
+    final end = _epgDate(ep, 'end');
+    if (start == null || end == null || !end.isAfter(DateTime.now())) {
+      return const SizedBox.shrink();
+    }
+    final rs = RecordingService.instance;
+    final sched = ScheduledRecording.fromProgram(
+      channelName: widget.channel.name,
+      streamUrl: widget.channel.streamUrl,
+      programStart: start,
+      programEnd: end,
+      title: title,
+    );
+    final agendada = rs.schedules.any((s) => s.id == sched.id);
+    return TextButton.icon(
+      onPressed: () async {
+        if (agendada) {
+          await rs.removeSchedule(sched.id);
+        } else {
+          await rs.addSchedule(sched);
+        }
+        if (mounted) setState(() {});
+      },
+      icon: Icon(agendada ? Icons.check_circle : Icons.alarm_add,
+          size: 16, color: agendada ? Colors.greenAccent : Colors.redAccent),
+      label: Text(agendada ? 'Agendada' : 'Agendar',
+          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+    );
+  }
+
   String _decodeTitle(String? title) {
     if (title == null || title.isEmpty) return '';
     try { return utf8.decode(base64.decode(title)); } catch (_) { return title; }
@@ -458,8 +509,19 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
       await rs.stopRecording();
       setState(() {});
     } else {
-      // Iniciar gravação
-      await rs.startRecording(widget.channel.name, widget.channel.streamUrl);
+      // Iniciar gravação: pergunta por quanto tempo (ou ate o fim do programa)
+      final agora = _epgList.isNotEmpty ? _epgList.first : null;
+      final d = await pickRecordingDuration(
+        context,
+        programEnd: agora == null ? null : _epgDate(agora, 'end'),
+        programTitle: agora == null ? null : _decodeTitle(agora['title']?.toString()),
+      );
+      if (d == null || !mounted) return;
+      await rs.startRecording(
+        widget.channel.name,
+        widget.channel.streamUrl,
+        duration: d == Duration.zero ? null : d,
+      );
       setState(() {});
     }
   }
@@ -476,7 +538,7 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
         left: 20, right: 20, top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
-      child: Column(mainAxisSize: MainAxisSize.min,
+      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
 
         // Handle
@@ -573,7 +635,7 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
           const Text('PROGRAMAÇÃO',
               style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
           const SizedBox(height: 8),
-          ..._epgList.take(2).toList().asMap().entries.map((entry) {
+          ..._epgList.take(4).toList().asMap().entries.map((entry) {
             final i     = entry.key;
             final ep    = entry.value;
             final title = _decodeTitle(ep['title']?.toString());
@@ -610,6 +672,8 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 )),
+                // Programas futuros: agendar a gravacao
+                if (!isNow) _scheduleButton(ep, title),
               ]),
             );
           }),
@@ -687,7 +751,7 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
         ],
 
         const SizedBox(height: 4),
-      ]),
+      ])),
     );
   }
 }

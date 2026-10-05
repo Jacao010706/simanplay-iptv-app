@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
 import io.flutter.embedding.android.FlutterActivity
@@ -44,6 +45,17 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         } catch (e: Exception) {
                             result.error("INSTALL_FAILED", e.message, null)
+                        }
+                    }
+                    "keepAlive" -> {
+                        try {
+                            val on = call.argument<Boolean>("on") ?: false
+                            val i = Intent(this, RecordingKeepAliveService::class.java)
+                                .putExtra("text", call.argument<String>("text") ?: "")
+                            if (on) ContextCompat.startForegroundService(this, i) else stopService(i)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("KEEP_ALIVE", e.message, null)
                         }
                     }
                     else ->

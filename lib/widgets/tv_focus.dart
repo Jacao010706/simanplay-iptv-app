@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+/// Atalhos do app: os padroes do Flutter + OK do controle remoto ativando
+/// botoes (select / botao A), garantido em qualquer versao.
+Map<ShortcutActivator, Intent> get appShortcuts => <ShortcutActivator, Intent>{
+      ...WidgetsApp.defaultShortcuts,
+      const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
+      const SingleActivator(LogicalKeyboardKey.gameButtonA): const ActivateIntent(),
+    };
+
 /// Substituto do GestureDetector para itens clicaveis: alem do toque, o item
 /// recebe o foco do controle remoto (setas) e e acionado com OK/Enter.
 class TvTap extends StatelessWidget {

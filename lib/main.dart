@@ -7,6 +7,7 @@ import 'screens/license_gate.dart';
 import 'core/app_config.dart';
 import 'services/update_service.dart';
 import 'widgets/tv_focus.dart';
+import 'services/recording_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,8 @@ void main() {
   runApp(const IptvPlayerApp());
   // Novidades da versao + verificacao de atualizacao (em segundo plano)
   UpdateService.runStartupChecks();
+  // Retoma a vigilancia das gravacoes agendadas
+  RecordingService.instance.init();
 }
 
 class IptvPlayerApp extends StatelessWidget {
@@ -27,6 +30,7 @@ class IptvPlayerApp extends StatelessWidget {
         builder: (context, themeProvider, _) {
           return MaterialApp(
             navigatorKey: appNavigatorKey,
+            shortcuts: appShortcuts,
             title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
