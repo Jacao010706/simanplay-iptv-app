@@ -4,11 +4,8 @@
 // Lista vazia = nao mostra nenhum aviso.
 class ReleaseNotes {
   static const List<String> items = [
-    'Navegacao pelo controle remoto em todo o app, com o item selecionado destacado',
-    'Pausar e continuar com o OK do controle (filmes e canais ao vivo)',
-    'Filmes e series: setas para voltar/avancar 10 segundos',
-    'Gravar canais: escolha por quanto tempo ou ate o fim do programa',
-    'Agende a gravacao dos proximos programas pela grade do canal',
-    'A gravacao continua mesmo com a TV na tela inicial ou com a tela apagada',
+    'Canais ao vivo: o app tenta formatos alternativos e reconecta antes de mostrar erro',
+    'Series: temporadas e episodios aparecem e podem ser escolhidos pelo controle',
+    'Busca: o teclado so abre ao apertar OK',
   ];
 }
