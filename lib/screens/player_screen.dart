@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import '../core/stream_sources.dart';
 import '../services/recording_service.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/record_options.dart';
@@ -30,8 +31,21 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen> {
   late final Player _player;
   late final VideoController _controller;
+  /// Fontes a tentar, em ordem (canal ao vivo: cada URL + o outro formato .ts/.m3u8)
+  late final List<String> _sources;
   int _currentUrlIndex = 0;
   String? _errorMessage;
+  /// Novas tentativas já feitas na fonte atual (cada fonte é tentada 2 vezes)
+  int _retries = 0;
+  /// O vídeo da fonte atual já começou a tocar: erros depois disso são ignorados
+  bool _started = false;
+  DateTime _openedAt = DateTime.now();
+  Timer? _startTimer;
+  String? _lastError;
+  String? _failedUrl;
+  final List<StreamSubscription<dynamic>> _subs = [];
+
+  static const _startTimeout = Duration(seconds: 12);
   bool _paused = false;
   DateTime? _pausedAt;
   Timer? _recTick;
@@ -62,7 +76,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
 
-    _player.stream.error.listen(_onPlayerError);
+    _sources = widget.isLive ? liveStreamSources(widget.urls) : List.of(widget.urls);
+    _subs.add(_player.stream.error.listen(_onPlayerError));
+    _subs.add(_player.stream.position.listen((p) {
+      if (p > Duration.zero) _markStarted();
+    }));
     _tryPlayUrl(0);
 
     // Atualiza o selo REC (tempo/tamanho) enquanto grava
@@ -118,7 +136,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (rs.isRecording) await rs.stopRecording();
       await rs.startRecording(
         widget.recordName!,
-        widget.urls[_currentUrlIndex],
+        _sources[_currentUrlIndex],
         duration: d == Duration.zero ? null : d,
       );
       messenger?.showSnackBar(const SnackBar(
@@ -127,8 +145,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (mounted) setState(() {});
   }
 
-  void _tryPlayUrl(int index) {
-    if (index >= widget.urls.length) {
+  void _tryPlayUrl(int index, {bool retry = false}) {
+    _startTimer?.cancel();
+    if (index >= _sources.length) {
       setState(() {
         _errorMessage = 'Nenhuma playlist disponível no momento.';
       });
@@ -139,16 +158,45 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _errorMessage = null;
       _paused = false;
     });
+    if (!retry) _retries = 0;
+    _started = false;
+    _openedAt = DateTime.now();
     _player.open(
-      Media(widget.urls[index]),
+      Media(_sources[index]),
       play: true,
     );
+    // Sem erro e sem imagem em 12 s: considera a fonte falha
+    _startTimer = Timer(_startTimeout,
+        () => _sourceFailed('O vídeo não começou em ${_startTimeout.inSeconds} s'));
+  }
+
+  void _markStarted() {
+    if (_started) return;
+    _started = true;
+    _startTimer?.cancel();
   }
 
   void _onPlayerError(String error) {
-    final nextIndex = _currentUrlIndex + 1;
-    if (nextIndex < widget.urls.length) {
-      _tryPlayUrl(nextIndex);
+    // Avisos do mpv com o vídeo já tocando não derrubam o canal
+    if (_started || _player.state.playing || _player.state.position > Duration.zero) {
+      _lastError = error;
+      return;
+    }
+    // Erros que chegam logo após abrir ainda são da fonte anterior
+    if (DateTime.now().difference(_openedAt) < const Duration(milliseconds: 500)) return;
+    _sourceFailed(error);
+  }
+
+  void _sourceFailed(String reason) {
+    if (!mounted || _started || _errorMessage != null) return;
+    _startTimer?.cancel();
+    _lastError = reason;
+    _failedUrl = _sources[_currentUrlIndex];
+    if (_retries < 1) {
+      _retries++;
+      _tryPlayUrl(_currentUrlIndex, retry: true);
+    } else if (_currentUrlIndex + 1 < _sources.length) {
+      _tryPlayUrl(_currentUrlIndex + 1);
     } else {
       setState(() {
         _errorMessage = 'Todas as fontes falharam. Verifique sua conexão.';
@@ -162,6 +210,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _recTick?.cancel();
+    _startTimer?.cancel();
+    for (final sub in _subs) {
+      sub.cancel();
+    }
     _player.dispose();
     super.dispose();
   }
@@ -174,8 +226,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ? _buildError()
           : PlayerRemoteControls(
               title: widget.title,
-              subtitle: widget.urls.length > 1
-                  ? 'Fonte ${_currentUrlIndex + 1}/${widget.urls.length}'
+              subtitle: widget.urls.length > 1 || _currentUrlIndex > 0
+                  ? 'Fonte ${_currentUrlIndex + 1}/${_sources.length}'
                   : null,
               paused: _paused,
               onPlayPause: _togglePause,
@@ -218,6 +270,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
             Text(_errorMessage!,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 textAlign: TextAlign.center),
+            if (_lastError != null || _failedUrl != null) ...[
+              const SizedBox(height: 8),
+              // Detalhe técnico para o suporte (sem usuário e senha)
+              Text(
+                [
+                  if (_lastError != null) _lastError!,
+                  if (_failedUrl != null) maskStreamUrl(_failedUrl!),
+                ].join('\n'),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
