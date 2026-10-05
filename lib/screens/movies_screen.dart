@@ -6,6 +6,7 @@ import '../models/category.dart';
 import '../core/app_config.dart';
 import '../services/xtream_service.dart';
 import 'player_screen.dart';
+import '../widgets/tv_focus.dart';
 
 class MoviesScreen extends StatefulWidget {
   final AppSession session;
@@ -132,7 +133,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
             final catId = isAll ? 'all' : _categories[i - 1].id;
             final catName = isAll ? 'Todos' : _categories[i - 1].name;
             final isSelected = catId == _selectedCategoryId;
-            return GestureDetector(
+            return TvTap(
               onTap: () => setState(() => _selectedCategoryId = catId),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
@@ -167,7 +168,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   Widget _buildMovieCard(Movie movie, Color primary) {
-    return GestureDetector(
+    return TvTap(
       onTap: () => _showMovieDetail(movie),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
@@ -343,6 +344,7 @@ class _MovieDetailSheetState extends State<_MovieDetailSheet> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton.icon(
+                    autofocus: true, // controle remoto ja cai no "Assistir"
                     onPressed: _play,
                     icon: const Icon(Icons.play_arrow, color: Colors.white),
                     label: const Text('Assistir', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),

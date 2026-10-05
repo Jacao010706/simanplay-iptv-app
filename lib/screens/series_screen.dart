@@ -5,6 +5,7 @@ import '../models/series.dart';
 import '../models/category.dart';
 import '../services/xtream_service.dart';
 import 'series_detail_screen.dart';
+import '../widgets/tv_focus.dart';
 
 class SeriesScreen extends StatefulWidget {
   final AppSession session;
@@ -151,7 +152,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
             final catId   = isAll ? 'all' : _categories[i - 1].id;
             final catName = isAll ? 'Todos' : _categories[i - 1].name;
             final sel     = catId == _selectedCategoryId;
-            return GestureDetector(
+            return TvTap(
               onTap: () => setState(() => _selectedCategoryId = catId),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
@@ -199,7 +200,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
   }
 
   Widget _buildCard(Series series, Color primary) {
-    return GestureDetector(
+    return TvTap(
       onTap: () => _openSeries(series),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(child: Stack(children: [

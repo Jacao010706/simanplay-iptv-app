@@ -6,6 +6,7 @@ import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/app_config.dart';
 import 'services/update_service.dart';
+import 'widgets/tv_focus.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +41,8 @@ class IptvPlayerApp extends StatelessWidget {
               return MediaQuery(
                 data: mq.copyWith(
                     textScaler: mq.textScaler.clamp(maxScaleFactor: 1.15)),
-                child: LicenseGate(child: child ?? const SizedBox.shrink()),
+                child: FocusRing(
+                    child: LicenseGate(child: child ?? const SizedBox.shrink())),
               );
             },
           );

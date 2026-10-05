@@ -13,13 +13,16 @@ import 'live_tv_screen.dart';
 import 'movies_screen.dart';
 import 'series_screen.dart';
 import 'player_screen.dart';
+import '../widgets/tv_focus.dart';
 
 String _fmtDate(DateTime dt) =>
     '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
 
 class HomeScreen extends StatefulWidget {
   final AppSession session;
-  const HomeScreen({super.key, required this.session});
+  /// Só para testes: força um tema da home (1 a 6).
+  final int? debugTheme;
+  const HomeScreen({super.key, required this.session, this.debugTheme});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -48,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    switch (AppConfig.appTheme) {
+    switch (widget.debugTheme ?? AppConfig.appTheme) {
       case 2: return _NetflixLayout(session: widget.session, onLogout: _logout);
       case 3: return _SidebarLayout(session: widget.session, onLogout: _logout);
       case 4: return _IBOLayout4(session: widget.session, onLogout: _logout);
@@ -102,7 +105,7 @@ Future<Map<String, List>> _loadXtream(AppSession session) async {
 }
 
 Widget _posterItem(String? url, Color color, double width, double height, VoidCallback onTap) {
-  return GestureDetector(onTap: onTap, child: Container(
+  return TvTap(onTap: onTap, child: Container(
     width: width, margin: const EdgeInsets.only(right: 8),
     decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withValues(alpha: 0.2))),
     child: ClipRRect(borderRadius: BorderRadius.circular(8),
@@ -119,7 +122,7 @@ Widget _hList(String title, List items, Color color, VoidCallback onTap, {bool i
     Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(children: [
       Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
       const Spacer(),
-      GestureDetector(onTap: onTap, child: Text('Ver tudo >', style: TextStyle(color: color, fontSize: 11))),
+      TvTap(onTap: onTap, child: Text('Ver tudo >', style: TextStyle(color: color, fontSize: 11))),
     ])),
     SizedBox(height: h, child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: items.length,
       itemBuilder: (_, i) => _posterItem(isChannel ? items[i].logoUrl : items[i].posterUrl, color, w, h, onTap))),
@@ -192,11 +195,11 @@ class _NetflixLayoutState extends State<_NetflixLayout> {
       SafeArea(child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: Row(children: [
         Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 20, fontWeight: FontWeight.bold)),
         const Spacer(),
-        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3)].map((t) => GestureDetector(
+        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3)].map((t) => TvTap(
           onTap: () => setState(() => _idx = t.$2),
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text(t.$1, style: TextStyle(color: _idx == t.$2 ? Colors.white : Colors.white38, fontSize: 13, fontWeight: _idx == t.$2 ? FontWeight.bold : FontWeight.normal))))),
         const SizedBox(width: 8),
-        GestureDetector(onTap: widget.onLogout, child: const CircleAvatar(radius: 14, backgroundColor: Color(0xFF333333), child: Icon(Icons.person, color: Colors.white, size: 16))),
+        TvTap(onTap: widget.onLogout, child: const CircleAvatar(radius: 14, backgroundColor: Color(0xFF333333), child: Icon(Icons.person, color: Colors.white, size: 16))),
       ]))),
       Expanded(child: screens[_idx]),
     ]));
@@ -272,7 +275,7 @@ class _SidebarLayoutState extends State<_SidebarLayout> {
         const SizedBox(height: 12), Icon(Icons.live_tv, color: p, size: 24), const SizedBox(height: 16),
         ...List.generate(_nav.length, (i) {
           final sel = _idx == i;
-          return GestureDetector(onTap: () => setState(() => _idx = i), child: Container(margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 6), padding: const EdgeInsets.symmetric(vertical: 8),
+          return TvTap(onTap: () => setState(() => _idx = i), child: Container(margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 6), padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(color: sel ? p.withValues(alpha: 0.2) : Colors.transparent, borderRadius: BorderRadius.circular(10), border: sel ? Border.all(color: p.withValues(alpha: 0.5)) : null),
             child: Column(children: [Icon(_nav[i]['icon'] as IconData, color: sel ? p : Colors.white38, size: 20), const SizedBox(height: 3), Text(_nav[i]['label'] as String, style: TextStyle(color: sel ? p : Colors.white38, fontSize: 8), textAlign: TextAlign.center)])));
         }),
@@ -298,7 +301,7 @@ class _SmartersHome extends StatelessWidget {
         Container(padding: const EdgeInsets.all(12), color: sf, width: double.infinity, child: Text('Categorias', style: TextStyle(color: p, fontSize: 13, fontWeight: FontWeight.bold))),
         Expanded(child: ListView.builder(itemCount: cats.length, itemBuilder: (_, i) {
           final sel = selCat == i;
-          return GestureDetector(onTap: () => onCat(i), child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          return TvTap(onTap: () => onCat(i), child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(color: sel ? p.withValues(alpha: 0.15) : Colors.transparent, border: Border(left: BorderSide(color: sel ? p : Colors.transparent, width: 3))),
             child: Text(cats[i].name ?? '', style: TextStyle(color: sel ? p : Colors.white54, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis)));
         })),
@@ -347,11 +350,11 @@ class _IBOLayout4State extends State<_IBOLayout4> {
     return Scaffold(backgroundColor: const Color(0xFF0a0a0a), body: SafeArea(child: Column(children: [
       Container(height: 52, color: sf, padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
         Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 16, fontWeight: FontWeight.bold)), const Spacer(),
-        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3)].map((t) => GestureDetector(onTap: () => setState(() => _idx = t.$2),
+        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3)].map((t) => TvTap(onTap: () => setState(() => _idx = t.$2),
           child: Container(margin: const EdgeInsets.only(left: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(color: _idx == t.$2 ? p.withValues(alpha: 0.2) : Colors.transparent, borderRadius: BorderRadius.circular(20), border: Border.all(color: _idx == t.$2 ? p : Colors.transparent)),
             child: Text(t.$1, style: TextStyle(color: _idx == t.$2 ? p : Colors.white54, fontSize: 12))))),
-        const SizedBox(width: 8), GestureDetector(onTap: widget.onLogout, child: const Icon(Icons.logout, color: Colors.white38, size: 20)),
+        const SizedBox(width: 8), TvTap(onTap: widget.onLogout, child: const Icon(Icons.logout, color: Colors.white38, size: 20)),
       ])),
       Expanded(child: screens[_idx]),
     ])));
@@ -408,7 +411,7 @@ class _IBO4Home extends StatelessWidget {
             {'icon': Icons.movie, 'label': 'Filmes', 'color': const Color(0xFF4b7bff), 'idx': 2},
             {'icon': Icons.video_library, 'label': 'Series', 'color': const Color(0xFF00c896), 'idx': 3},
             {'icon': Icons.favorite, 'label': 'Favoritos', 'color': const Color(0xFFff6b6b), 'idx': 0},
-          ].map((c) => GestureDetector(onTap: () => onNav(c['idx'] as int), child: Container(
+          ].map((c) => TvTap(onTap: () => onNav(c['idx'] as int), child: Container(
             decoration: BoxDecoration(color: (c['color'] as Color).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: (c['color'] as Color).withValues(alpha: 0.4))),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(c['icon'] as IconData, color: c['color'] as Color, size: 28), const SizedBox(height: 4), Text(c['label'] as String, style: TextStyle(color: c['color'] as Color, fontSize: 10))]))))
           .toList()),
@@ -443,7 +446,7 @@ class _IBOLayout5State extends State<_IBOLayout5> {
     return Scaffold(backgroundColor: const Color(0xFF0f0f1a), body: SafeArea(child: Row(children: [
       Container(width: 80, decoration: BoxDecoration(color: sf, border: Border(right: BorderSide(color: p.withValues(alpha: 0.2)))), child: Column(children: [
         const SizedBox(height: 16), Icon(Icons.live_tv, color: p, size: 28), const SizedBox(height: 20),
-        ...List.generate(nav.length, (i) { final sel = _idx == i; return GestureDetector(onTap: () => setState(() => _idx = i), child: Container(margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8), padding: const EdgeInsets.symmetric(vertical: 10),
+        ...List.generate(nav.length, (i) { final sel = _idx == i; return TvTap(onTap: () => setState(() => _idx = i), child: Container(margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8), padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(color: sel ? p.withValues(alpha: 0.15) : Colors.transparent, borderRadius: BorderRadius.circular(10), border: Border.all(color: sel ? p.withValues(alpha: 0.5) : Colors.transparent)),
           child: Column(children: [Icon(nav[i]['icon'] as IconData, color: sel ? p : Colors.white24, size: 22), const SizedBox(height: 4), Text(nav[i]['label'] as String, style: TextStyle(color: sel ? p : Colors.white24, fontSize: 8), textAlign: TextAlign.center)]))); }),
         const Spacer(),
@@ -463,7 +466,7 @@ class _IBO5Home extends StatelessWidget {
     final feat = mv.isNotEmpty ? mv[0] : null;
     return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildHomeBanner(p, onNav),
-      GestureDetector(onTap: () => onNav(2), child: Container(height: 220, width: double.infinity, color: const Color(0xFF0f0f1a),
+      TvTap(onTap: () => onNav(2), child: Container(height: 220, width: double.infinity, color: const Color(0xFF0f0f1a),
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // Poster lateral esquerdo
         if (feat?.posterUrl != null)
@@ -523,7 +526,7 @@ class _IBOLayout6State extends State<_IBOLayout6> {
       bottomNavigationBar: Container(decoration: BoxDecoration(color: const Color(0xFF1a1a1a), border: Border(top: BorderSide(color: p.withValues(alpha: 0.3)))),
         child: SafeArea(child: SizedBox(height: 56, child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: navItems.map((item) {
           final sel = _idx == item['idx'];
-          return GestureDetector(onTap: () => setState(() => _idx = item['idx'] as int), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          return TvTap(onTap: () => setState(() => _idx = item['idx'] as int), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(item['icon'] as IconData, color: sel ? p : Colors.white38, size: 22),
             Text(item['label'] as String, style: TextStyle(color: sel ? p : Colors.white38, fontSize: 10)),
           ]));
@@ -550,7 +553,7 @@ class _IBO6Home extends StatelessWidget {
             Positioned(top: 8, right: 8, child: SafeArea(child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (session.expiresAt != null) Text('Vence: ${_fmtDate(session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
               const SizedBox(width: 4),
-              GestureDetector(onTap: onLogout, child: const Icon(Icons.logout, color: Colors.white54, size: 20)),
+              TvTap(onTap: onLogout, child: const Icon(Icons.logout, color: Colors.white54, size: 20)),
               const SizedBox(width: 8),
             ]))),
             Positioned(bottom: 16, left: 16, right: 16, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -649,7 +652,7 @@ class _HomeTab extends StatelessWidget {
   }
 
   Widget _card({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
-    return GestureDetector(onTap: onTap, child: Container(
+    return TvTap(onTap: onTap, child: Container(
       decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.4))),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(icon, color: color, size: 36), const SizedBox(height: 8),

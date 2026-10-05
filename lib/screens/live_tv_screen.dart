@@ -10,6 +10,7 @@ import '../services/xtream_service.dart';
 import '../services/recording_service.dart';
 import 'player_screen.dart';
 import 'recordings_screen.dart';
+import '../widgets/tv_focus.dart';
 
 class LiveTvScreen extends StatefulWidget {
   final AppSession session;
@@ -336,7 +337,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                     ]),
                 ],
               )),
-              GestureDetector(
+              TvTap(
                 onTap: () => _toggleFavorite(ch),
                 child: Padding(
                   padding: const EdgeInsets.all(8),

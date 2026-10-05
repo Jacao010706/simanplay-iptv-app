@@ -4,8 +4,8 @@
 // Lista vazia = nao mostra nenhum aviso.
 class ReleaseNotes {
   static const List<String> items = [
-    'Login pela TV corrigido: o controle agora chega no botao "Entrar"',
-    'Ao confirmar a senha no teclado, o login ja e feito',
-    'Textos e botoes ajustados para nao ficarem cortados na TV',
+    'Navegacao pelo controle remoto em todo o app: menus, canais, filmes e series',
+    'Item selecionado fica com borda branca para voce saber onde esta',
+    'Botao OK do controle abre o canal, filme ou serie selecionado',
   ];
 }

@@ -4,6 +4,7 @@ import '../models/series.dart';
 import '../services/xtream_service.dart';
 import '../core/app_config.dart';
 import 'player_screen.dart';
+import '../widgets/tv_focus.dart';
 
 class SeriesDetailScreen extends StatefulWidget {
   final AppSession session;
@@ -272,7 +273,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
             itemBuilder: (_, i) {
               final s = seasons[i];
               final isSelected = s == _selectedSeason;
-              return GestureDetector(
+              return TvTap(
                 onTap: () => setState(() => _selectedSeason = s),
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
