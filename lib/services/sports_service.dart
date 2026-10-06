@@ -86,6 +86,13 @@ class SportsUnavailableException implements Exception {
   String toString() => 'Jogos indisponíveis no momento';
 }
 
+/// A API de futebol não cobre a data pedida (HTTP 403: o plano só aceita
+/// alguns dias em volta de hoje).
+class SportsDateUnavailableException implements Exception {
+  @override
+  String toString() => 'Jogos desta data não estão disponíveis';
+}
+
 String fixtureDateParam(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -133,6 +140,7 @@ class SportsService {
     final uri = Uri.parse('${AppConfig.backendUrl}/sports/fixtures?date=${fixtureDateParam(day)}');
     final res = await http.get(uri).timeout(const Duration(seconds: 20));
     if (res.statusCode == 503) throw SportsUnavailableException();
+    if (res.statusCode == 403) throw SportsDateUnavailableException();
     if (res.statusCode != 200) throw Exception('Erro ao carregar os jogos (${res.statusCode})');
     final data = jsonDecode(utf8.decode(res.bodyBytes));
     if (data is! List) return const [];

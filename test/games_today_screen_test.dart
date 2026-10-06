@@ -176,6 +176,11 @@ void main() {
     expect(find.text('Jogos indisponíveis no momento'), findsOneWidget);
   });
 
+  testWidgets('data fora do plano da API: mensagem propria', (tester) async {
+    await abrir(tester, fixtures: (day) async => throw SportsDateUnavailableException());
+    expect(find.text('Jogos desta data não estão disponíveis.'), findsOneWidget);
+  });
+
   testWidgets('Ontem/Hoje/Amanha trocam a data pedida', (tester) async {
     final pedidos = <DateTime>[];
     await abrir(tester, fixtures: (day) async {

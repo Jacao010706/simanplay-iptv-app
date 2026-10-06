@@ -45,6 +45,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
   int _dayOffset = 0; // -1 ontem, 0 hoje, 1 amanhã
   bool _loading = true;
   bool _unavailable = false;
+  bool _dateUnavailable = false;
   String? _error;
   List<Fixture> _fixtures = const [];
   Map<int, List<Channel>> _where = const {};
@@ -69,6 +70,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     setState(() {
       _loading = true;
       _unavailable = false;
+      _dateUnavailable = false;
       _error = null;
       _where = const {};
       _searchingChannels = false;
@@ -86,6 +88,12 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       if (!mounted || token != _loadToken) return;
       setState(() {
         _unavailable = true;
+        _loading = false;
+      });
+    } on SportsDateUnavailableException {
+      if (!mounted || token != _loadToken) return;
+      setState(() {
+        _dateUnavailable = true;
         _loading = false;
       });
     } catch (_) {
@@ -204,6 +212,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
   Widget _body(Color primary) {
     if (_loading) return Center(child: CircularProgressIndicator(color: primary));
     if (_unavailable) return _message('Jogos indisponíveis no momento', icon: Icons.event_busy);
+    if (_dateUnavailable) return _message('Jogos desta data não estão disponíveis.', icon: Icons.event_busy);
     if (_error != null) return _message(_error!, icon: Icons.wifi_off, retry: true);
     if (_fixtures.isEmpty) return _message('Nenhum jogo dos campeonatos acompanhados neste dia.');
 
