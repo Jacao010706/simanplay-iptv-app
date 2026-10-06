@@ -82,8 +82,11 @@ function openApp() {
   f.submit();
 }
 
+// Voltar: comportamento oficial da LG (popup de saída no webOS 6+, Home no webOS 5 ou
+// anterior). Sem a webOSTV.js, chama o PalmSystem, que é o que ela usa por baixo.
 function exitApp() {
   try { if (window.webOS && webOS.platformBack) { webOS.platformBack(); return; } } catch (e) {}
+  try { if (window.PalmSystem && PalmSystem.platformBack) { PalmSystem.platformBack(); return; } } catch (e) {}
   try { window.close(); } catch (e) {}
 }
 

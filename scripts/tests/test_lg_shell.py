@@ -320,3 +320,11 @@ def test_lancador_migra_a_identidade_da_1_0_100_por_post(gerar):
     assert "dev_" not in alvo and "sp_" not in alvo
     assert "openApp();" in page, "abre o /tv (ou migra) depois de conferir a conexão"
 
+
+def test_voltar_na_entrada_usa_o_platformback_da_lg(gerar):
+    _, _, app = gerar(SLUG="primetv")
+    page = (app / "index.html").read_text(encoding="utf-8")
+    i_web, i_palm, i_close = page.index("webOS.platformBack()"), page.index("PalmSystem.platformBack()"), page.index("window.close()")
+    assert i_web < i_palm < i_close, "platformBack (popup de saída/Home) antes do window.close"
+    assert "k === 461" in page
+
