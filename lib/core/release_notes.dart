@@ -6,6 +6,8 @@ class ReleaseNotes {
   static const List<String> items = [
     'Canais ao vivo: o app tenta formatos alternativos e reconecta antes de mostrar erro',
     'Series: temporadas e episodios aparecem e podem ser escolhidos pelo controle',
-    'Busca: o teclado so abre ao apertar OK',
+    'Programacao dos canais: veja o que esta passando e os proximos horarios',
+    'Agende gravacoes direto pela programacao no player',
+    'Nova pagina Jogos do Dia: jogos com escudos, horario e o canal onde passa',
   ];
 }
