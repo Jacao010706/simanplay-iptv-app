@@ -44,6 +44,44 @@ var selected = 0;   // 0 = Tentar novamente, 1 = Sair
 var autoRetry = null;
 var checking = false;
 
+// Migração da 1.0.100 (telas dentro do .ipk): a identidade do aparelho (MAC/chave,
+// licença, usuário/senha salvos, favoritos) ficou no localStorage do app, que é este
+// mesmo. No primeiro acesso, envia esses dados ao /tv por POST (corpo HTTPS, nunca na
+// URL); o painel grava no /tv só se ele ainda estiver vazio. Sem dados, abre direto.
+var MIG_FLAG = "mig_v1_done";
+var PANEL_ORIGIN = (/^(https?:\/\/[^\/]+)/.exec(TARGET) || ["", ""])[1];
+
+function legacyData() {
+  var d = {}, n = 0;
+  try {
+    var ls = window.localStorage;
+    if (ls.getItem(MIG_FLAG)) return null;
+    for (var i = 0; i < ls.length; i++) {
+      var k = ls.key(i);
+      if (/^(dev_|sp_)/.test(k)) { d[k] = ls.getItem(k); n++; }
+    }
+  } catch (e) { return null; }
+  return n && (d.dev_code || d.dev_hw) ? d : null;
+}
+
+function openApp() {
+  var data = legacyData();
+  if (!data || !PANEL_ORIGIN) { location.replace(TARGET); return; }
+  try { localStorage.setItem(MIG_FLAG, "1"); } catch (e) {}
+  var f = document.createElement("form");
+  f.method = "POST";
+  f.action = PANEL_ORIGIN + "/api/tv-migrate";
+  f.style.display = "none";
+  var fields = { data: JSON.stringify(data), next: TARGET.substring(PANEL_ORIGIN.length) };
+  for (var name in fields) {
+    var input = document.createElement("input");
+    input.type = "hidden"; input.name = name; input.value = fields[name];
+    f.appendChild(input);
+  }
+  document.body.appendChild(f);
+  f.submit();
+}
+
 function exitApp() {
   try { if (window.webOS && webOS.platformBack) { webOS.platformBack(); return; } } catch (e) {}
   try { window.close(); } catch (e) {}
@@ -99,7 +137,7 @@ function start() {
   x.onreadystatechange = function () {
     if (x.readyState !== 4) return;
     if (x.status >= 200 && x.status < 400) {
-      location.replace(TARGET);
+      openApp();
     } else {
       // status 0 = sem resposta (algumas TVs antigas não disparam onerror)
       showOffline(x.status ? "O servidor não respondeu (" + x.status + ")." : "Não foi possível conectar ao servidor.");

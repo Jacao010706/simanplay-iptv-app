@@ -306,3 +306,17 @@ def test_javascript_do_lancador_e_valido(gerar, tmp_path):
         f.write_text(js, encoding="utf-8")
         r = subprocess.run([node, "--check", str(f)], capture_output=True, text=True)
         assert r.returncode == 0, r.stderr
+
+
+def test_lancador_migra_a_identidade_da_1_0_100_por_post(gerar):
+    _, _, app = gerar(SLUG="primetv")
+    page = (app / "index.html").read_text(encoding="utf-8")
+    assert 'var MIG_FLAG = "mig_v1_done";' in page
+    assert '/^(dev_|sp_)/' in page, "migra só as chaves do aparelho e do login"
+    assert 'f.method = "POST";' in page and '"/api/tv-migrate"' in page, "envia por POST para o painel"
+    assert "data: JSON.stringify(data)" in page, "dados no corpo do formulário"
+    # A URL do /tv continua só com a marca (nada do aparelho)
+    alvo = _launcher_target(page)
+    assert "dev_" not in alvo and "sp_" not in alvo
+    assert "openApp();" in page, "abre o /tv (ou migra) depois de conferir a conexão"
+
