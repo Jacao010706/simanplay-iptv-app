@@ -19,9 +19,12 @@ LOGO_URL, TV_URL (opcional), TV_SRC_DIR (opcional: pasta local com index.html e
 qrcode.js, em vez de baixar do painel), GITHUB_RUN_NUMBER.
 
 Casca LG white-label: tv_hosted/lg_brands.json (por SLUG) define id, título, ícones,
-URL do app de TV, resolução e a última versão enviada à loja (min_version). As
-variáveis LG_APP_ID, LG_TITLE, LG_ICON_URL, LG_BG_URL, LG_RESOLUTION, LG_VENDOR,
+URL do app de TV, resolução, modo e a última versão enviada à loja (min_version). As
+variáveis LG_APP_ID, LG_TITLE, LG_ICON_URL, LG_BG_URL, LG_RESOLUTION, LG_MODE, LG_VENDOR,
 LG_VERSION e LG_MIN_VERSION sobrepõem o arquivo. Empacotar: scripts/build_lg_ipk.py.
+Modo "hosted" (padrão da casca): o .ipk leva só o lançador (tv_hosted/lg_index.html), que
+abre o /tv do painel; correções no /tv chegam às TVs sem nova versão na loja. Modo
+"packaged": as telas vão dentro do .ipk (como a 1.0.100).
 """
 import hashlib
 import html
@@ -179,6 +182,18 @@ def lg_version():
     return version
 
 
+def lg_mode():
+    mode = (os.environ.get("LG_MODE") or LG_BRAND.get("mode") or "hosted").strip().lower()
+    if mode not in ("hosted", "packaged"):
+        raise SystemExit(f"LG: modo inválido: {mode!r} (use hosted ou packaged)")
+    return mode
+
+
+def lg_target_url():
+    """URL que a casca abre: /tv do revendedor com a marca e fit=1 (ajuste de tela no /tv)."""
+    return target_url() + "&fit=1"
+
+
 def lg_vendor():
     return (os.environ.get("LG_VENDOR") or LG_BRAND.get("vendor") or "Akitemtech").strip()
 
@@ -322,20 +337,24 @@ def build_lg(require_packaged=False):
                 .replace("__LG_RESOLUTION__", lg_resolution()))
     info = json.loads(fill(template))
     write(os.path.join(d, "appinfo.json"), json.dumps(info, ensure_ascii=False, indent=2))
-    packaged = packaged_files()
+    mode = lg_mode()
+    packaged = packaged_files() if mode == "packaged" else None
     if packaged:
         files = dict(packaged)
         files["index.html"] = lg_page(files["index.html"])
-    elif require_packaged:
+        kind = "empacotado"
+    elif mode == "packaged" and require_packaged:
         raise SystemExit("LG: não consegui baixar o app de TV para empacotar (TV_URL/TV_SRC_DIR)")
     else:
-        files = {"index.html": fill(read("index.html"))}
+        # Casca: só o lançador; as telas vêm do /tv do painel
+        launcher = read("lg_index.html").replace("__TARGET_URL__", json.dumps(lg_target_url())[1:-1])
+        files = {"index.html": lg_page(fill(launcher))}
+        kind = "pela URL"
     for fname, data in files.items():
         write(os.path.join(d, fname), data)
     write(os.path.join(d, "icon.png"), lg_image("icon", "LG_ICON_URL", 80, 80))
     write(os.path.join(d, "largeIcon.png"), lg_image("large_icon", "LG_ICON_URL", 130, 130))
     write(os.path.join(d, "bgImage.png"), lg_image("bg_image", "LG_BG_URL", 1920, 1080, logo_ratio=0.35))
-    kind = "empacotado" if packaged else "hospedado"
     print(f"  LG ({kind}): {d}/ (id {info['id']}, {info['title']!r} {info['version']}, {info['resolution']})")
     return info
 

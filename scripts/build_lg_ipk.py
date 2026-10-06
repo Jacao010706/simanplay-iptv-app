@@ -122,7 +122,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Gera e empacota a casca LG (.ipk) do revendedor.")
     ap.add_argument("--out", default="dist_lg", help="pasta de saída (padrão: dist_lg)")
     ap.add_argument("--allow-hosted", action="store_true",
-                    help="aceita o lançador hospedado se o app de TV não puder ser baixado (a loja pode recusar)")
+                    help="no modo packaged, aceita o lançador se o app de TV não puder ser baixado")
     args = ap.parse_args(argv)
 
     sys.path.insert(0, HERE)
@@ -130,7 +130,8 @@ def main(argv=None):
 
     gen.build_lg(require_packaged=not args.allow_hosted)
     out, info = pack_ipk(os.path.join(gen.OUT, "lg"), args.out)
-    print(f"LG pronto: {out}  (id {info['id']}, título {info['title']!r}, versão {info['version']}, {info['resolution']})")
+    print(f"LG pronto: {out}  (id {info['id']}, título {info['title']!r}, versão {info['version']}, "
+          f"{info['resolution']}, modo {gen.lg_mode()})")
     return out
 
 

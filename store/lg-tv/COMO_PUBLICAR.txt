@@ -37,4 +37,7 @@ PRÓXIMA VERSÃO (casca white-label)
   reenvie. Depois da aprovação, gere a próxima versão com:
     SLUG=primetv APP_NAME=PRIMETV GITHUB_RUN_NUMBER=<número> python3 scripts/build_lg_ipk.py
   (id com.primetv.app, título PrimeTV, os mesmos ícones, versão 1.1.x > 1.0.100,
-  funciona em 1280x720 e 1920x1080). Detalhes em docs/TV_APPS.md, "Casca LG white-label".
+  funciona em 1280x720 e 1920x1080; as telas vêm do /tv do painel, então correções
+  chegam sem passar pela loja). Detalhes em docs/TV_APPS.md, "Casca LG white-label".
+  ATENÇÃO: não envie a casca antes de migrar a identidade do aparelho (MAC/chave) da
+  1.0.100 para o /tv (ver o BLOQUEIO em docs/TV_APPS.md).

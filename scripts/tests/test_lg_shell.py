@@ -28,7 +28,8 @@ FAKE_TV = (
 )
 
 LG_VARS = ("SLUG", "APP_NAME", "LOGO_URL", "TV_URL", "GITHUB_RUN_NUMBER", "LG_APP_ID", "LG_TITLE",
-           "LG_ICON_URL", "LG_BG_URL", "LG_RESOLUTION", "LG_VERSION", "LG_MIN_VERSION", "LG_VENDOR")
+           "LG_ICON_URL", "LG_BG_URL", "LG_RESOLUTION", "LG_VERSION", "LG_MIN_VERSION", "LG_VENDOR",
+           "LG_MODE", "PRIMARY_HEX", "BG_HEX")
 
 
 @pytest.fixture
@@ -61,8 +62,10 @@ def gerar(tmp_path, monkeypatch):
             raise OSError("sem rede no teste")
 
         monkeypatch.setattr(gen, "fetch", fake_fetch)
+        gen._PACKAGED.clear()
         info = gen.build_lg(require_packaged=True)
         app = tmp_path / "build_tv" / "lg"
+        gen.baixados = baixados
         return gen, info, app
 
     return run
@@ -107,7 +110,7 @@ def test_versao_menor_ou_igual_a_enviada_falha(gerar):
 
 
 def test_funciona_nas_duas_resolucoes(gerar):
-    _, info, app = gerar(SLUG="primetv")
+    _, info, app = gerar(SLUG="primetv", LG_MODE="packaged")
     assert info["resolution"] == "1920x1080"
     page = (app / "index.html").read_text(encoding="utf-8")
     # Ajuste de tela antes de </body>: reduz o layout 1920x1080 em telas 1280x720
@@ -122,7 +125,7 @@ def test_funciona_nas_duas_resolucoes(gerar):
 
 
 def test_app_empacotado_com_scripts_locais_e_marca(gerar):
-    _, _, app = gerar(SLUG="primetv", APP_NAME="PRIMETV")
+    _, _, app = gerar(SLUG="primetv", APP_NAME="PRIMETV", LG_MODE="packaged")
     page = (app / "index.html").read_text(encoding="utf-8")
     assert '<script src="qrcode.js"></script>' in page and '<script src="hls.min.js"></script>' in page
     assert "/tv/qrcode.js" not in page and HLS not in page
@@ -171,7 +174,7 @@ def test_id_invalido_e_recusado(gerar):
 def test_sem_app_de_tv_nao_gera_lancador_hospedado(gerar, monkeypatch):
     monkeypatch.setenv("TV_SRC_DIR", "/pasta/que/nao/existe")
     with pytest.raises(SystemExit, match="não consegui baixar o app de TV"):
-        gerar(SLUG="primetv")
+        gerar(SLUG="primetv", LG_MODE="packaged")
 
 
 def _read_ar(data):
@@ -189,7 +192,7 @@ def _read_ar(data):
 def test_ipk_no_formato_da_loja(gerar, tmp_path):
     import build_lg_ipk
 
-    _, info, app = gerar(SLUG="primetv")
+    _, info, app = gerar(SLUG="primetv", LG_MODE="packaged")
     path, packed = build_lg_ipk.pack_ipk(str(app), str(tmp_path / "dist"), mtime=1790000000)
     assert os.path.basename(path) == "com.primetv.app_1.1.126_all.ipk"
     assert packed == info
@@ -220,3 +223,86 @@ def test_main_gera_o_ipk(gerar, tmp_path):
     gerar(SLUG="primetv")  # carrega o gerador com as variáveis e o fetch falso; main() reaproveita
     out = build_lg_ipk.main(["--out", str(tmp_path / "saida")])
     assert out.endswith("com.primetv.app_1.1.126_all.ipk") and os.path.exists(out)
+
+
+# ── Modo "pela URL" (padrão da casca): as telas vêm do /tv do painel ──
+
+def _launcher_target(page):
+    import re
+    m = re.search(r'var TARGET = "([^"]+)";', page)
+    assert m, "lançador sem TARGET"
+    return m.group(1)
+
+
+def test_casca_carrega_as_telas_da_url_do_painel(gerar):
+    gen, info, app = gerar(SLUG="primetv", APP_NAME="PRIMETV")
+    assert gen.lg_mode() == "hosted"
+    # Mantém id, título, ícones e resolução
+    assert info["id"] == "com.primetv.app" and info["title"] == "PrimeTV"
+    for f in ("icon.png", "largeIcon.png", "bgImage.png"):
+        assert (app / f).read_bytes() == _brand(f), f
+    # Só o lançador vai no pacote: nada do /tv nem hls/qrcode
+    assert sorted(p.name for p in app.iterdir()) == ["appinfo.json", "bgImage.png", "icon.png", "index.html", "largeIcon.png"]
+    assert gen.baixados == [], "no modo pela URL o build não baixa o /tv"
+    page = (app / "index.html").read_text(encoding="utf-8")
+    alvo = _launcher_target(page)
+    assert alvo.startswith("https://simanplay-iptv-admin-panel.vercel.app/tv?")
+    for parte in ("name=PRIMETV", "color=e94bff", "bg=0d0b14", "fit=1"):
+        assert parte in alvo, parte
+    assert "location.replace(TARGET)" in page
+
+
+def test_casca_mantem_o_ajuste_de_tela(gerar):
+    _, _, app = gerar(SLUG="primetv")
+    page = (app / "index.html").read_text(encoding="utf-8")
+    assert "Math.min(window.innerWidth/1920, window.innerHeight/1080)" in page, "o próprio lançador se ajusta"
+    assert "fit=1" in _launcher_target(page), "e pede ao /tv o mesmo ajuste"
+
+
+def test_tela_sem_conexao_navegavel_pelo_controle(gerar):
+    _, _, app = gerar(SLUG="primetv")
+    page = (app / "index.html").read_text(encoding="utf-8")
+    assert "Sem conexão" in page
+    assert 'id="btnRetry"' in page and "Tentar novamente" in page
+    assert 'id="btnExit"' in page and "Sair" in page
+    assert 'class="btn on" id="btnRetry"' in page, "Tentar novamente já vem selecionado"
+    for codigo in ("k === 13", "k === 37", "k === 39", "k === 461"):
+        assert codigo in page, f"tecla {codigo} sem tratamento"
+    assert ".btn.on{" in page, "botão selecionado precisa de destaque visível"
+    assert "setTimeout(retryNow, 30000)" in page, "também tenta sozinho"
+
+
+def test_url_do_revendedor_na_casca(gerar):
+    _, _, app = gerar(SLUG="revendax", APP_NAME="Revenda X", LG_APP_ID="com.revendax.tv",
+                      LG_VERSION="1.0.1", TV_URL="https://painel.revendax.com/tv", PRIMARY_HEX="00ff00")
+    alvo = _launcher_target((app / "index.html").read_text(encoding="utf-8"))
+    assert alvo.startswith("https://painel.revendax.com/tv?")
+    assert "name=Revenda+X" in alvo and "color=00ff00" in alvo and "fit=1" in alvo
+
+
+def test_ipk_da_casca(gerar, tmp_path):
+    import build_lg_ipk
+
+    _, info, app = gerar(SLUG="primetv")
+    path, _ = build_lg_ipk.pack_ipk(str(app), str(tmp_path / "dist"), mtime=1790000000)
+    data = tarfile.open(fileobj=io.BytesIO(_read_ar(open(path, "rb").read())["data.tar.gz"]))
+    base = "usr/palm/applications/com.primetv.app"
+    arquivos = sorted(n for n in data.getnames() if n.startswith(base + "/"))
+    assert arquivos == [f"{base}/{f}" for f in ("appinfo.json", "bgImage.png", "icon.png", "index.html", "largeIcon.png")]
+
+
+def test_javascript_do_lancador_e_valido(gerar, tmp_path):
+    import re
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node não instalado")
+    _, _, app = gerar(SLUG="primetv")
+    page = (app / "index.html").read_text(encoding="utf-8")
+    for i, js in enumerate(re.findall(r"<script>(.*?)</script>", page, re.S)):
+        f = tmp_path / f"s{i}.js"
+        f.write_text(js, encoding="utf-8")
+        r = subprocess.run([node, "--check", str(f)], capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr

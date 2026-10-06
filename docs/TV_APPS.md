@@ -66,6 +66,21 @@ A versão **1.0.100** do `com.primetv.app` (PrimeTV) foi enviada à LG em 01/10/
 análise. **Não altere nem reenvie esse pacote.** A próxima versão sai da casca abaixo e só deve
 ser enviada depois que a 1.0.100 for aprovada.
 
+**Como a casca funciona (modo `hosted`, padrão):** o `.ipk` leva só um lançador
+(`tv_hosted/lg_index.html`) com o id, título, ícones e o ajuste de tela. Ao abrir, ele confere
+se o painel responde e abre `tv_url` com a marca e `fit=1` (o `/tv` reduz o layout para telas
+1280x720). Sem conexão, mostra "Sem conexão" com **Tentar novamente** e **Sair** (setas + OK;
+Voltar sai) e tenta sozinho a cada 30 s. Assim, correções no `/tv` chegam às TVs com o deploy
+do painel, sem nova versão na loja. A 1.0.100 é diferente: ela tem as telas **dentro** do
+`.ipk` (modo `packaged`) e só muda com um pacote novo.
+
+> **BLOQUEIO antes de enviar a casca:** o `/tv` guarda a identidade do aparelho (`dev_hw`,
+> `dev_code`, licença, usuário/senha e favoritos) no `localStorage` da página. Na 1.0.100 essa
+> página é o arquivo do `.ipk`; na casca é o site do painel, cujo `localStorage` começa vazio.
+> Sem migração, cada TV que atualizar ganha outro MAC/chave, perde as listas e a licença e o
+> teste grátis recomeça. Correção prevista: o lançador (mesma origem da 1.0.100) lê esses dados
+> e os passa ao `/tv` no fragmento da URL (`#migrar=...`), e o `/tv` importa quando estiver vazio.
+
 Configuração por revendedor em `tv_hosted/lg_brands.json` (escolhida pelo `SLUG`):
 
 | Campo | PrimeTV | Para que serve |
@@ -76,17 +91,18 @@ Configuração por revendedor em `tv_hosted/lg_brands.json` (escolhida pelo `SLU
 | `icon`, `large_icon`, `bg_image` | `tv_hosted/lg_brands/primetv/` | os **mesmos ícones** do pacote 1.0.100 |
 | `tv_url` | `https://simanplay-iptv-admin-panel.vercel.app/tv` | app de TV do revendedor, empacotado no `.ipk` |
 | `resolution` | `1920x1080` | a tela se ajusta sozinha a 1280x720 e 1920x1080 |
+| `mode` | `hosted` | `hosted`: telas pelo `/tv` do painel; `packaged`: telas dentro do `.ipk` |
 | `min_version` | `1.0.100` | última versão enviada; o build falha se a nova não for maior |
 
 Variáveis de ambiente sobrepõem o arquivo: `LG_APP_ID`, `LG_TITLE`, `LG_ICON_URL`, `LG_BG_URL`,
-`TV_URL`, `LG_RESOLUTION`, `LG_VENDOR`, `LG_VERSION`, `LG_MIN_VERSION` (e `APP_NAME`, `PRIMARY_HEX`,
+`TV_URL`, `LG_RESOLUTION`, `LG_MODE`, `LG_VENDOR`, `LG_VERSION`, `LG_MIN_VERSION` (e `APP_NAME`, `PRIMARY_HEX`,
 `BG_HEX`, `LOGO_URL`). Sem entrada no arquivo, o revendedor usa `com.primetv.<slug>`, o nome do app
 e ícones gerados da logo.
 
 Versão: `LG_VERSION` ou, automático, `1.<1 + run/1000>.<run % 1000>` (ex.: run 127 → `1.1.127`),
 sempre maior que as 1.0.x já publicadas.
 
-Gerar o pacote (precisa de Python 3 com Pillow; baixa o app de TV do `tv_url`):
+Gerar o pacote (precisa de Python 3 com Pillow; no modo `packaged` baixa o app de TV do `tv_url`):
 ```
 pip install pillow
 SLUG=primetv APP_NAME=PRIMETV GITHUB_RUN_NUMBER=127 python3 scripts/build_lg_ipk.py
