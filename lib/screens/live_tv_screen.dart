@@ -7,6 +7,7 @@ import '../models/category.dart';
 import '../core/app_config.dart';
 import '../core/m3u_service.dart';
 import '../services/xtream_service.dart';
+import '../services/epg_service.dart';
 import '../services/recording_service.dart';
 import 'player_screen.dart';
 import 'recordings_screen.dart';
@@ -36,6 +37,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   @override
   void initState() {
     super.initState();
+    EpgService.instance.useSession(widget.session);
     _loadFavorites().then((_) => _loadContent());
     // Update UI when recording state changes
     RecordingService.instance.onUpdate = () {
@@ -117,6 +119,10 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
     return base;
   }
 
+  /// Stream id para a programacao (so canais Xtream; listas M3U nao tem EPG)
+  String? _epgStreamId(Channel channel) =>
+      widget.session.hasXtreamAccess && !channel.id.startsWith('m3u_') ? channel.id : null;
+
   void _openPlayer(Channel channel) {
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => PlayerScreen(
@@ -124,6 +130,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         title: channel.name,
         isLive: true,
         recordName: channel.name,
+        streamId: _epgStreamId(channel),
       ),
     ));
   }
@@ -333,6 +340,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                   Text(ch.name,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
+                  if (_epgStreamId(ch) != null)
+                    _NowPlayingLine(key: ValueKey('now-${ch.id}'), streamId: ch.id),
                   if (isThisRecording)
                     Row(children: [
                       const Icon(Icons.circle, color: Colors.red, size: 8),
@@ -373,6 +382,42 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
                       const Icon(Icons.live_tv, color: Colors.white38, size: 22)))
           : const Icon(Icons.live_tv, color: Colors.white38, size: 22),
     );
+  }
+}
+
+/// "Agora: Titulo" sob o nome do canal. So e montado para os itens visiveis da
+/// lista (ListView.builder), entao a grade e buscada sob demanda (com cache).
+class _NowPlayingLine extends StatefulWidget {
+  final String streamId;
+  const _NowPlayingLine({super.key, required this.streamId});
+
+  @override
+  State<_NowPlayingLine> createState() => _NowPlayingLineState();
+}
+
+class _NowPlayingLineState extends State<_NowPlayingLine> {
+  List<EpgProgram>? _programs;
+
+  @override
+  void initState() {
+    super.initState();
+    _programs = EpgService.instance.cached(widget.streamId);
+    if (_programs == null) {
+      EpgService.instance.getEpg(widget.streamId).then((list) {
+        if (mounted) setState(() => _programs = list);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = _programs;
+    final atual = list == null ? null : currentProgram(list, DateTime.now());
+    if (atual == null || atual.title.isEmpty) return const SizedBox.shrink();
+    return Text('Agora: ${atual.title}',
+        style: const TextStyle(color: Colors.white54, fontSize: 11),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis);
   }
 }
 

@@ -111,9 +111,9 @@ class XtreamService {
     return decodeJson(response);
   }
 
-  /// EPG resumido: programa atual + próximo do canal
-  Future<Map<String, dynamic>> getShortEpg(String streamId) async {
-    final url = '$_baseApiUrl&action=get_short_epg&stream_id=$streamId&limit=2';
+  /// EPG resumido: programa atual + próximos do canal (padrão: 2 itens)
+  Future<Map<String, dynamic>> getShortEpg(String streamId, {int limit = 2}) async {
+    final url = '$_baseApiUrl&action=get_short_epg&stream_id=$streamId&limit=$limit';
     final response = await http.get(Uri.parse(url));
     return decodeJson(response);
   }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../core/stream_sources.dart';
+import '../services/epg_service.dart';
 import '../services/recording_service.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/record_options.dart';
@@ -15,6 +16,8 @@ class PlayerScreen extends StatefulWidget {
   final bool isLive;
   /// Nome do canal para gravar (null = sem botao Gravar)
   final String? recordName;
+  /// Stream id do canal no Xtream: mostra a programacao (EPG) no player
+  final String? streamId;
 
   const PlayerScreen({
     super.key,
@@ -22,6 +25,7 @@ class PlayerScreen extends StatefulWidget {
     required this.title,
     this.isLive = false,
     this.recordName,
+    this.streamId,
   });
 
   @override
@@ -44,6 +48,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   String? _lastError;
   String? _failedUrl;
   final List<StreamSubscription<dynamic>> _subs = [];
+  // Programacao do canal ao vivo (null = canal sem EPG)
+  List<EpgProgram>? _epg;
+  bool _epgLoading = false;
+  Timer? _epgTick;
 
   static const _startTimeout = Duration(seconds: 12);
   bool _paused = false;
@@ -82,6 +90,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (p > Duration.zero) _markStarted();
     }));
     _tryPlayUrl(0);
+    _startEpg();
 
     // Atualiza o selo REC (tempo/tamanho) enquanto grava
     if (widget.recordName != null) {
@@ -89,6 +98,53 @@ class _PlayerScreenState extends State<PlayerScreen> {
         if (mounted && RecordingService.instance.isRecording) setState(() {});
       });
     }
+  }
+
+  bool get _hasEpg =>
+      widget.isLive && (widget.streamId?.isNotEmpty ?? false) && EpgService.instance.isAvailable;
+
+  void _startEpg() {
+    if (!_hasEpg) return;
+    _epg = EpgService.instance.cached(widget.streamId!) ?? const [];
+    _loadEpg();
+    // A cada minuto: avanca o programa atual/progresso e renova quando o cache vencer
+    _epgTick = Timer.periodic(const Duration(minutes: 1), (_) => _loadEpg());
+  }
+
+  Future<void> _loadEpg() async {
+    if (_epg?.isEmpty ?? true) setState(() => _epgLoading = true);
+    final list = await EpgService.instance.getEpg(widget.streamId!);
+    if (!mounted) return;
+    setState(() {
+      _epg = list;
+      _epgLoading = false;
+    });
+  }
+
+  String get _channelName => widget.recordName ?? widget.title;
+
+  ScheduledRecording _scheduleFor(EpgProgram p) => ScheduledRecording.fromProgram(
+        channelName: _channelName,
+        streamUrl: widget.urls.first,
+        programStart: p.start,
+        programEnd: p.end,
+        title: p.title,
+      );
+
+  bool _isScheduled(EpgProgram p) {
+    final id = _scheduleFor(p).id;
+    return RecordingService.instance.schedules.any((s) => s.id == id);
+  }
+
+  Future<void> _toggleSchedule(EpgProgram p) async {
+    final rs = RecordingService.instance;
+    final sched = _scheduleFor(p);
+    if (_isScheduled(p)) {
+      await rs.removeSchedule(sched.id);
+    } else {
+      await rs.addSchedule(sched);
+    }
+    if (mounted) setState(() {});
   }
 
   void _togglePause() {
@@ -211,6 +267,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _recTick?.cancel();
     _startTimer?.cancel();
+    _epgTick?.cancel();
     for (final sub in _subs) {
       sub.cancel();
     }
@@ -235,6 +292,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
               onSeek: widget.isLive ? null : _seek,
               onRecord: widget.recordName == null ? null : _toggleRecording,
               recording: _isRecordingThis,
+              programs: _epg,
+              programsLoading: _epgLoading,
+              isScheduled: _epg == null ? null : _isScheduled,
+              onToggleSchedule: _epg == null || widget.recordName == null ? null : _toggleSchedule,
               recordingInfo: _isRecordingThis
                   ? 'REC ${RecordingService.instance.activeRecording!.elapsedFormatted}'
                       '${RecordingService.instance.activeRecording!.stopAtFormatted != null ? ' ate ${RecordingService.instance.activeRecording!.stopAtFormatted}' : ''}'

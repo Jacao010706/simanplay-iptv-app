@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
 import '../models/app_session.dart';
+import '../services/epg_service.dart';
 import '../services/xtream_service.dart';
 import '../models/channel.dart';
 import '../models/movie.dart';
@@ -28,6 +29,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    EpgService.instance.useSession(widget.session);
+  }
+
   Future<void> _logout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -319,7 +326,7 @@ class _SmartersHome extends StatelessWidget {
                 : Icon(Icons.live_tv, color: p, size: 28),
               title: Text(c.name ?? '', style: const TextStyle(color: Colors.white, fontSize: 13)),
               subtitle: Text(c.categoryName ?? '', style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(urls: [c.streamUrl], title: c.name ?? '', isLive: true, recordName: c.name))),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(urls: [c.streamUrl], title: c.name ?? '', isLive: true, recordName: c.name, streamId: c.id))),
             );
           })),
       ])),
