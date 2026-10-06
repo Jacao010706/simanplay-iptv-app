@@ -1,15 +1,15 @@
 {
   "id": "__LG_APP_ID__",
-  "version": "__VERSION__",
-  "vendor": "Akitemtech",
+  "version": "__LG_VERSION__",
+  "vendor": "__LG_VENDOR_JSON__",
   "type": "web",
   "main": "index.html",
-  "title": "__APP_NAME_JSON__",
+  "title": "__LG_TITLE_JSON__",
   "icon": "icon.png",
   "largeIcon": "largeIcon.png",
   "bgImage": "bgImage.png",
   "iconColor": "#__BG_HEX__",
-  "resolution": "1920x1080",
+  "resolution": "__LG_RESOLUTION__",
   "disableBackHistoryAPI": true,
   "requiredACG": []
 }

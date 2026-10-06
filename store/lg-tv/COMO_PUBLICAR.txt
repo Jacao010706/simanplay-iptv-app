@@ -31,3 +31,10 @@ ENVIO: LG Seller Lounge — https://seller.lgappstv.com
 TESTAR NA SUA TV ANTES (opcional): app "Developer Mode" da LG + ares-install
   (passo a passo em docs/TV_APPS.md no repositório do app no GitHub).
 Toda nova versão sai em https://github.com/Jacao010706/simanplay-iptv-app/releases
+
+PRÓXIMA VERSÃO (casca white-label)
+  A 1.0.100 (com.primetv.app) está em análise na LG desde 01/10/2026: NÃO retire nem
+  reenvie. Depois da aprovação, gere a próxima versão com:
+    SLUG=primetv APP_NAME=PRIMETV GITHUB_RUN_NUMBER=<número> python3 scripts/build_lg_ipk.py
+  (id com.primetv.app, título PrimeTV, os mesmos ícones, versão 1.1.x > 1.0.100,
+  funciona em 1280x720 e 1920x1080). Detalhes em docs/TV_APPS.md, "Casca LG white-label".

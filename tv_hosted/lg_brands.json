@@ -1,0 +1,15 @@
+{
+  "_como_usar": "Casca LG (webOS) por revendedor, escolhida pelo SLUG do build. Campos: app_id, title, primary_hex/bg_hex (cores), icon/large_icon/bg_image (arquivos em tv_hosted/), tv_url (app de TV do revendedor), resolution (1920x1080 ou 1280x720; a tela se ajusta as duas), min_version (ultima versao enviada a LG: a nova precisa ser maior). Sem entrada aqui, o revendedor usa com.primetv.<slug>, o nome do app e icones gerados da logo. As variaveis LG_APP_ID, LG_TITLE, LG_ICON_URL, LG_BG_URL, TV_URL, LG_RESOLUTION, LG_VERSION e LG_MIN_VERSION sobrepoem estes valores.",
+  "primetv": {
+    "app_id": "com.primetv.app",
+    "title": "PrimeTV",
+    "primary_hex": "e94bff",
+    "bg_hex": "0d0b14",
+    "icon": "lg_brands/primetv/icon.png",
+    "large_icon": "lg_brands/primetv/largeIcon.png",
+    "bg_image": "lg_brands/primetv/bgImage.png",
+    "tv_url": "https://simanplay-iptv-admin-panel.vercel.app/tv",
+    "resolution": "1920x1080",
+    "min_version": "1.0.100"
+  }
+}

@@ -61,6 +61,42 @@ O `.ipk` já sai pronto para envio: a LG **não** exige assinatura do desenvolve
    chave e adicione a lista pública `https://iptv-org.github.io/iptv/countries/br.m3u`.
 5. A LG testa com controle comum e Magic Remote; a análise costuma levar de 2 a 6 semanas.
 
+#### Casca LG white-label (próxima versão na loja)
+A versão **1.0.100** do `com.primetv.app` (PrimeTV) foi enviada à LG em 01/10/2026 e está em
+análise. **Não altere nem reenvie esse pacote.** A próxima versão sai da casca abaixo e só deve
+ser enviada depois que a 1.0.100 for aprovada.
+
+Configuração por revendedor em `tv_hosted/lg_brands.json` (escolhida pelo `SLUG`):
+
+| Campo | PrimeTV | Para que serve |
+|---|---|---|
+| `app_id` | `com.primetv.app` | id do app na LG (não muda entre versões) |
+| `title` | `PrimeTV` | nome no menu da TV |
+| `primary_hex` / `bg_hex` | `e94bff` / `0d0b14` | cores |
+| `icon`, `large_icon`, `bg_image` | `tv_hosted/lg_brands/primetv/` | os **mesmos ícones** do pacote 1.0.100 |
+| `tv_url` | `https://simanplay-iptv-admin-panel.vercel.app/tv` | app de TV do revendedor, empacotado no `.ipk` |
+| `resolution` | `1920x1080` | a tela se ajusta sozinha a 1280x720 e 1920x1080 |
+| `min_version` | `1.0.100` | última versão enviada; o build falha se a nova não for maior |
+
+Variáveis de ambiente sobrepõem o arquivo: `LG_APP_ID`, `LG_TITLE`, `LG_ICON_URL`, `LG_BG_URL`,
+`TV_URL`, `LG_RESOLUTION`, `LG_VENDOR`, `LG_VERSION`, `LG_MIN_VERSION` (e `APP_NAME`, `PRIMARY_HEX`,
+`BG_HEX`, `LOGO_URL`). Sem entrada no arquivo, o revendedor usa `com.primetv.<slug>`, o nome do app
+e ícones gerados da logo.
+
+Versão: `LG_VERSION` ou, automático, `1.<1 + run/1000>.<run % 1000>` (ex.: run 127 → `1.1.127`),
+sempre maior que as 1.0.x já publicadas.
+
+Gerar o pacote (precisa de Python 3 com Pillow; baixa o app de TV do `tv_url`):
+```
+pip install pillow
+SLUG=primetv APP_NAME=PRIMETV GITHUB_RUN_NUMBER=127 python3 scripts/build_lg_ipk.py
+# -> dist_lg/com.primetv.app_1.1.127_all.ipk
+```
+Testes: `pip install pillow pytest && pytest scripts/tests/test_lg_shell.py`.
+
+Depois da aprovação da 1.0.100: no LG Seller Lounge, abra o app `com.primetv.app` > nova
+versão e envie o `.ipk` gerado (mesmas instruções para os testadores).
+
 ### Samsung (Tizen)
 A Samsung **exige assinatura** com certificado emitido pela Samsung; o arquivo
 sai do build como `_nao_assinado.wgt`.
