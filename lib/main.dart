@@ -8,6 +8,7 @@ import 'core/app_config.dart';
 import 'services/update_service.dart';
 import 'widgets/tv_focus.dart';
 import 'services/recording_service.dart';
+import 'services/assistindo_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,8 @@ void main() {
   UpdateService.runStartupChecks();
   // Retoma a vigilancia das gravacoes agendadas
   RecordingService.instance.init();
+  // "Assistindo agora" no painel: retoma os avisos com o token salvo
+  Assistindo.iniciar();
 }
 
 class IptvPlayerApp extends StatelessWidget {

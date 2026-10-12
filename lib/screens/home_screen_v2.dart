@@ -1,3 +1,4 @@
+import '../services/assistindo_service.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -52,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed != true) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('session');
+    await Assistindo.configurar(null); // sai da conta: para de avisar o painel
     if (!mounted) return;
     // Volta para a tela do aparelho (MAC + listas), sem entrar sozinho de novo
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const DeviceHomeScreen(autoEnter: false)), (_) => false);

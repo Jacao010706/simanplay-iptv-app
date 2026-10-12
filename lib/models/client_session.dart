@@ -54,6 +54,8 @@ class ClientSession {
   final int? clientId;
   final String? resellerSlug;
   final String? username;
+  // Token da sessão (/app/login e /app/activate): usado só para o aviso "Assistindo agora"
+  final String? tvToken;
 
   const ClientSession({
     required this.status,
@@ -67,6 +69,7 @@ class ClientSession {
     this.clientId,
     this.resellerSlug,
     this.username,
+    this.tvToken,
   });
 
   factory ClientSession.fromJson(Map<String, dynamic> json) {
@@ -87,6 +90,7 @@ class ClientSession {
       clientId: json['client_id'] as int?,
       resellerSlug: json['reseller_slug'] as String?,
       username: json['username'] as String?,
+      tvToken: json['tv_token'] as String?,
     );
   }
 

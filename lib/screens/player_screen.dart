@@ -6,6 +6,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../core/stream_sources.dart';
 import '../services/epg_service.dart';
 import '../services/recording_service.dart';
+import '../services/assistindo_service.dart';
 import '../widgets/player_controls.dart';
 import '../widgets/record_options.dart';
 
@@ -91,6 +92,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }));
     _tryPlayUrl(0);
     _startEpg();
+    // "Assistindo agora" no painel; se o revendedor encerrar a conexão, o player fecha
+    Assistindo.conteudo(
+        Assistindo.tipoDaUrl(widget.urls.isNotEmpty ? widget.urls.first : '', aoVivo: widget.isLive), widget.title);
+    _subs.add(Assistindo.derrubado.stream.listen((msg) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      Navigator.of(context).maybePop();
+      messenger?.showSnackBar(SnackBar(content: Text(msg)));
+    }));
 
     // Atualiza o selo REC (tempo/tamanho) enquanto grava
     if (widget.recordName != null) {
@@ -272,6 +282,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       sub.cancel();
     }
     _player.dispose();
+    Assistindo.conteudo('menu', '');
     super.dispose();
   }
 

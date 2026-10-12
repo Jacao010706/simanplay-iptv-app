@@ -4,6 +4,7 @@ import '../core/text_fix.dart';
 import '../models/client_session.dart';
 import '../models/app_session.dart';
 import '../core/app_config.dart';
+import 'assistindo_service.dart';
 
 class ApiService {
   static Future<ClientSession> activateByMac({
@@ -16,7 +17,9 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final json = jsonDecode(decodeBody(response)) as Map<String, dynamic>;
-      return ClientSession.fromJson(json);
+      final cs = ClientSession.fromJson(json);
+      Assistindo.configurar(cs.tvToken);
+      return cs;
     } else if (response.statusCode == 403) {
       throw Exception('Dispositivo não ativado');
     } else {
@@ -40,7 +43,9 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       final json = jsonDecode(decodeBody(response)) as Map<String, dynamic>;
-      return ClientSession.fromJson(json);
+      final cs = ClientSession.fromJson(json);
+      Assistindo.configurar(cs.tvToken);
+      return cs;
     } else if (response.statusCode == 401) {
       throw Exception('Usuário ou senha inválidos');
     } else {
