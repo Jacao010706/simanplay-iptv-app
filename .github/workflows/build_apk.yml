@@ -200,9 +200,14 @@ jobs:
         if: success()
         run: |
           APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.reseller_username }}-simanplay.apk"
-          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}&build_number=${{ github.run_number }}" || true
+          # O backend só aceita o aviso com o segredo compartilhado (BUILD_CALLBACK_SECRET)
+          curl -sS --fail-with-body -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
+            "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}&build_number=${{ github.run_number }}" \
+            || echo "::warning::O backend recusou o aviso de APK pronto (confira o secret BUILD_CALLBACK_SECRET)"
 
       - name: Notify backend - Failure
         if: failure()
         run: |
-          curl -X PATCH "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" || true
+          curl -sS --fail-with-body -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
+            "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" \
+            || echo "::warning::O backend recusou o aviso de falha (confira o secret BUILD_CALLBACK_SECRET)"
