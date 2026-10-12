@@ -339,6 +339,21 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
             ]),
           ),
         ),
+        if (f.emissoras.isNotEmpty)
+          Padding(
+            key: ValueKey('emissoras-${f.id}'),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            child: Row(children: [
+              Icon(Icons.tv, color: primary, size: 14),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text('Passa em: ${f.emissoras.join(', ')}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ]),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
           child: _channelsRow(f, channels, primary),

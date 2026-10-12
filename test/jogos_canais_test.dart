@@ -79,4 +79,23 @@ void main() {
     expect(isSportsCategory('EVENTOS AO VIVO'), isTrue);
     expect(isSportsCategory('PPV'), isTrue);
   });
+
+  test('emissora marcada no painel acha os canais dela, depois do evento e da grade', () {
+    final semGrade = Fixture(id: 9, leagueName: 'Serie A', kickoff: hoje.add(const Duration(hours: 16)),
+        homeName: 'Flamengo', awayName: 'Palmeiras', emissoras: const ['Premiere', 'Globo']);
+    final lista = [ch('g1', 'Globo SP HD'), ch('p1', 'Premiere Clubes 2 FHD'), ch('p2', 'Premiere Clubes 2 HD'),
+                   ch('x', 'Grêmio x Inter - 16:00'), ch('s', 'SporTV FHD')];
+    final r2 = matchFixturesToChannels([semGrade], lista, (_) => const []);
+    expect(r2[9]!.map((c) => c.name).toList()..sort(), ['Globo SP HD', 'Premiere Clubes 2 FHD']);
+    expect(channelIsBroadcaster('TNT Sports HD', ['TNT Sports']), isTrue);
+    expect(channelIsBroadcaster('Premiere Clubes FHD', ['Prime Video']), isFalse);
+  });
+
+  test('emissoras vêm do JSON do backend', () {
+    final f = Fixture.fromJson({'id': 1, 'kickoff': '2026-10-12T21:00:00-03:00', 'league': {'name': 'Serie A'},
+      'home': {'name': 'A'}, 'away': {'name': 'B'}, 'emissoras': ['Premiere', ' ', 'SporTV']})!;
+    expect(f.emissoras, ['Premiere', 'SporTV']);
+    final sem = Fixture.fromJson({'id': 2, 'kickoff': '2026-10-12T21:00:00-03:00', 'home': {'name': 'A'}, 'away': {'name': 'B'}})!;
+    expect(sem.emissoras, isEmpty);
+  });
 }

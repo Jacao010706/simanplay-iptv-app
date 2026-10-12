@@ -169,3 +169,13 @@ int channelQualityRank(String name) {
   final reserva = name.contains('²') || name.contains('³') || words.contains('alt');
   return r * 2 - (reserva ? 1 : 0);
 }
+
+/// O canal é de uma das emissoras marcadas pelo admin ("Premiere" -> "Premiere Clubes FHD",
+/// "SporTV" -> "SporTV 2 HD"). Compara palavras inteiras, sem acento e sem qualidade.
+bool channelIsBroadcaster(String channelName, List<String> emissoras) {
+  final canal = ' ${channelBaseName(channelName)} ';
+  return emissoras.any((e) {
+    final n = normalizeText(e);
+    return n.isNotEmpty && canal.contains(' $n ');
+  });
+}

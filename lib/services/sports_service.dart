@@ -25,6 +25,8 @@ class Fixture {
   final String? awayLogo;
   final int? goalsHome;
   final int? goalsAway;
+  /// Onde passa (cadastrado pelo admin no painel; a API de futebol não informa)
+  final List<String> emissoras;
 
   const Fixture({
     required this.id,
@@ -40,6 +42,7 @@ class Fixture {
     this.awayLogo,
     this.goalsHome,
     this.goalsAway,
+    this.emissoras = const [],
   });
 
   static const _liveStatus = {'1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE', 'INT', 'SUSP'};
@@ -76,6 +79,10 @@ class Fixture {
       awayLogo: s(away['logo']),
       goalsHome: n(goals['home']),
       goalsAway: n(goals['away']),
+      emissoras: (j['emissoras'] is List ? j['emissoras'] as List : const [])
+          .map((e) => '$e'.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(),
     );
   }
 }
@@ -100,6 +107,8 @@ String fixtureDateParam(DateTime d) =>
 /// 1) O nome do canal traz os dois times (canal de evento do jogo): entra primeiro, mesmo sem grade.
 /// 2) A grade ([epgOf]) mostra o jogo no horário: entra depois, exceto se o nome do canal for
 ///    de OUTRO jogo (listas reaproveitam a grade da emissora nos canais de evento).
+/// 3) O canal é de uma emissora que o admin marcou no painel ("Premiere" -> "Premiere Clubes
+///    FHD"): entra por último.
 /// Cada canal aparece uma vez (na melhor qualidade: FHD > HD > SD; reservas "²" depois),
 /// no máximo [maxPorJogo] por jogo.
 Map<int, List<Channel>> matchFixturesToChannels(
@@ -116,7 +125,12 @@ Map<int, List<Channel>> matchFixturesToChannels(
         (achados[f.id] ??= []).add((ch, 0));
         continue;
       }
-      if (programs.isEmpty || channelIsOtherEvent(ch.name, f.homeName, f.awayName)) continue;
+      if (channelIsOtherEvent(ch.name, f.homeName, f.awayName)) continue;
+      if (channelIsBroadcaster(ch.name, f.emissoras)) {
+        (achados[f.id] ??= []).add((ch, 2));
+        continue;
+      }
+      if (programs.isEmpty) continue;
       final hit = programs.any((p) => programShowsFixture(
             title: p.title,
             start: p.start,
