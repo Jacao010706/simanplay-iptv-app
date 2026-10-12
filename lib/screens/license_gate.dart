@@ -137,7 +137,7 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
         const SizedBox(height: 8),
         const Text(
           'Para continuar usando, assine um plano pelo site com PIX:\n'
-          'Mensal R\$ 5,00  •  Semestral R\$ 8,00  •  Anual R\$ 13,00',
+          'Mensal R\$ 5,00  •  Semestral R\$ 10,00  •  Anual R\$ 15,00',
           style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
         ),
         const SizedBox(height: 16),
