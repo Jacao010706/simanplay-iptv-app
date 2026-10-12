@@ -45,6 +45,10 @@ on:
         description: 'URL do icone do APK (opcional - PNG quadrado, min 512x512)'
         required: false
         default: ''
+      application_id:
+        description: 'applicationId do APK (vem do painel; travado depois do primeiro APK do revendedor)'
+        required: false
+        default: 'com.simanplay.iptvplayer.iptv_player'
 
 jobs:
   build:
@@ -77,6 +81,16 @@ jobs:
             grep -E "\[E\]|Expected:|Actual:|Which:|reason|Error:|error:" /tmp/test.log | head -10 | while IFS= read -r l; do echo "::error::$l"; done
           fi
           exit $code
+
+      - name: Validar applicationId
+        env:
+          APP_ID: ${{ inputs.application_id }}
+        run: |
+          # mesmo formato que o painel e o backend exigem
+          if ! echo "$APP_ID" | grep -Eq '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'; then
+            echo "::error::applicationId invalido: $APP_ID"; exit 1
+          fi
+          echo "applicationId: $APP_ID"
 
       - name: Convert color to int
         id: colors
@@ -158,9 +172,12 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
           printf 'storePassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyPassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyAlias=${{ secrets.KEY_ALIAS }}\nstoreFile=simanplay.jks\n' > android/key.properties
-          cat android/key.properties
+          # nao imprimir o key.properties: tem as senhas do keystore
+          test -s android/app/simanplay.jks || { echo "::error::KEYSTORE_BASE64 vazio"; exit 1; }
 
       - name: Build APK
+        env:
+          APPLICATION_ID: ${{ inputs.application_id }}
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Rename APK

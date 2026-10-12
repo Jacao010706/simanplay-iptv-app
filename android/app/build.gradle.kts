@@ -31,7 +31,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.simanplay.iptvplayer.iptv_player"
+        // applicationId de cada revendedor: vem do painel pelo workflow (APPLICATION_ID).
+        // Sem a variável (build local), usa o ID antigo, o mesmo dos APKs já distribuídos.
+        applicationId = System.getenv("APPLICATION_ID")?.takeIf { it.isNotBlank() }
+            ?: "com.simanplay.iptvplayer.iptv_player"
         minSdk = flutter.minSdkVersion
         targetSdk = 35
         versionCode = flutter.versionCode
