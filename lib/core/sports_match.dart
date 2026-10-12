@@ -119,9 +119,53 @@ bool programShowsFixture({
 const List<String> sportsCategoryKeywords = [
   'esporte', 'sport', 'premiere', 'espn', 'sportv', 'combate', 'brasileir',
   'futebol', 'dazn', 'caze', 'tnt', 'band sports', 'goat',
+  // canais de evento ("Jogos de hoje", "Eventos", "PPV")
+  'evento', 'ppv', 'jogos', 'campeonato',
 ];
 
 bool isSportsCategory(String categoryName) {
   final n = normalizeText(categoryName);
   return sportsCategoryKeywords.any(n.contains);
+}
+
+// ---------------------------------------------------------------------------
+// Nome do canal
+// ---------------------------------------------------------------------------
+
+/// O nome parece de um canal de evento ("Coritiba x Botafogo - 16:00").
+bool nameLooksLikeEvent(String name) {
+  final n = ' ${normalizeText(name)} ';
+  return n.contains(' x ') || n.contains(' vs ') || n.contains(' versus ');
+}
+
+/// O nome do canal traz os dois times deste jogo.
+bool channelNameMatchesFixture(String name, String homeTeam, String awayTeam) =>
+    titleMatchesFixture(name, homeTeam, awayTeam);
+
+/// Canal de evento de OUTRO jogo: nunca entra neste jogo, mesmo que a grade diga
+/// (listas costumam reaproveitar a grade da emissora nos canais de evento).
+bool channelIsOtherEvent(String name, String homeTeam, String awayTeam) =>
+    nameLooksLikeEvent(name) && !channelNameMatchesFixture(name, homeTeam, awayTeam);
+
+const Set<String> _qualityTokens = {'fhd', 'hd', 'sd', 'uhd', '4k', 'fullhd', 'h265', 'hevc', 'h264', 'alt'};
+
+/// Nome do canal sem a qualidade ("SporTV HD²" e "SporTV FHD" -> "sportv"),
+/// para mostrar cada canal uma vez só.
+String channelBaseName(String name) =>
+    normalizeText(name).split(' ').where((w) => !_qualityTokens.contains(w)).join(' ');
+
+/// Qualidade para escolher a melhor variação: FHD/4K > HD > sem marca > SD;
+/// as reservas ("²", "³", "alt") ficam depois da principal.
+int channelQualityRank(String name) {
+  final words = normalizeText(name).split(' ').toSet();
+  var r = 2;
+  if (words.contains('fhd') || words.contains('uhd') || words.contains('4k') || words.contains('fullhd')) {
+    r = 4;
+  } else if (words.contains('hd')) {
+    r = 3;
+  } else if (words.contains('sd')) {
+    r = 1;
+  }
+  final reserva = name.contains('²') || name.contains('³') || words.contains('alt');
+  return r * 2 - (reserva ? 1 : 0);
 }

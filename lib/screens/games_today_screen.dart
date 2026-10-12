@@ -314,7 +314,9 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
 
   Widget _fixtureCard(Fixture f, Color primary) {
     final channels = _where[f.id] ?? const <Channel>[];
-    return Container(
+    // Fonte grande do sistema quebrava o nome do time no meio da palavra ("Botafog / o"):
+    // dentro do cartão o aumento fica limitado.
+    return MediaQuery.withClampedTextScaling(maxScaleFactor: 1.15, child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFF1a1625),
@@ -332,7 +334,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(children: [
               _team(f.homeName, f.homeLogo, home: true),
-              SizedBox(width: 92, child: Center(child: _center(f))),
+              SizedBox(width: 76, child: Center(child: _center(f))),
               _team(f.awayName, f.awayLogo, home: false),
             ]),
           ),
@@ -342,7 +344,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           child: _channelsRow(f, channels, primary),
         ),
       ]),
-    );
+    ));
   }
 
   Widget _channelsRow(Fixture f, List<Channel> channels, Color primary) {
@@ -357,7 +359,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       return const Text('Canal não encontrado na sua lista',
           style: TextStyle(color: Colors.white38, fontSize: 11));
     }
-    return Wrap(spacing: 8, runSpacing: 6, children: [
+    return LayoutBuilder(builder: (context, box) => Wrap(spacing: 8, runSpacing: 6, children: [
       for (final ch in channels)
         TvTap(
           key: ValueKey('channel-chip-${f.id}-${ch.id}'),
@@ -369,10 +371,17 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: primary.withValues(alpha: 0.5)),
             ),
+            // Nome longo é cortado com "…" e o botão nunca passa da borda do cartão
+            constraints: BoxConstraints(maxWidth: box.maxWidth),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.live_tv, color: primary, size: 14),
               const SizedBox(width: 6),
-              Text(ch.name, style: const TextStyle(color: Colors.white, fontSize: 12)),
+              Flexible(
+                child: Text(ch.name,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
             ]),
           ),
         ),
@@ -381,6 +390,6 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           padding: EdgeInsets.only(top: 6),
           child: SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white38)),
         ),
-    ]);
+    ]));
   }
 }

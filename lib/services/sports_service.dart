@@ -96,17 +96,27 @@ class SportsDateUnavailableException implements Exception {
 String fixtureDateParam(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-/// Canais de [channels] que transmitem cada jogo, pela programação ([epgOf]).
+/// Canais de [channels] que transmitem cada jogo.
+/// 1) O nome do canal traz os dois times (canal de evento do jogo): entra primeiro, mesmo sem grade.
+/// 2) A grade ([epgOf]) mostra o jogo no horário: entra depois, exceto se o nome do canal for
+///    de OUTRO jogo (listas reaproveitam a grade da emissora nos canais de evento).
+/// Cada canal aparece uma vez (na melhor qualidade: FHD > HD > SD; reservas "²" depois),
+/// no máximo [maxPorJogo] por jogo.
 Map<int, List<Channel>> matchFixturesToChannels(
   List<Fixture> fixtures,
   List<Channel> channels,
-  List<EpgProgram> Function(Channel channel) epgOf,
-) {
-  final out = <int, List<Channel>>{};
+  List<EpgProgram> Function(Channel channel) epgOf, {
+  int maxPorJogo = 6,
+}) {
+  final achados = <int, List<(Channel, int)>>{};   // (canal, prioridade: 0 nome, 1 grade)
   for (final ch in channels) {
     final programs = epgOf(ch);
-    if (programs.isEmpty) continue;
     for (final f in fixtures) {
+      if (channelNameMatchesFixture(ch.name, f.homeName, f.awayName)) {
+        (achados[f.id] ??= []).add((ch, 0));
+        continue;
+      }
+      if (programs.isEmpty || channelIsOtherEvent(ch.name, f.homeName, f.awayName)) continue;
       final hit = programs.any((p) => programShowsFixture(
             title: p.title,
             start: p.start,
@@ -115,9 +125,24 @@ Map<int, List<Channel>> matchFixturesToChannels(
             awayTeam: f.awayName,
             kickoff: f.kickoff,
           ));
-      if (hit) (out[f.id] ??= []).add(ch);
+      if (hit) (achados[f.id] ??= []).add((ch, 1));
     }
   }
+  final out = <int, List<Channel>>{};
+  achados.forEach((id, lista) {
+    lista.sort((a, b) {
+      final p = a.$2.compareTo(b.$2);
+      return p != 0 ? p : channelQualityRank(b.$1.name).compareTo(channelQualityRank(a.$1.name));
+    });
+    final vistos = <String>{};
+    final escolhidos = <Channel>[];
+    for (final (ch, _) in lista) {
+      if (!vistos.add(channelBaseName(ch.name))) continue;
+      escolhidos.add(ch);
+      if (escolhidos.length >= maxPorJogo) break;
+    }
+    out[id] = escolhidos;
+  });
   return out;
 }
 
