@@ -32,7 +32,7 @@ android {
 
     defaultConfig {
         // applicationId de cada revendedor: vem do painel pelo workflow (APPLICATION_ID).
-        // Sem a variável (build local), usa o ID antigo, o mesmo dos APKs já distribuídos.
+        // Sem a variável (build local), usa o ID antigo, que ficou só com o PRIMETV.
         applicationId = System.getenv("APPLICATION_ID")?.takeIf { it.isNotBlank() }
             ?: "com.simanplay.iptvplayer.iptv_player"
         minSdk = flutter.minSdkVersion
