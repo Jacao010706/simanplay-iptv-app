@@ -3,8 +3,12 @@ package com.simanplay.iptvplayer.iptv_player
 import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import android.provider.Settings
+import java.security.MessageDigest
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
@@ -47,6 +51,16 @@ class MainActivity : FlutterActivity() {
                             result.error("INSTALL_FAILED", e.message, null)
                         }
                     }
+                    "apkInfo" -> {
+                        // Sem "path": dados do app instalado. Com "path": do APK baixado,
+                        // mais o SHA-256 do arquivo. O atualizador compara os dois antes de instalar.
+                        try {
+                            val path = call.argument<String>("path")
+                            result.success(if (path == null) infoInstalado() else infoArquivo(path))
+                        } catch (e: Exception) {
+                            result.error("APK_INFO", e.message, null)
+                        }
+                    }
                     "keepAlive" -> {
                         try {
                             val on = call.argument<Boolean>("on") ?: false
@@ -62,5 +76,60 @@ class MainActivity : FlutterActivity() {
                         result.notImplemented()
                 }
             }
+    }
+
+    private fun sha256Hex(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    private fun sha256Arquivo(f: File): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        f.inputStream().use { s ->
+            val buf = ByteArray(1 shl 16)
+            while (true) {
+                val n = s.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun certificados(pi: PackageInfo?): List<String> {
+        if (pi == null) return emptyList()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val si = pi.signingInfo
+            if (si != null) {
+                val sigs = if (si.hasMultipleSigners()) si.apkContentsSigners else si.signingCertificateHistory
+                if (!sigs.isNullOrEmpty()) return sigs.map { sha256Hex(it.toByteArray()) }
+            }
+        }
+        return (pi.signatures ?: emptyArray()).map { sha256Hex(it.toByteArray()) }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun flagsAssinatura(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+            PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
+        else PackageManager.GET_SIGNATURES
+
+    @Suppress("DEPRECATION")
+    private fun versao(pi: PackageInfo): Long =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pi.longVersionCode else pi.versionCode.toLong()
+
+    private fun infoInstalado(): Map<String, Any?> {
+        val pi = packageManager.getPackageInfo(packageName, flagsAssinatura())
+        return mapOf("package" to packageName, "versionCode" to versao(pi), "certs" to certificados(pi))
+    }
+
+    private fun infoArquivo(path: String): Map<String, Any?> {
+        val f = File(path)
+        val pi = packageManager.getPackageArchiveInfo(path, flagsAssinatura())
+        return mapOf(
+            "package" to pi?.packageName,
+            "versionCode" to (pi?.let { versao(it) } ?: 0L),
+            "certs" to certificados(pi),
+            "sha256" to sha256Arquivo(f),
+        )
     }
 }

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
 import '../core/release_notes.dart';
+import '../core/update_check.dart';
 
 /// Chave global do Navigator: permite mostrar avisos em qualquer tela.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -95,46 +96,50 @@ class UpdateService {
     } catch (_) {}
   }
 
-  /// Verifica nova versão no backend ao abrir o app.
+  static const _canal = MethodChannel('primetv/device');
+
+  /// Dados do app instalado (pacote, versionCode e certificados de assinatura).
+  static Future<ApkInfo> _instalado() async =>
+      ApkInfo.fromMap(await _canal.invokeMethod('apkInfo') as Map);
+
+  /// Verifica nova versão DESTE app (revendedor + applicationId) ao abrir o app.
   /// Se houver, exibe dialog com download automático e instalação.
   static Future<void> checkForUpdate(BuildContext context) async {
     if (AppConfig.resellerUsername.isEmpty) return;
 
     try {
+      final instalado = await _instalado();
       final uri = Uri.parse(
-        '${AppConfig.backendUrl}/app/check-update'
-        '?reseller_username=${Uri.encodeComponent(AppConfig.resellerUsername)}'
-        '&current_build=${AppConfig.buildNumber}',
+        '${AppConfig.backendUrl}/app/versao'
+        '?revendedor=${Uri.encodeComponent(AppConfig.resellerUsername)}'
+        '&application_id=${Uri.encodeComponent(instalado.package)}',
       );
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return;
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final serverBuild = (data['build_number'] as num?)?.toInt() ?? 0;
-      final apkUrl = data['apk_url'] as String? ?? '';
-
-      if (serverBuild <= AppConfig.buildNumber || apkUrl.isEmpty) return;
+      final versao = VersaoServidor.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      if (!deveOferecer(versao, instalado)) return;
       if (!context.mounted) return;
 
-      _showUpdateDialog(context, apkUrl, serverBuild);
+      _showUpdateDialog(context, versao, instalado);
     } catch (_) {
-      // Sem Internet ou backend indisponível — continua sem interromper
+      // Sem Internet, backend indisponível ou build local sem o canal nativo: segue sem interromper
     }
   }
 
-  static void _showUpdateDialog(BuildContext ctx, String apkUrl, int serverBuild) {
+  static void _showUpdateDialog(BuildContext ctx, VersaoServidor versao, ApkInfo instalado) {
     showDialog(
       context: ctx,
       barrierDismissible: false,
-      builder: (dialogCtx) => _UpdateDialog(apkUrl: apkUrl, buildNumber: serverBuild),
+      builder: (dialogCtx) => _UpdateDialog(versao: versao, instalado: instalado),
     );
   }
 }
 
 class _UpdateDialog extends StatefulWidget {
-  final String apkUrl;
-  final int buildNumber;
-  const _UpdateDialog({required this.apkUrl, required this.buildNumber});
+  final VersaoServidor versao;
+  final ApkInfo instalado;
+  const _UpdateDialog({required this.versao, required this.instalado});
 
   @override
   State<_UpdateDialog> createState() => _UpdateDialogState();
@@ -155,7 +160,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
       final dio = Dio();
       await dio.download(
-        widget.apkUrl,
+        widget.versao.apkUrl,
         filePath,
         onReceiveProgress: (received, total) {
           if (total > 0 && mounted) {
@@ -165,12 +170,23 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       );
 
       if (!mounted) return;
+
+      // Confere hash, pacote, assinatura e versão antes de abrir o instalador
+      final baixado = ApkInfo.fromMap(
+          await UpdateService._canal.invokeMethod('apkInfo', {'path': filePath}) as Map);
+      final motivo = motivoRecusa(
+          anunciada: widget.versao, instalado: widget.instalado, baixado: baixado);
+      if (motivo != null) {
+        try { await file.delete(); } catch (_) {}
+        if (mounted) setState(() { _error = motivo; _progress = null; });
+        return;
+      }
+      if (!mounted) return;
       setState(() => _progress = 1.0);
 
       // Abre o instalador do sistema (mostra dialog "Instalar?" ao usuário)
       try {
-        await const MethodChannel('primetv/device')
-            .invokeMethod('installApk', {'path': filePath});
+        await UpdateService._canal.invokeMethod('installApk', {'path': filePath});
         if (mounted) Navigator.of(context).pop();
       } on PlatformException catch (e) {
         if (mounted) {

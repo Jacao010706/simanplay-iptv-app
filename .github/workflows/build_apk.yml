@@ -169,11 +169,17 @@ jobs:
         run: flutter pub get
 
       - name: Decode Keystore
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/simanplay.jks
-          printf 'storePassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyPassword=${{ secrets.KEYSTORE_PASSWORD }}\nkeyAlias=${{ secrets.KEY_ALIAS }}\nstoreFile=simanplay.jks\n' > android/key.properties
-          # nao imprimir o key.properties: tem as senhas do keystore
+          # As senhas vêm por variável de ambiente (não entram no texto do comando) e o
+          # key.properties nunca é impresso. Mesma chave para todos os revendedores.
+          printf '%s' "$KS_B64" | base64 --decode > android/app/simanplay.jks
           test -s android/app/simanplay.jks || { echo "::error::KEYSTORE_BASE64 vazio"; exit 1; }
+          { printf 'storePassword=%s\n' "$KS_PASS"; printf 'keyPassword=%s\n' "$KS_PASS";
+            printf 'keyAlias=%s\n' "$KS_ALIAS"; printf 'storeFile=simanplay.jks\n'; } > android/key.properties
 
       - name: Build APK
         env:
@@ -182,10 +188,14 @@ jobs:
         run: flutter build apk --release --no-tree-shake-icons --build-number=${{ github.run_number }}
 
       - name: Rename APK
+        id: apk
         run: |
           mkdir -p release
           cp build/app/outputs/flutter-apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || \
           cp build/flutter_apk/app-release.apk release/${{ inputs.reseller_username }}-simanplay.apk || true
+          # SHA-256 do APK: o atualizador do app confere o arquivo baixado com este valor
+          echo "sha256=$(sha256sum release/${{ inputs.reseller_username }}-simanplay.apk | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          sha256sum release/${{ inputs.reseller_username }}-simanplay.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -203,7 +213,7 @@ jobs:
           APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.reseller_username }}-simanplay.apk"
           # O backend só aceita o aviso com o segredo compartilhado (BUILD_CALLBACK_SECRET)
           curl -sS --fail-with-body -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
-            "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}&build_number=${{ github.run_number }}" \
+            "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}&build_number=${{ github.run_number }}&sha256=${{ steps.apk.outputs.sha256 }}" \
             || echo "::warning::O backend recusou o aviso de APK pronto (confira o secret BUILD_CALLBACK_SECRET)"
 
       - name: Notify backend - Failure
