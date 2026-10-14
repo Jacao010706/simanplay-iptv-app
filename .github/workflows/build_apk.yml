@@ -197,6 +197,27 @@ jobs:
           echo "sha256=$(sha256sum release/${{ inputs.reseller_username }}-simanplay.apk | cut -d' ' -f1)" >> $GITHUB_OUTPUT
           sha256sum release/${{ inputs.reseller_username }}-simanplay.apk
 
+      - name: Conferir assinatura do APK
+        env:
+          # SHA-256 público do certificado da chave de assinatura (o mesmo fixado no app, lib/core/update_check.dart)
+          CERT_ESPERADO: 5b72ee8d7963bf6f53c77c6449c5980a7ac4765cc00ab29dc39440543f10b232
+          APK: release/${{ inputs.reseller_username }}-simanplay.apk
+        run: |
+          # Se algum secret da chave estiver errado, o APK sairia assinado com outra chave e
+          # não atualizaria por cima nos clientes: aqui o build falha antes de publicar.
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          SAIDA=$("$APKSIGNER" verify --print-certs "$APK")
+          echo "$SAIDA" | grep "SHA-256 digest"
+          # o mesmo certificado aparece uma vez por esquema de assinatura (v1/v2/v3): conta os distintos
+          CERTS=$(echo "$SAIDA" | grep "certificate SHA-256 digest" | awk '{print $NF}' | tr 'A-F' 'a-f' | sort -u)
+          SIGNERS=$(echo "$CERTS" | grep -c .)
+          CERT=$(echo "$CERTS" | head -1)
+          if [ "$SIGNERS" != "1" ] || [ "$CERT" != "$CERT_ESPERADO" ]; then
+            echo "::error::APK assinado com a chave errada ($CERT). Confira os secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD e KEY_ALIAS."
+            exit 1
+          fi
+          echo "Assinatura confere: $CERT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

@@ -56,11 +56,16 @@ bool deveOferecer(VersaoServidor v, ApkInfo instalado) =>
     _hex64.hasMatch(v.sha256) &&
     v.applicationId == instalado.package;
 
+/// SHA-256 público do certificado da chave que assina os APKs de todos os revendedores.
+/// O mesmo valor é conferido no build (.github/workflows/build_apk.yml, "Conferir assinatura do APK").
+const certAssinatura = '5b72ee8d7963bf6f53c77c6449c5980a7ac4765cc00ab29dc39440543f10b232';
+
 /// Motivo para NÃO instalar o APK baixado, ou null se está tudo certo.
 String? motivoRecusa({
   required VersaoServidor anunciada,
   required ApkInfo instalado,
   required ApkInfo baixado,
+  String certEsperado = certAssinatura,
 }) {
   if (!_hex64.hasMatch(anunciada.sha256) || baixado.sha256 != anunciada.sha256) {
     return 'O arquivo baixado não confere (download incompleto ou alterado). Tente novamente.';
@@ -68,8 +73,13 @@ String? motivoRecusa({
   if (baixado.package.isEmpty || baixado.package != instalado.package) {
     return 'O arquivo baixado é de outro app. Atualização cancelada.';
   }
-  final a = instalado.certs.toSet(), b = baixado.certs.toSet();
-  if (a.isEmpty || b.isEmpty || a.length != b.length || !a.containsAll(b)) {
+  // Só a nossa chave (um único certificado), e a mesma do app instalado
+  final b = baixado.certs.toSet();
+  if (b.length != 1 || b.first != certEsperado.toLowerCase()) {
+    return 'O arquivo baixado não foi assinado pela chave oficial do app. Atualização cancelada.';
+  }
+  final a = instalado.certs.toSet();
+  if (a.length != b.length || !a.containsAll(b)) {
     return 'A assinatura do arquivo baixado é diferente da deste app. Atualização cancelada.';
   }
   if (baixado.versionCode <= instalado.versionCode) {

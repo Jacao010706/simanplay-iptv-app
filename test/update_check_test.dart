@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:simanplay_iptv/core/update_check.dart';
 
 const _sha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const _cert = '1111111111111111111111111111111111111111111111111111111111111111';
+const _cert = certAssinatura; // a chave oficial
+// SHA-256 do certificado da chave nova, como o keytool mostra (fixado no app e no workflow)
+const _certDoKeytool = '5B:72:EE:8D:79:63:BF:6F:53:C7:7C:64:49:C5:98:0A:7A:C4:76:5C:C0:0A:B2:9D:C3:94:40:54:3F:10:B2:32';
 const _outroCert = '2222222222222222222222222222222222222222222222222222222222222222';
 
 const _instalado = ApkInfo(package: 'com.sofae.app', versionCode: 131, certs: [_cert]);
@@ -46,10 +48,24 @@ void main() {
     test('APK de outro app (outro revendedor): recusa', () {
       expect(_recusa(_baixado(pkg: 'com.simanplay.iptvplayer.iptv_player')), contains('outro app'));
     });
-    test('assinatura diferente ou ausente: recusa', () {
-      expect(_recusa(_baixado(certs: [_outroCert])), contains('assinatura'));
-      expect(_recusa(_baixado(certs: const [])), contains('assinatura'));
-      expect(_recusa(_baixado(certs: [_cert, _outroCert])), contains('assinatura'));
+    test('assinatura de outra chave, ausente ou com dois certificados: recusa', () {
+      expect(_recusa(_baixado(certs: [_outroCert])), contains('chave oficial'));
+      expect(_recusa(_baixado(certs: const [])), contains('chave oficial'));
+      expect(_recusa(_baixado(certs: [_cert, _outroCert])), contains('chave oficial'));
+    });
+    test('app instalado com outra chave e APK com a oficial: recusa', () {
+      // o Android também recusaria; aqui a mensagem é clara e o instalador nem abre
+      const instaladoOutraChave = ApkInfo(package: 'com.sofae.app', versionCode: 131, certs: [_outroCert]);
+      expect(motivoRecusa(anunciada: _anunciada, instalado: instaladoOutraChave, baixado: _baixado()),
+          contains('diferente da deste app'));
+    });
+    test('mesmo app e mesma chave, mas não a oficial: recusa', () {
+      const instaladoOutraChave = ApkInfo(package: 'com.sofae.app', versionCode: 131, certs: [_outroCert]);
+      expect(motivoRecusa(anunciada: _anunciada, instalado: instaladoOutraChave, baixado: _baixado(certs: [_outroCert])),
+          contains('chave oficial'));
+    });
+    test('a chave fixada é a do keytool (5B:72:...:B2:32)', () {
+      expect(certAssinatura, _certDoKeytool.replaceAll(':', '').toLowerCase());
     });
     test('versão igual ou menor que a instalada: recusa', () {
       expect(_recusa(_baixado(vc: 131)), contains('mais nova'));
