@@ -61,6 +61,15 @@ android {
     }
 }
 
+// APK oficial (release) só ARM. O --target-platform do Flutter não filtra as bibliotecas que
+// vêm prontas nos plugins (ex.: libmpv do player), e o abiFilters é sobrescrito pelo plugin do
+// Flutter; aqui elas saem no empacotamento. O debug (emulador, BUILD_LOCAL.md) mantém o x86_64.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.packaging.jniLibs.excludes.addAll(listOf("lib/x86_64/**", "lib/x86/**"))
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
