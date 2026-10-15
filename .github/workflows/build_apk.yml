@@ -184,8 +184,9 @@ jobs:
       - name: Build APK
         env:
           APPLICATION_ID: ${{ inputs.application_id }}
-        # versionCode = número do build: cada APK novo é maior que o anterior, então instala como atualização
-        run: flutter build apk --release --no-tree-shake-icons --build-number=${{ github.run_number }}
+        # versionCode = número do build: cada APK novo é maior que o anterior, então instala como atualização.
+        # Só ARM (celulares, TVs e TV box). x86_64 (emulador) só em build local de debug: ver BUILD_LOCAL.md
+        run: flutter build apk --release --no-tree-shake-icons --target-platform android-arm,android-arm64 --build-number=${{ github.run_number }}
 
       - name: Rename APK
         id: apk
