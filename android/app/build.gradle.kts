@@ -51,6 +51,14 @@ android {
             }
         }
     }
+
+    // Bibliotecas nativas (.so) comprimidas dentro do APK: o download cai de ~62 MB para ~29 MB.
+    // O Android extrai as bibliotecas na instalação (extractNativeLibs=true no manifesto final).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 kotlin {
