@@ -12,12 +12,15 @@ import '../services/recording_service.dart';
 import 'player_screen.dart';
 import 'recordings_screen.dart';
 import '../widgets/tv_focus.dart';
+import '../widgets/modo_tv_widgets.dart';
 import '../widgets/tv_search_field.dart';
 import '../widgets/record_options.dart';
 
 class LiveTvScreen extends StatefulWidget {
   final AppSession session;
-  const LiveTvScreen({super.key, required this.session});
+  /// Categoria aberta ao entrar: 'all' (todas) ou '__favs__' (Favoritos).
+  final String categoriaInicial;
+  const LiveTvScreen({super.key, required this.session, this.categoriaInicial = 'all'});
 
   @override
   State<LiveTvScreen> createState() => _LiveTvScreenState();
@@ -26,7 +29,7 @@ class LiveTvScreen extends StatefulWidget {
 class _LiveTvScreenState extends State<LiveTvScreen> {
   List<Channel> _allChannels = [];
   List<Category> _categories = [];
-  String _selectedCategoryId = 'all';
+  late String _selectedCategoryId = widget.categoriaInicial;
   bool _loading = true;
   String? _error;
   String _search = '';
@@ -306,7 +309,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         const SizedBox(height: 12),
         Text(
           _selectedCategoryId == '__favs__'
-              ? 'Nenhum favorito ainda.\nToque ★ para salvar um canal.'
+              ? 'Nenhum favorito ainda.\nToque ★ ou, no controle, aperte Menu (☰) ou a tecla amarela num canal.'
               : 'Nenhum canal encontrado',
           style: const TextStyle(color: Colors.white54),
           textAlign: TextAlign.center,
@@ -320,7 +323,11 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         final isFav = _favoriteIds.contains(ch.id);
         final isThisRecording = RecordingService.instance.activeRecording?.channelName == ch.name;
 
-        return InkWell(
+        // Menu (☰) no Fire TV ou a tecla amarela: adiciona/remove o canal com foco dos favoritos
+        return TeclaFavorito(
+          onFavorito: () => _toggleFavorite(ch),
+          child: InkWell(
+          key: ValueKey('canal-${ch.id}'),
           onTap: () => _showChannelSheet(ch, primary),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -364,7 +371,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               Icon(Icons.chevron_right, color: primary, size: 20),
             ]),
           ),
-        );
+        ));
       },
     );
   }

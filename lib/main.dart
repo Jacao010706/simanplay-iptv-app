@@ -5,14 +5,18 @@ import 'core/providers/theme_provider.dart';
 import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/app_config.dart';
+import 'core/modo_tv.dart';
 import 'services/update_service.dart';
 import 'widgets/tv_focus.dart';
+import 'widgets/modo_tv_widgets.dart';
 import 'services/recording_service.dart';
 import 'services/assistindo_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized(); // necessário para o player de vídeo
+  // TV/TV box/Fire TV e pacote do APK: fonte, overscan, saída e (Sofae) telas sem pagamento
+  await ModoTv.iniciar();
   runApp(const IptvPlayerApp());
   // Novidades da versao + verificacao de atualizacao (em segundo plano)
   UpdateService.runStartupChecks();
@@ -43,13 +47,17 @@ class IptvPlayerApp extends StatelessWidget {
             // Envolve o app inteiro, então o bloqueio vale em qualquer tela.
             builder: (context, child) {
               // TVs costumam vir com fonte do sistema bem grande: limita o
-              // aumento para o texto nao estourar botoes e campos.
+              // aumento para o texto nao estourar botoes e campos. Na TV a escala e
+              // fixa (texto legivel a ~3 m) e o app ganha a margem de overscan.
               final mq = MediaQuery.of(context);
               return MediaQuery(
                 data: mq.copyWith(
-                    textScaler: mq.textScaler.clamp(maxScaleFactor: 1.15)),
-                child: FocusRing(
-                    child: LicenseGate(child: child ?? const SizedBox.shrink())),
+                    textScaler: ModoTv.tv
+                        ? const TextScaler.linear(ModoTv.escalaTexto)
+                        : mq.textScaler.clamp(maxScaleFactor: 1.15)),
+                child: MargemTv(
+                    child: FocusRing(
+                        child: LicenseGate(child: child ?? const SizedBox.shrink()))),
               );
             },
           );

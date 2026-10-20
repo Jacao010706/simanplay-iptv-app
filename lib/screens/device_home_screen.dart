@@ -12,6 +12,8 @@ import '../services/license_service.dart';
 import '../services/xtream_service.dart';
 import 'activation_screen_v3.dart';
 import 'home_screen_v2.dart';
+import '../core/modo_tv.dart';
+import '../widgets/modo_tv_widgets.dart';
 
 /// Abre a home com a sessão escolhida e a salva para a próxima abertura.
 Future<void> openHome(BuildContext context, AppSession session) async {
@@ -161,27 +163,33 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
           SelectableText(lic?.deviceKey.isNotEmpty == true ? lic!.deviceKey : '—',
               style: TextStyle(color: primary, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 4)),
           const SizedBox(height: 14),
-          const Text('Para adicionar suas listas, acesse pelo celular:',
-              style: TextStyle(color: Colors.white70, fontSize: 14)),
-          const SizedBox(height: 4),
-          const SelectableText(DeviceListsService.siteShort,
-              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          const Text('e digite o MAC e a chave acima.', style: TextStyle(color: Colors.white70, fontSize: 14)),
-          if (lic != null && lic.mac.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-              child: QrImageView(data: DeviceListsService.siteUrl(lic.mac), size: 150, backgroundColor: Colors.white),
-            ),
+          // Sofae na TV (loja): só o código e o pedido para informá-lo ao provedor; sem site,
+          // QR nem teste grátis
+          if (ModoTv.sofaeTv)
+            const Text(ModoTv.fraseProvedor, style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4))
+          else ...[
+            const Text('Para adicionar suas listas, acesse pelo celular:',
+                style: TextStyle(color: Colors.white70, fontSize: 14)),
             const SizedBox(height: 4),
-            const Text('Ou aponte a câmera do celular', style: TextStyle(color: Colors.white38, fontSize: 12)),
-          ],
-          if (lic != null && lic.isTrial) ...[
-            const SizedBox(height: 12),
-            Text('Teste grátis: ${lic.daysLeft} dia(s) restante(s)',
-                style: const TextStyle(color: Colors.amberAccent, fontSize: 13)),
+            const SelectableText(DeviceListsService.siteShort,
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            const Text('e digite o MAC e a chave acima.', style: TextStyle(color: Colors.white70, fontSize: 14)),
+            if (lic != null && lic.mac.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                child: QrImageView(data: DeviceListsService.siteUrl(lic.mac), size: 150, backgroundColor: Colors.white),
+              ),
+              const SizedBox(height: 4),
+              const Text('Ou aponte a câmera do celular', style: TextStyle(color: Colors.white38, fontSize: 12)),
+            ],
+            if (lic != null && lic.isTrial) ...[
+              const SizedBox(height: 12),
+              Text('Teste grátis: ${lic.daysLeft} dia(s) restante(s)',
+                  style: const TextStyle(color: Colors.amberAccent, fontSize: 13)),
+            ],
           ],
         ],
       ),
@@ -210,10 +218,12 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(12)),
-            child: const Text(
-              'Nenhuma lista cadastrada ainda.\n'
-              'Cadastre pelo site com o MAC e a chave ao lado. Ela aparece aqui sozinha em alguns segundos.',
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            child: Text(
+              ModoTv.sofaeTv
+                  ? 'Nenhuma lista liberada ainda.\nEla aparece aqui sozinha assim que o provedor liberar.'
+                  : 'Nenhuma lista cadastrada ainda.\n'
+                      'Cadastre pelo site com o MAC e a chave ao lado. Ela aparece aqui sozinha em alguns segundos.',
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
             ),
           ),
         for (var i = 0; i < lists.length; i++)
@@ -247,7 +257,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
       ],
     );
 
-    return Scaffold(
+    return ConfirmarSaida(child: Scaffold(
       backgroundColor: bg,
       body: SafeArea(
         child: SingleChildScrollView(
@@ -285,7 +295,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 

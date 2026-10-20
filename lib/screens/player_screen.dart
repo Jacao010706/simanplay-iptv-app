@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import '../core/modo_tv.dart';
 import '../core/stream_sources.dart';
 import '../services/epg_service.dart';
 import '../services/recording_service.dart';
@@ -62,6 +63,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    // Vídeo até a borda (sem a margem de overscan da TV). Depois do quadro: a margem fica
+    // acima do player na árvore e não pode ser reconstruída durante este build.
+    WidgetsBinding.instance.addPostFrameCallback((_) => ModoTv.telaCheia.value = true);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -283,6 +287,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     _player.dispose();
     Assistindo.conteudo('menu', '');
+    WidgetsBinding.instance.addPostFrameCallback((_) => ModoTv.telaCheia.value = false);
     super.dispose();
   }
 

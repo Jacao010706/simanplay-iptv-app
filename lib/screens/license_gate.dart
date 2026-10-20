@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_config.dart';
+import '../core/modo_tv.dart';
 import '../services/license_service.dart';
 
 /// Verifica a licença ao abrir (e ao voltar para o app). Libera o [child]
@@ -43,7 +44,8 @@ class _LicenseGateState extends State<LicenseGate> with WidgetsBindingObserver {
     final st = await LicenseService.check();
     if (!mounted) return;
     setState(() => _state = st);
-    if (st.allowed && st.isTrial && st.daysLeft > 0 && !_trialNoticeShown) {
+    // Sofae na TV (loja): sem aviso de teste grátis
+    if (st.allowed && st.isTrial && st.daysLeft > 0 && !_trialNoticeShown && !ModoTv.sofaeTv) {
       _trialNoticeShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final messenger = ScaffoldMessenger.maybeOf(context);
@@ -119,11 +121,70 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
     }
   }
 
+  /// Sofae na TV (loja): sem preço, PIX, plano, QR nem botão para o site. Só o aviso, o MAC
+  /// e "Verificar novamente" (a tela também libera sozinha a cada 15 s).
+  Widget _semPagamento(Color primary, Color bg, Color surface) {
+    final st = widget.state;
+    return Scaffold(
+      backgroundColor: bg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              constraints: const BoxConstraints(maxWidth: 760),
+              decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(16)),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(AppConfig.appName, style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Text(st.plan != null ? 'Seu acesso venceu' : 'Seu período de teste terminou',
+                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                const Text('O acesso deste aparelho não está liberado no momento.\n${ModoTv.fraseProvedor}',
+                    style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.5)),
+                const SizedBox(height: 16),
+                const Text('MAC do aparelho', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(st.displayId,
+                    style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                const SizedBox(height: 8),
+                const Text('Assim que o acesso for liberado, o app entra sozinho.',
+                    style: TextStyle(color: Colors.white54, fontSize: 14)),
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  autofocus: true,
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: BorderSide(color: primary),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+                  onPressed: _checking ? null : _check,
+                  icon: _checking
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.refresh),
+                  label: const Text('Verificar novamente', style: TextStyle(fontSize: 16)),
+                ),
+                if (_msg != null) ...[
+                  const SizedBox(height: 12),
+                  const Text('Ainda não liberado. Aguarde alguns segundos.',
+                      style: TextStyle(color: Colors.amberAccent, fontSize: 13)),
+                ],
+                if (st.offline) ...[
+                  const SizedBox(height: 8),
+                  const Text('Sem conexão com o servidor. Verifique a internet.', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final primary = Color(AppConfig.primaryColor);
     final bg = Color(AppConfig.backgroundColor);
     final surface = Color(AppConfig.surfaceColor);
+    if (ModoTv.sofaeTv) return _semPagamento(primary, bg, surface);
     final st = widget.state;
     final titulo = st.plan != null ? 'Sua assinatura venceu' : 'Seu período de teste grátis terminou';
 

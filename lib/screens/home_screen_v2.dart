@@ -17,6 +17,9 @@ import 'movies_screen.dart';
 import 'series_screen.dart';
 import 'player_screen.dart';
 import '../widgets/tv_focus.dart';
+import '../widgets/modo_tv_widgets.dart';
+import '../core/modo_tv.dart';
+import 'home_tv_screen.dart';
 
 String _fmtDate(DateTime dt) =>
     '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
@@ -45,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Sair', style: TextStyle(color: Colors.white)),
         content: const Text('Deseja desconectar?', style: TextStyle(color: Colors.white70)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
+          TextButton(autofocus: true, onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Sair', style: TextStyle(color: Color(AppConfig.primaryColor)))),
         ],
       ),
@@ -61,6 +64,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Na TV o Voltar na tela inicial pergunta antes de sair (todas as marcas)
+    return ConfirmarSaida(child: _tema());
+  }
+
+  Widget _tema() {
+    // Sofae na TV: 4 blocos (TV ao Vivo, Filmes, Séries, Favoritos), como no /tv da LG/Samsung
+    if (ModoTv.sofaeTv && widget.debugTheme == null) {
+      return HomeTvScreen(session: widget.session, onLogout: _logout);
+    }
     switch (widget.debugTheme ?? AppConfig.appTheme) {
       case 2: return _NetflixLayout(session: widget.session, onLogout: _logout);
       case 3: return _SidebarLayout(session: widget.session, onLogout: _logout);
@@ -207,10 +219,13 @@ class _NetflixLayoutState extends State<_NetflixLayout> {
     return Scaffold(backgroundColor: const Color(0xFF141414), body: Column(children: [
       SafeArea(child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: Row(children: [
         Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 20, fontWeight: FontWeight.bold)),
-        const Spacer(),
+        const SizedBox(width: 12),
+        // Menu rolável: na TV (texto maior) não cabe inteiro em 960 px
+        Expanded(child: Align(alignment: Alignment.centerRight, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
         ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3), ('Jogos', 4)].map((t) => TvTap(
           onTap: () => setState(() => _idx = t.$2),
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text(t.$1, style: TextStyle(color: _idx == t.$2 ? Colors.white : Colors.white38, fontSize: 13, fontWeight: _idx == t.$2 ? FontWeight.bold : FontWeight.normal))))),
+        ])))),
         const SizedBox(width: 8),
         TvTap(onTap: widget.onLogout, child: const CircleAvatar(radius: 14, backgroundColor: Color(0xFF333333), child: Icon(Icons.person, color: Colors.white, size: 16))),
       ]))),
@@ -365,11 +380,14 @@ class _IBOLayout4State extends State<_IBOLayout4> {
     ];
     return Scaffold(backgroundColor: const Color(0xFF0a0a0a), body: SafeArea(child: Column(children: [
       Container(height: 52, color: sf, padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
-        Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 16, fontWeight: FontWeight.bold)), const Spacer(),
+        Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 16, fontWeight: FontWeight.bold)), const SizedBox(width: 12),
+        // Menu rolável: na TV (texto maior) não cabe inteiro em 960 px
+        Expanded(child: Align(alignment: Alignment.centerRight, child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
         ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3), ('Jogos', 4)].map((t) => TvTap(onTap: () => setState(() => _idx = t.$2),
           child: Container(margin: const EdgeInsets.only(left: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(color: _idx == t.$2 ? p.withValues(alpha: 0.2) : Colors.transparent, borderRadius: BorderRadius.circular(20), border: Border.all(color: _idx == t.$2 ? p : Colors.transparent)),
             child: Text(t.$1, style: TextStyle(color: _idx == t.$2 ? p : Colors.white54, fontSize: 12))))),
+        ])))),
         const SizedBox(width: 8), TvTap(onTap: widget.onLogout, child: const Icon(Icons.logout, color: Colors.white38, size: 20)),
       ])),
       Expanded(child: screens[_idx]),
@@ -463,10 +481,12 @@ class _IBOLayout5State extends State<_IBOLayout5> {
     return Scaffold(backgroundColor: const Color(0xFF0f0f1a), body: SafeArea(child: Row(children: [
       Container(width: 80, decoration: BoxDecoration(color: sf, border: Border(right: BorderSide(color: p.withValues(alpha: 0.2)))), child: Column(children: [
         const SizedBox(height: 16), Icon(Icons.live_tv, color: p, size: 28), const SizedBox(height: 20),
+        // Itens roláveis: na TV (texto maior) a coluna não cabe inteira na altura
+        Expanded(child: SingleChildScrollView(child: Column(children: [
         ...List.generate(nav.length, (i) { final sel = _idx == i; return TvTap(onTap: () => setState(() => _idx = i), child: Container(margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8), padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(color: sel ? p.withValues(alpha: 0.15) : Colors.transparent, borderRadius: BorderRadius.circular(10), border: Border.all(color: sel ? p.withValues(alpha: 0.5) : Colors.transparent)),
           child: Column(children: [Icon(nav[i]['icon'] as IconData, color: sel ? p : Colors.white24, size: 22), const SizedBox(height: 4), Text(nav[i]['label'] as String, style: TextStyle(color: sel ? p : Colors.white24, fontSize: 8), textAlign: TextAlign.center)]))); }),
-        const Spacer(),
+        ]))),
         if (widget.session.expiresAt != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4), child: Text(_fmtDate(widget.session.expiresAt!), style: const TextStyle(color: Colors.white24, fontSize: 7), textAlign: TextAlign.center)),
         IconButton(icon: const Icon(Icons.logout, color: Colors.white24, size: 18), onPressed: widget.onLogout), const SizedBox(height: 8),
       ])),
