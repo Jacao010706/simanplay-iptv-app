@@ -5,8 +5,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
-    <application>
+    <!-- Sem gravação na Play (política de PI: cópia local de conteúdo): sai o serviço em
+         primeiro plano e as permissões que só ele usava -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove"/>
+    <!-- Marca Sofae (o APK do painel recebe o nome do revendedor pelo workflow) -->
+    <application android:label="Sofae" tools:replace="android:label">
         <provider android:name="androidx.core.content.FileProvider" tools:node="remove"/>
+        <service android:name=".RecordingKeepAliveService" tools:node="remove"/>
     </application>
     <!-- Só abrir links https (url_launcher); sem as consultas de instalar APK -->
     <queries tools:node="replace">

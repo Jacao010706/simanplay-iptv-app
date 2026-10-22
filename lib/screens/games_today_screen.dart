@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../models/app_session.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart' show formatHm;
@@ -145,7 +145,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
+    final primary = Color(Marca.primaryColor);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(

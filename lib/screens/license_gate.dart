@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../core/loja.dart';
 import '../services/license_service.dart';
 
@@ -61,9 +61,9 @@ class _LicenseGateState extends State<LicenseGate> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final st = _state;
     if (st == null) {
-      final primary = Color(AppConfig.primaryColor);
+      final primary = Color(Marca.primaryColor);
       return Scaffold(
-        backgroundColor: Color(AppConfig.backgroundColor),
+        backgroundColor: Color(Marca.backgroundColor),
         body: Center(child: CircularProgressIndicator(color: primary)),
       );
     }
@@ -136,7 +136,7 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
               constraints: const BoxConstraints(maxWidth: 760),
               decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(16)),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(AppConfig.appName, style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
+                Text(Marca.appName, style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Text(st.plan != null ? 'Seu acesso venceu' : 'Acesso não liberado',
                     style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
@@ -181,9 +181,9 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
-    final bg = Color(AppConfig.backgroundColor);
-    final surface = Color(AppConfig.surfaceColor);
+    final primary = Color(Marca.primaryColor);
+    final bg = Color(Marca.backgroundColor);
+    final surface = Color(Marca.surfaceColor);
     if (Loja.play) return _semPagamento(primary, bg, surface);
     final st = widget.state;
     final titulo = st.plan != null ? 'Sua assinatura venceu' : 'Seu período de teste grátis terminou';
@@ -192,7 +192,7 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(AppConfig.appName, style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
+        Text(Marca.appName, style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),

@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_session.dart';
 import '../models/channel.dart';
 import '../models/category.dart';
-import '../core/app_config.dart';
+import '../core/marca.dart';
+import '../core/loja.dart';
 import '../core/m3u_service.dart';
 import '../services/xtream_service.dart';
 import '../services/epg_service.dart';
@@ -165,7 +166,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
+    final primary = Color(Marca.primaryColor);
     final isRecording = RecordingService.instance.isRecording;
 
     if (_loading) {
@@ -216,8 +217,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
             ),
           )),
           const SizedBox(width: 4),
-          // Botão Gravações
-          Tooltip(
+          // Botão Gravações (a Play não tem gravação)
+          if (!Loja.play) Tooltip(
             message: 'Minhas Gravações',
             child: Stack(alignment: Alignment.topRight, children: [
               IconButton(
@@ -719,7 +720,7 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 )),
                 // Programas futuros: agendar a gravacao
-                if (!isNow) _scheduleButton(ep, title),
+                if (!isNow && !Loja.play) _scheduleButton(ep, title),
               ]),
             );
           }),
@@ -756,9 +757,9 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
               ),
             ),
           )),
-          const SizedBox(width: 10),
-          // Gravar / Parar
-          SizedBox(
+          // Gravar / Parar (a Play não tem gravação)
+          if (!Loja.play) const SizedBox(width: 10),
+          if (!Loja.play) SizedBox(
             height: 48,
             child: ElevatedButton.icon(
               onPressed: otherRec ? null : _toggleRecording,

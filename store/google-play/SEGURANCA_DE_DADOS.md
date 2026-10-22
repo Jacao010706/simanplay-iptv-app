@@ -26,18 +26,27 @@ não conta como compartilhamento.
 | **Atividade no app > Interações no app** | Tipo e nome do conteúdo tocando (canal/filme/série), a cada 30 s no vídeo e 60 s no menu | `assistindo_service.dart` `/app/tv/assistindo` | Sim | **Sim** (revendedor vê "assistindo agora") | Sim para contas de painel | Funcionalidade do app; Prevenção de fraudes e segurança (compartilhamento de conta) |
 | **Local > Local aproximado** | Cidade estimada pelo IP no servidor (a política declara) | servidor | Sim | Sim, se o revendedor vê a cidade (**confirmar no painel**) | Sim | Prevenção de fraudes e segurança |
 
-Senha do painel: vai ao servidor só para autenticar (`/app/login`) e o app guarda o token. Não é
+Senha do painel: vai ao servidor só para autenticar (`/app/login`). O app guarda no aparelho o
+token e também usuário e senha, na sessão local (`activation_screen_v3.dart` → `buildSession`
+→ `SharedPreferences`), para reabrir a conta; saem ao tocar em Sair. Não é
 uma categoria própria no formulário; fica coberta por "IDs de usuário" + criptografia em trânsito.
 **Confirmar** que o servidor não grava a senha em texto puro.
+
+**Modo Livre** (lista digitada no app): servidor, usuário, senha e link M3U ficam só no aparelho
+e vão direto para o servidor do provedor; não são coletados por nós. **Lista de demonstração:**
+não envia nada ao nosso servidor.
 
 Não coletado pela variante `play`: nome, e-mail, telefone, endereço, pagamentos (sem PIX/Mercado
 Pago no app), contatos, fotos, áudio, arquivos, calendário, saúde, localização precisa,
 histórico de navegação, registros de falha, diagnósticos, anúncios.
 
-Dados que **ficam só no aparelho** (não declaram): listas em cache, favoritos, gravações
-(pasta interna do app), tema escolhido.
+Dados que **ficam só no aparelho** (não declaram): listas em cache, listas do Modo Livre,
+favoritos, sessão do painel (usuário e senha, para reabrir), tema escolhido. A versão Play não tem
+gravação.
 
 ## Ajustes na política de privacidade antes de enviar
+Texto novo já escrito em `POLITICA_DE_PRIVACIDADE.md` (cobre os itens abaixo). Itens originais:
+
 1. Citar o **Android ID** (identificador do sistema) enviado no registro da licença; hoje a
    política só fala do MAC.
 2. Frequência do "assistindo": o código envia a cada **30 s** durante o vídeo e **60 s** no menu

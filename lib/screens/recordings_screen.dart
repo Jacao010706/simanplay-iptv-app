@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../services/recording_service.dart';
 import 'player_screen.dart';
 
@@ -80,7 +80,7 @@ class _RecordingsScreenState extends State<RecordingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary    = Color(AppConfig.primaryColor);
+    final primary    = Color(Marca.primaryColor);
     final activeRec  = RecordingService.instance.activeRecording;
 
     return Scaffold(

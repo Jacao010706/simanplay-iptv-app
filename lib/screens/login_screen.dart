@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/marca.dart';
 import '../services/api_service.dart';
 import '../models/app_session.dart';
 import 'home_screen_v2.dart';
@@ -118,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.live_tv, size: 80, color: Color(0xFFe94bff)),
                 const SizedBox(height: 16),
                 const Text(
-                  'SimanPlay IPTV',
+                  Marca.appName,
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/app_config.dart';
+import '../core/marca.dart';
+import '../core/lista_demo.dart';
 import '../core/loja.dart';
 import '../models/app_session.dart';
 import '../services/device_lists_service.dart';
@@ -133,8 +134,8 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
   }
 
   Widget _logo(Color primary) {
-    if (AppConfig.useCustomLogo) {
-      return Image.network(AppConfig.logoUrl,
+    if (Marca.useCustomLogo) {
+      return Marca.logo(
           height: 56, errorBuilder: (_, __, ___) => Icon(Icons.live_tv, size: 48, color: primary));
     }
     return Icon(Icons.live_tv, size: 48, color: primary);
@@ -142,9 +143,9 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
-    final bg = Color(AppConfig.backgroundColor);
-    final surface = Color(AppConfig.surfaceColor);
+    final primary = Color(Marca.primaryColor);
+    final bg = Color(Marca.backgroundColor);
+    final surface = Color(Marca.surfaceColor);
     final lic = _lic;
 
     final device = Container(
@@ -252,6 +253,22 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
           icon: const Icon(Icons.keyboard),
           label: const Text('Entrar com servidor, usuário e senha ou link M3U'),
         ),
+        // Play: quem ainda não tem lista (e o revisor da loja) pode conhecer o app com filmes
+        // abertos da Blender, licença Creative Commons
+        if (Loja.play) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('abrir_demo'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white38),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: () => openHome(context, ListaDemo.sessao()),
+            icon: const Icon(Icons.play_circle_outline),
+            label: const Text('Ver demonstração (filmes livres, sem lista)'),
+          ),
+        ],
       ],
     );
 
@@ -269,7 +286,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
                   Row(children: [
                     _logo(primary),
                     const SizedBox(width: 12),
-                    Text(AppConfig.appName,
+                    Text(Marca.appName,
                         style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
                   ]),
                   const SizedBox(height: 20),

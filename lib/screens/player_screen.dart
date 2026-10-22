@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import '../core/loja.dart';
 import '../core/stream_sources.dart';
 import '../services/epg_service.dart';
 import '../services/recording_service.dart';
@@ -103,7 +104,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }));
 
     // Atualiza o selo REC (tempo/tamanho) enquanto grava
-    if (widget.recordName != null) {
+    if (_recordName != null) {
       _recTick = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted && RecordingService.instance.isRecording) setState(() {});
       });
@@ -132,6 +133,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   String get _channelName => widget.recordName ?? widget.title;
+
+  /// Canal que pode ser gravado; na Play não há gravação (política de PI: cópia local).
+  String? get _recordName => Loja.play ? null : widget.recordName;
 
   ScheduledRecording _scheduleFor(EpgProgram p) => ScheduledRecording.fromProgram(
         channelName: _channelName,
@@ -186,7 +190,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   bool get _isRecordingThis {
     final rs = RecordingService.instance;
-    return rs.isRecording && rs.activeRecording?.channelName == widget.recordName;
+    return rs.isRecording && rs.activeRecording?.channelName == _recordName;
   }
 
   Future<void> _toggleRecording() async {
@@ -201,7 +205,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (d == null || !mounted) return;
       if (rs.isRecording) await rs.stopRecording();
       await rs.startRecording(
-        widget.recordName!,
+        _recordName!,
         _sources[_currentUrlIndex],
         duration: d == Duration.zero ? null : d,
       );
@@ -301,12 +305,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
               onPlayPause: _togglePause,
               onBack: () => Navigator.pop(context),
               onSeek: widget.isLive ? null : _seek,
-              onRecord: widget.recordName == null ? null : _toggleRecording,
+              onRecord: _recordName == null ? null : _toggleRecording,
               recording: _isRecordingThis,
               programs: _epg,
               programsLoading: _epgLoading,
               isScheduled: _epg == null ? null : _isScheduled,
-              onToggleSchedule: _epg == null || widget.recordName == null ? null : _toggleSchedule,
+              onToggleSchedule: _epg == null || _recordName == null ? null : _toggleSchedule,
               recordingInfo: _isRecordingThis
                   ? 'REC ${RecordingService.instance.activeRecording!.elapsedFormatted}'
                       '${RecordingService.instance.activeRecording!.stopAtFormatted != null ? ' ate ${RecordingService.instance.activeRecording!.stopAtFormatted}' : ''}'

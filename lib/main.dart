@@ -4,7 +4,7 @@ import 'package:media_kit/media_kit.dart';
 import 'core/providers/theme_provider.dart';
 import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
-import 'core/app_config.dart';
+import 'core/marca.dart';
 import 'core/loja.dart';
 import 'services/update_service.dart';
 import 'widgets/tv_focus.dart';
@@ -18,8 +18,8 @@ void main() {
   // Novidades da versao + verificacao de atualizacao (em segundo plano).
   // Na Play quem atualiza e a loja: o atualizador nem entra no build.
   if (!Loja.play) UpdateService.runStartupChecks();
-  // Retoma a vigilancia das gravacoes agendadas
-  RecordingService.instance.init();
+  // Retoma a vigilancia das gravacoes agendadas (a Play nao tem gravacao)
+  if (!Loja.play) RecordingService.instance.init();
   // "Assistindo agora" no painel: retoma os avisos com o token salvo
   Assistindo.iniciar();
 }
@@ -36,7 +36,7 @@ class IptvPlayerApp extends StatelessWidget {
           return MaterialApp(
             navigatorKey: appNavigatorKey,
             shortcuts: appShortcuts,
-            title: AppConfig.appName,
+            title: Marca.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
             // Tela inicial estilo IBO: MAC + chave do aparelho e as listas cadastradas no site

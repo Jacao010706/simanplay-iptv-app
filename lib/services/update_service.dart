@@ -7,14 +7,15 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../core/release_notes.dart';
 import '../core/update_check.dart';
 
 /// Chave global do Navigator: permite mostrar avisos em qualquer tela.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
-const Color _primary = Color(AppConfig.primaryColor);
-const Color _surface = Color(AppConfig.surfaceColor);
+const Color _primary = Color(Marca.primaryColor);
+const Color _surface = Color(Marca.surfaceColor);
 
 class UpdateService {
   static bool _started = false;

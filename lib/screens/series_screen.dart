@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../models/app_session.dart';
 import '../models/series.dart';
 import '../models/category.dart';
@@ -85,7 +85,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
+    final primary = Color(Marca.primaryColor);
 
     if (_loading) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

@@ -29,11 +29,15 @@ que podem ter conteúdo adulto. Não marcar "pode atrair crianças".
 > conteúdo e pelas licenças. O app não tem compras nem links de pagamento. Atualizações são
 > feitas somente pela Google Play.
 >
-> Para revisar: [instruções de acesso + MAC liberado/lista de demonstração com conteúdo de
-> domínio público — PREENCHER]. Nenhum login é necessário além disso.
+> Para revisar sem lista própria: abra o app e toque em **"Ver demonstração (filmes livres,
+> sem lista)"** na tela inicial. A demonstração tem 10 filmes abertos da Blender Foundation
+> (Creative Commons, servidos pelo Wikimedia Commons) em Filmes e 3 canais de demonstração em
+> TV ao Vivo. Nenhum login ou pagamento é necessário. O acesso de teste vale por 7 dias a partir
+> da primeira abertura no aparelho.
 
-Revisores precisam conseguir usar o app. Sem uma lista de demonstração legal liberada, a revisão
-tende a recusar por "Acesso ao app" ou "funcionalidade mínima".
+O botão existe só na versão Play (`test/play_variante_test.dart`). **Atenção:** se o período
+de teste do aparelho do revisor acabar, a tela de acesso bloqueia também a demonstração (ver o
+relatório, decisão pendente).
 
 ## 4. Outras declarações do Console
 | Declaração | Resposta proposta |
@@ -42,5 +46,5 @@ tende a recusar por "Acesso ao app" ou "funcionalidade mínima".
 | Acesso ao app | Restrito: fornecer instruções/lista de demonstração (item 3) |
 | App de notícias / governo / financeiro / saúde | Não |
 | ID de publicidade | Não usa (conferir no manifesto final: nenhuma lib de anúncios no `pubspec.yaml`) |
-| Serviço em primeiro plano (`dataSync`) | **Precisa declarar** se a gravação ficar na versão Play: descrição, impacto, use case "Upload or download (network transfer)" e **link de vídeo** mostrando o usuário iniciando a gravação. Ver risco no relatório: a política de PI cita gravação/cópia local |
+| Serviço em primeiro plano | **Não se aplica**: a versão Play não tem gravação; o serviço e as permissões `FOREGROUND_SERVICE*`, `WAKE_LOCK` e `POST_NOTIFICATIONS` saem do manifesto |
 | Permissão de instalar pacotes | Não aplicável: removida na variante `play` |

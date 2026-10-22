@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
+import '../core/marca.dart';
+import '../core/lista_demo.dart';
+import '../core/loja.dart';
 import '../models/app_session.dart';
 import '../services/epg_service.dart';
 import '../services/xtream_service.dart';
@@ -41,12 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Color(AppConfig.surfaceColor),
+        backgroundColor: Color(Marca.surfaceColor),
         title: const Text('Sair', style: TextStyle(color: Colors.white)),
         content: const Text('Deseja desconectar?', style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Sair', style: TextStyle(color: Color(AppConfig.primaryColor)))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Sair', style: TextStyle(color: Color(Marca.primaryColor)))),
         ],
       ),
     );
@@ -61,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    switch (widget.debugTheme ?? AppConfig.appTheme) {
+    switch (widget.debugTheme ?? Marca.appTheme) {
       case 2: return _NetflixLayout(session: widget.session, onLogout: _logout);
       case 3: return _SidebarLayout(session: widget.session, onLogout: _logout);
       case 4: return _IBOLayout4(session: widget.session, onLogout: _logout);
@@ -152,28 +155,28 @@ class _GridLayoutState extends State<_GridLayout> {
   int _idx = 0;
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
+    final p = Color(Marca.primaryColor);
     final screens = [
       _HomeTab(session: widget.session, onNavigate: (i) => setState(() => _idx = i)),
       BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
-      BannerBackground(child: GamesTodayScreen(session: widget.session)),
+      if (!Loja.play) BannerBackground(child: GamesTodayScreen(session: widget.session)),
     ];
     return Scaffold(
-      backgroundColor: Color(AppConfig.backgroundColor),
-      appBar: AppBar(backgroundColor: Color(AppConfig.surfaceColor), elevation: 0,
-        title: Row(children: [Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(AppConfig.appName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500))]),
+      backgroundColor: Color(Marca.backgroundColor),
+      appBar: AppBar(backgroundColor: Color(Marca.surfaceColor), elevation: 0,
+        title: Row(children: [Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(Marca.appName, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500))]),
         actions: [
           if (widget.session.expiresAt != null) Padding(padding: const EdgeInsets.only(right: 8), child: Center(child: Text('Vence: ${_fmtDate(widget.session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 11)))),
           IconButton(icon: const Icon(Icons.logout, color: Colors.white54), onPressed: widget.onLogout),
         ]),
       body: screens[_idx],
-      bottomNavigationBar: NavigationBar(backgroundColor: Color(AppConfig.surfaceColor), selectedIndex: _idx, onDestinationSelected: (i) => setState(() => _idx = i), indicatorColor: p.withValues(alpha: 0.2),
+      bottomNavigationBar: NavigationBar(backgroundColor: Color(Marca.surfaceColor), selectedIndex: _idx, onDestinationSelected: (i) => setState(() => _idx = i), indicatorColor: p.withValues(alpha: 0.2),
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined, color: Colors.white54), selectedIcon: Icon(Icons.home, color: p), label: 'Inicio'),
           NavigationDestination(icon: const Icon(Icons.live_tv_outlined, color: Colors.white54), selectedIcon: Icon(Icons.live_tv, color: p), label: 'Ao Vivo'),
           NavigationDestination(icon: const Icon(Icons.movie_outlined, color: Colors.white54), selectedIcon: Icon(Icons.movie, color: p), label: 'Filmes'),
           NavigationDestination(icon: const Icon(Icons.video_library_outlined, color: Colors.white54), selectedIcon: Icon(Icons.video_library, color: p), label: 'Series'),
-          NavigationDestination(icon: const Icon(Icons.sports_soccer_outlined, color: Colors.white54), selectedIcon: Icon(Icons.sports_soccer, color: p), label: 'Jogos'),
+          if (!Loja.play) NavigationDestination(icon: const Icon(Icons.sports_soccer_outlined, color: Colors.white54), selectedIcon: Icon(Icons.sports_soccer, color: p), label: 'Jogos'),
         ]),
     );
   }
@@ -198,17 +201,17 @@ class _NetflixLayoutState extends State<_NetflixLayout> {
   }
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
+    final p = Color(Marca.primaryColor);
     final screens = [
       _NfHome(ch: _ch, mv: _mv, sr: _sr, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p),
       BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
-      BannerBackground(child: GamesTodayScreen(session: widget.session)),
+      if (!Loja.play) BannerBackground(child: GamesTodayScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: const Color(0xFF141414), body: Column(children: [
       SafeArea(child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: Row(children: [
-        Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(Marca.appName, style: TextStyle(color: p, fontSize: 20, fontWeight: FontWeight.bold)),
         const Spacer(),
-        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3), ('Jogos', 4)].map((t) => TvTap(
+        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3), if (!Loja.play) ('Jogos', 4)].map((t) => TvTap(
           onTap: () => setState(() => _idx = t.$2),
           child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text(t.$1, style: TextStyle(color: _idx == t.$2 ? Colors.white : Colors.white38, fontSize: 13, fontWeight: _idx == t.$2 ? FontWeight.bold : FontWeight.normal))))),
         const SizedBox(width: 8),
@@ -255,7 +258,7 @@ class _SidebarLayoutState extends State<_SidebarLayout> {
     {'icon': Icons.live_tv, 'label': 'Ao Vivo'},
     {'icon': Icons.movie, 'label': 'Filmes'},
     {'icon': Icons.video_library, 'label': 'Series'},
-    {'icon': Icons.sports_soccer, 'label': 'Jogos'},
+    if (!Loja.play) {'icon': Icons.sports_soccer, 'label': 'Jogos'},
   ];
   @override void initState() { super.initState(); _loadCats(); }
   Future<void> _loadCats() async {
@@ -278,14 +281,14 @@ class _SidebarLayoutState extends State<_SidebarLayout> {
   }
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
-    final sf = Color(AppConfig.surfaceColor);
+    final p = Color(Marca.primaryColor);
+    final sf = Color(Marca.surfaceColor);
     final screens = [
       _SmartersHome(cats: _cats, ch: _ch, loading: _loading, selCat: _selCat, onCat: _loadCat, p: p, sf: sf),
       BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
-      BannerBackground(child: GamesTodayScreen(session: widget.session)),
+      if (!Loja.play) BannerBackground(child: GamesTodayScreen(session: widget.session)),
     ];
-    return Scaffold(backgroundColor: Color(AppConfig.backgroundColor), body: SafeArea(child: Row(children: [
+    return Scaffold(backgroundColor: Color(Marca.backgroundColor), body: SafeArea(child: Row(children: [
       Container(width: 72, color: sf, child: Column(children: [
         const SizedBox(height: 12), Icon(Icons.live_tv, color: p, size: 24), const SizedBox(height: 16),
         ...List.generate(_nav.length, (i) {
@@ -356,17 +359,17 @@ class _IBOLayout4State extends State<_IBOLayout4> {
   Future<void> _load() async { final d = await _loadXtream(widget.session); if (mounted) setState(() { _ch = d['channels']!; _mv = d['movies']!; _sr = d['series']!; _loading = false; }); }
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
-    final sf = Color(AppConfig.surfaceColor);
+    final p = Color(Marca.primaryColor);
+    final sf = Color(Marca.surfaceColor);
     final screens = [
       _IBO4Home(mv: _mv, sr: _sr, ch: _ch, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p),
       BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
-      BannerBackground(child: GamesTodayScreen(session: widget.session)),
+      if (!Loja.play) BannerBackground(child: GamesTodayScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: const Color(0xFF0a0a0a), body: SafeArea(child: Column(children: [
       Container(height: 52, color: sf, padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
-        Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(AppConfig.appName, style: TextStyle(color: p, fontSize: 16, fontWeight: FontWeight.bold)), const Spacer(),
-        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3), ('Jogos', 4)].map((t) => TvTap(onTap: () => setState(() => _idx = t.$2),
+        Icon(Icons.live_tv, color: p, size: 22), const SizedBox(width: 8), Text(Marca.appName, style: TextStyle(color: p, fontSize: 16, fontWeight: FontWeight.bold)), const Spacer(),
+        ...[('Inicio', 0), ('Ao Vivo', 1), ('Filmes', 2), ('Series', 3), if (!Loja.play) ('Jogos', 4)].map((t) => TvTap(onTap: () => setState(() => _idx = t.$2),
           child: Container(margin: const EdgeInsets.only(left: 8), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(color: _idx == t.$2 ? p.withValues(alpha: 0.2) : Colors.transparent, borderRadius: BorderRadius.circular(20), border: Border.all(color: _idx == t.$2 ? p : Colors.transparent)),
             child: Text(t.$1, style: TextStyle(color: _idx == t.$2 ? p : Colors.white54, fontSize: 12))))),
@@ -452,13 +455,13 @@ class _IBOLayout5State extends State<_IBOLayout5> {
   Future<void> _load() async { final d = await _loadXtream(widget.session); if (mounted) setState(() { _ch = d['channels']!; _mv = d['movies']!; _sr = d['series']!; _loading = false; }); }
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
-    final sf = Color(AppConfig.surfaceColor);
-    final nav = [{'icon': Icons.home, 'label': 'Home'}, {'icon': Icons.live_tv, 'label': 'Live TV'}, {'icon': Icons.movie, 'label': 'Filmes'}, {'icon': Icons.video_library, 'label': 'Series'}, {'icon': Icons.sports_soccer, 'label': 'Jogos'}];
+    final p = Color(Marca.primaryColor);
+    final sf = Color(Marca.surfaceColor);
+    final nav = [{'icon': Icons.home, 'label': 'Home'}, {'icon': Icons.live_tv, 'label': 'Live TV'}, {'icon': Icons.movie, 'label': 'Filmes'}, {'icon': Icons.video_library, 'label': 'Series'}, if (!Loja.play) {'icon': Icons.sports_soccer, 'label': 'Jogos'}];
     final screens = [
       _IBO5Home(mv: _mv, sr: _sr, ch: _ch, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p, session: widget.session),
       BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
-      BannerBackground(child: GamesTodayScreen(session: widget.session)),
+      if (!Loja.play) BannerBackground(child: GamesTodayScreen(session: widget.session)),
     ];
     return Scaffold(backgroundColor: const Color(0xFF0f0f1a), body: SafeArea(child: Row(children: [
       Container(width: 80, decoration: BoxDecoration(color: sf, border: Border(right: BorderSide(color: p.withValues(alpha: 0.2)))), child: Column(children: [
@@ -533,13 +536,13 @@ class _IBOLayout6State extends State<_IBOLayout6> {
   Future<void> _load() async { final d = await _loadXtream(widget.session); if (mounted) setState(() { _ch = d['channels']!; _mv = d['movies']!; _sr = d['series']!; _loading = false; }); }
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
+    final p = Color(Marca.primaryColor);
     final screens = [
       _IBO6Home(mv: _mv, sr: _sr, ch: _ch, loading: _loading, onNav: (i) => setState(() => _idx = i), p: p, onLogout: widget.onLogout, session: widget.session),
       BannerBackground(child: LiveTvScreen(session: widget.session)), BannerBackground(child: MoviesScreen(session: widget.session)), BannerBackground(child: SeriesScreen(session: widget.session)),
-      BannerBackground(child: GamesTodayScreen(session: widget.session)),
+      if (!Loja.play) BannerBackground(child: GamesTodayScreen(session: widget.session)),
     ];
-    final navItems = [{'icon': Icons.home, 'label': 'Home', 'idx': 0}, {'icon': Icons.live_tv, 'label': 'Ao Vivo', 'idx': 1}, {'icon': Icons.movie, 'label': 'Filmes', 'idx': 2}, {'icon': Icons.video_library, 'label': 'Series', 'idx': 3}, {'icon': Icons.sports_soccer, 'label': 'Jogos', 'idx': 4}];
+    final navItems = [{'icon': Icons.home, 'label': 'Home', 'idx': 0}, {'icon': Icons.live_tv, 'label': 'Ao Vivo', 'idx': 1}, {'icon': Icons.movie, 'label': 'Filmes', 'idx': 2}, {'icon': Icons.video_library, 'label': 'Series', 'idx': 3}, if (!Loja.play) {'icon': Icons.sports_soccer, 'label': 'Jogos', 'idx': 4}];
     return Scaffold(backgroundColor: const Color(0xFF0d0d0d), body: screens[_idx],
       bottomNavigationBar: Container(decoration: BoxDecoration(color: const Color(0xFF1a1a1a), border: Border(top: BorderSide(color: p.withValues(alpha: 0.3)))),
         child: SafeArea(child: SizedBox(height: 56, child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: navItems.map((item) {
@@ -562,8 +565,8 @@ class _IBO6Home extends StatelessWidget {
         flexibleSpace: FlexibleSpaceBar(
           collapseMode: CollapseMode.pin,
           background: Stack(children: [
-            AppConfig.bannerUrl.isNotEmpty
-              ? Image.network(AppConfig.bannerUrl, fit: BoxFit.cover, width: double.infinity, height: 280, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1a1a2e)))
+            Marca.bannerUrl.isNotEmpty
+              ? Image.network(Marca.bannerUrl, fit: BoxFit.cover, width: double.infinity, height: 280, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1a1a2e)))
               : (mv.isNotEmpty && mv[0].posterUrl != null
                 ? Image.network(mv[0].posterUrl!, fit: BoxFit.cover, width: double.infinity, height: 280, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1a1a2e)))
                 : Container(color: const Color(0xFF1a1a2e))),
@@ -602,8 +605,8 @@ class _IBO6Home extends StatelessWidget {
 Widget _buildHomeBanner(Color p, Function(int) onNav) {
   return Stack(children: [
     SizedBox(height: 220, width: double.infinity,
-      child: AppConfig.bannerUrl.isNotEmpty
-        ? Image.network(AppConfig.bannerUrl, fit: BoxFit.cover, width: double.infinity, height: 220,
+      child: Marca.bannerUrl.isNotEmpty
+        ? Image.network(Marca.bannerUrl, fit: BoxFit.cover, width: double.infinity, height: 220,
             errorBuilder: (_, __, ___) => Container(color: const Color(0xFF0d0b14)))
         : Container(color: const Color(0xFF0d0b14))),
     Container(height: 220, width: double.infinity,
@@ -611,12 +614,12 @@ Widget _buildHomeBanner(Color p, Function(int) onNav) {
         begin: Alignment.topCenter, end: Alignment.bottomCenter,
         colors: [Colors.transparent, Color(0xCC000000), Color(0xFF0d0d0d)]))),
     SizedBox(height: 220, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      if (AppConfig.useCustomLogo)
-        Image.network(AppConfig.logoUrl, height: 70, errorBuilder: (_, __, ___) => Icon(Icons.live_tv, color: p, size: 60))
+      if (Marca.useCustomLogo)
+        Marca.logo(height: 70, errorBuilder: (_, __, ___) => Icon(Icons.live_tv, color: p, size: 60))
       else
         Icon(AppConfig.usePlayIcon ? Icons.play_circle : Icons.live_tv, color: p, size: 60),
       const SizedBox(height: 8),
-      Text(AppConfig.appName, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold,
+      Text(Marca.appName, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold,
         shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
       const SizedBox(height: 16),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -641,7 +644,7 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = Color(AppConfig.primaryColor);
+    final p = Color(Marca.primaryColor);
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _buildHomeBanner(p, onNavigate),
@@ -656,12 +659,12 @@ class _HomeTab extends StatelessWidget {
             _card(icon: Icons.favorite, label: 'Favoritos', color: const Color(0xFFff6b6b), onTap: () {}),
           ]),
         const SizedBox(height: 24),
-        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Color(AppConfig.surfaceColor), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF2a2538))),
+        Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Color(Marca.surfaceColor), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF2a2538))),
           child: Row(children: [
             Icon(Icons.info_outline, color: p, size: 20), const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(session.isXtream ? 'Conectado via Xtream Codes' : 'Conectado via ${AppConfig.appName}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-              if (session.isXtream) Text(session.xtreamHost ?? '', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(session.isXtream ? 'Conectado via Xtream Codes' : 'Conectado via ${Marca.appName}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+              if (session.isXtream) Text(ListaDemo.ativa(session.xtreamHost) ? ListaDemo.nome : session.xtreamHost ?? '', style: const TextStyle(color: Colors.white54, fontSize: 11)),
             ])),
           ])),
         ])),

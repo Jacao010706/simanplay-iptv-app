@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:simanplay_iptv/core/loja.dart';
 import 'package:simanplay_iptv/models/app_session.dart';
 import 'package:simanplay_iptv/models/channel.dart';
 import 'package:simanplay_iptv/screens/games_today_screen.dart';
@@ -223,6 +224,7 @@ void main() {
       } finally {
         FlutterError.onError = original;
       }
-    });
+      // A Play não tem Jogos do Dia (test/play_variante_test.dart confere que o item some)
+    }, skip: Loja.play);
   }
 }

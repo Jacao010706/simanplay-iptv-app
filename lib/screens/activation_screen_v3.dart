@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../models/app_session.dart';
 import '../services/api_service.dart';
 import '../services/license_service.dart';
@@ -267,8 +268,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   }
 
   Widget _buildLogo(Color primary) {
-    if (AppConfig.useCustomLogo) {
-      return Image.network(AppConfig.logoUrl,
+    if (Marca.useCustomLogo) {
+      return Marca.logo(
           height: _isTV ? AppConfig.logoSize * 0.6 : AppConfig.logoSize,
           errorBuilder: (_, __, ___) => Icon(Icons.live_tv,
               size: AppConfig.logoSize * 0.75, color: primary));
@@ -282,11 +283,11 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
-    final bg = Color(AppConfig.backgroundColor);
-    final surface = Color(AppConfig.surfaceColor);
+    final primary = Color(Marca.primaryColor);
+    final bg = Color(Marca.backgroundColor);
+    final surface = Color(Marca.surfaceColor);
 
-    final hasBanner = AppConfig.bannerUrl.isNotEmpty;
+    final hasBanner = Marca.bannerUrl.isNotEmpty;
 
     return Scaffold(
       backgroundColor: bg,
@@ -296,7 +297,7 @@ class _ActivationScreenState extends State<ActivationScreen>
         children: [
           if (hasBanner)
             CachedNetworkImage(
-              imageUrl: AppConfig.bannerUrl,
+              imageUrl: Marca.bannerUrl,
               fit: BoxFit.cover,
               placeholder: (_, __) => Container(color: bg),
               errorWidget: (_, __, ___) => Container(color: bg),
@@ -361,7 +362,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                             dividerColor: const Color(0xFF2a2538),
                             labelStyle: const TextStyle(fontSize: 12),
                             tabs: const [
-                              Tab(text: AppConfig.appName),
+                              Tab(text: Marca.appName),
                               Tab(text: 'Xtream'),
                               Tab(text: 'URL M3U'),
                             ],
@@ -565,7 +566,7 @@ class _ActivationScreenState extends State<ActivationScreen>
       labelText: label,
       labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
       filled: true,
-      fillColor: Color(AppConfig.backgroundColor),
+      fillColor: Color(Marca.backgroundColor),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none),

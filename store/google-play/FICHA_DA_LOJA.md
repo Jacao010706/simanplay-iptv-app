@@ -27,11 +27,16 @@ Recursos:
 • Vários temas de tela
 • Feito para controle remoto: funciona em Android TV e TV box, além de celular e tablet
 • Busca na sua lista
+• Demonstração com filmes abertos (Creative Commons) para conhecer o app antes de ter uma lista
 
 Como começar:
 1. Abra o app e anote o código do aparelho (MAC) exibido na tela.
-2. Informe esse código ao seu provedor para ele liberar o acesso e a sua lista.
-3. A lista aparece no app automaticamente.
+2. Informe esse código ao seu provedor para ele liberar o acesso e a sua lista, ou digite você
+   mesmo os dados da sua lista (servidor, usuário e senha, ou link M3U).
+3. Quer só conhecer? Toque em "Ver demonstração" e assista a filmes abertos da Blender.
+
+Créditos da demonstração: filmes © Blender Foundation (blender.org), licenças Creative Commons;
+vídeos servidos pelo Wikimedia Commons.
 
 Privacidade: veja como tratamos os dados em sofae.com.br/privacidade.
 Suporte: akitemtech@gmail.com
@@ -49,7 +54,6 @@ Necessário: ícone 512x512 (já existe em `store/android/icone-512.png`), banne
 1024x500, 2 a 8 capturas de celular; para Android TV, banner 1280x720 e capturas de TV.
 
 ## Pontos que dependem de decisão
-- "Como começar" acima descreve o fluxo da variante `play` (provedor libera pelo código). Se o
-  app também aceitar lista digitada pelo usuário, acrescentar "ou digite os dados da sua lista".
+- As capturas podem usar a própria demonstração (filmes da Blender, CC BY/BY-SA, com crédito).
 - O nome pode ser só "Sofae" se o nome estiver livre; evitar "IPTV" no título (chama atenção da
   revisão de PI; não é proibido, mas é risco).

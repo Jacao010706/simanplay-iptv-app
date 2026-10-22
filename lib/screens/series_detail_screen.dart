@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_session.dart';
 import '../models/series.dart';
 import '../services/xtream_service.dart';
-import '../core/app_config.dart';
+import '../core/marca.dart';
 import 'player_screen.dart';
 import '../widgets/tv_focus.dart';
 
@@ -112,7 +112,7 @@ class _SeriesDetailScreenState extends State<SeriesDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
+    final primary = Color(Marca.primaryColor);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0d0b14),

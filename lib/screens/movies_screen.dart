@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_session.dart';
 import '../models/movie.dart';
 import '../models/category.dart';
-import '../core/app_config.dart';
+import '../core/marca.dart';
 import '../services/xtream_service.dart';
 import 'player_screen.dart';
 import '../widgets/tv_focus.dart';
@@ -80,14 +80,14 @@ class _MoviesScreenState extends State<MoviesScreen> {
       builder: (_) => _MovieDetailSheet(
         movie: movie,
         session: widget.session,
-        primary: Color(AppConfig.primaryColor),
+        primary: Color(Marca.primaryColor),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final primary = Color(AppConfig.primaryColor);
+    final primary = Color(Marca.primaryColor);
     if (_loading) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         CircularProgressIndicator(color: primary),

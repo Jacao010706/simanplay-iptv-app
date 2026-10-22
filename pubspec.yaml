@@ -39,3 +39,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Logo da Sofae: só entra no build da Google Play (--flavor play)
+  assets:
+    - path: assets/play/
+      flavors:
+        - play

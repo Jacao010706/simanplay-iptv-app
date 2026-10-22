@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import '../core/lista_demo.dart';
 import '../core/text_fix.dart';
 import '../models/channel.dart';
 import '../models/movie.dart';
@@ -10,7 +11,18 @@ class XtreamService {
   final String username;
   final String password;
 
-  XtreamService({
+  /// Na Play, o host da lista de demonstração ([ListaDemo.host]) responde no próprio aparelho,
+  /// sem rede; qualquer outro host é um servidor Xtream de verdade.
+  factory XtreamService({
+    required String host,
+    required String username,
+    required String password,
+  }) =>
+      ListaDemo.ativa(host)
+          ? _XtreamDemo()
+          : XtreamService._(host: host, username: username, password: password);
+
+  XtreamService._({
     required this.host,
     required this.username,
     required this.password,
@@ -124,4 +136,49 @@ class XtreamService {
     final response = await http.get(Uri.parse(url));
     return decodeJson(response);
   }
+}
+
+/// Lista de demonstração (só na Play): filmes abertos da Blender, sem rede e sem login.
+class _XtreamDemo extends XtreamService {
+  _XtreamDemo() : super._(host: ListaDemo.host, username: ListaDemo.usuario, password: ListaDemo.senha);
+
+  @override
+  Future<Map<String, dynamic>> authenticate() async => {
+        'user_info': {'auth': 1, 'username': ListaDemo.usuario, 'status': 'Active'},
+      };
+
+  @override
+  Future<List<Category>> getLiveCategories() async => ListaDemo.categoriasCanais;
+
+  @override
+  Future<List<Channel>> getLiveStreams(String categoryId, String categoryName) async =>
+      ListaDemo.canais.where((c) => c.categoryId == categoryId).toList();
+
+  @override
+  Future<List<Category>> getMovieCategories() async => ListaDemo.categoriasFilmes;
+
+  @override
+  Future<List<Movie>> getAllMovies() async => ListaDemo.filmes;
+
+  @override
+  Future<List<Movie>> getMovies(String categoryId, String categoryName) async =>
+      ListaDemo.filmes.where((m) => m.categoryId == categoryId).toList();
+
+  @override
+  Future<List<Category>> getSeriesCategories() async => [];
+
+  @override
+  Future<List<Series>> getAllSeries() async => [];
+
+  @override
+  Future<List<Series>> getSeries(String categoryId, String categoryName) async => [];
+
+  @override
+  Future<Map<String, dynamic>> getSeriesInfo(String seriesId) async => {};
+
+  @override
+  Future<Map<String, dynamic>> getShortEpg(String streamId, {int limit = 2}) async => {'epg_listings': []};
+
+  @override
+  Future<Map<String, dynamic>> getVodInfo(String vodId) async => ListaDemo.infoFilme(vodId);
 }
