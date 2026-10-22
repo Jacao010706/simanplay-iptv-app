@@ -6,6 +6,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Variante da Google Play: só existe com -Ploja=play (store/google-play/COMO_GERAR.md).
+// Sem a propriedade o build é o de sempre (APK do painel, sem flavors, com o atualizador).
+val lojaPlay = project.findProperty("loja") == "play"
+
 android {
     namespace = "com.simanplay.iptvplayer.iptv_player"
     compileSdk = flutter.compileSdkVersion
@@ -39,6 +43,22 @@ android {
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    if (lojaPlay) {
+        flavorDimensions += "loja"
+        productFlavors {
+            create("play") {
+                dimension = "loja"
+                applicationId = "com.sofae.app"
+                // Exigência da Play para apps novos e atualizações desde 31/08/2026 (API 36).
+                // O APK do painel continua em 35 até ser testado no Android 16.
+                targetSdk = 36
+            }
+        }
+    } else {
+        // Atualizador interno (instala o APK baixado); a Play usa src/play/kotlin
+        sourceSets["main"].java.srcDir("src/instalador/kotlin")
     }
 
     buildTypes {

@@ -5,6 +5,7 @@ import 'core/providers/theme_provider.dart';
 import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/app_config.dart';
+import 'core/loja.dart';
 import 'services/update_service.dart';
 import 'widgets/tv_focus.dart';
 import 'services/recording_service.dart';
@@ -14,8 +15,9 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized(); // necessário para o player de vídeo
   runApp(const IptvPlayerApp());
-  // Novidades da versao + verificacao de atualizacao (em segundo plano)
-  UpdateService.runStartupChecks();
+  // Novidades da versao + verificacao de atualizacao (em segundo plano).
+  // Na Play quem atualiza e a loja: o atualizador nem entra no build.
+  if (!Loja.play) UpdateService.runStartupChecks();
   // Retoma a vigilancia das gravacoes agendadas
   RecordingService.instance.init();
   // "Assistindo agora" no painel: retoma os avisos com o token salvo

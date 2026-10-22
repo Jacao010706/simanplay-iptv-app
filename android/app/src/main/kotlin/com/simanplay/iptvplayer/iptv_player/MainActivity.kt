@@ -10,7 +10,6 @@ import android.os.Build
 import android.provider.Settings
 import java.security.MessageDigest
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import java.io.File
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -37,20 +36,8 @@ class MainActivity : FlutterActivity() {
                             !pm.hasSystemFeature("android.hardware.touchscreen")
                         )
                     }
-                    "installApk" -> {
-                        try {
-                            val path = call.argument<String>("path")!!
-                            val uri = FileProvider.getUriForFile(this, "$packageName.provider", File(path))
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, "application/vnd.android.package-archive")
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            startActivity(intent)
-                            result.success(true)
-                        } catch (e: Exception) {
-                            result.error("INSTALL_FAILED", e.message, null)
-                        }
-                    }
+                    // src/instalador (APK do painel) ou src/play (Google Play: não instala nada)
+                    "installApk" -> Instalador.instalar(this, call, result)
                     "apkInfo" -> {
                         // Sem "path": dados do app instalado. Com "path": do APK baixado,
                         // mais o SHA-256 do arquivo. O atualizador compara os dois antes de instalar.

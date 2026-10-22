@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Play (-Ploja=play): tira do manifesto final tudo o que era do atualizador interno.
+     A Play só aceita REQUEST_INSTALL_PACKAGES para apps cuja função principal é instalar
+     outros apps, e proíbe app que se atualiza por fora da loja. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove"/>
+    <application>
+        <provider android:name="androidx.core.content.FileProvider" tools:node="remove"/>
+    </application>
+    <!-- Só abrir links https (url_launcher); sem as consultas de instalar APK -->
+    <queries tools:node="replace">
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+    </queries>
+</manifest>
