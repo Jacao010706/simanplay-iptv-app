@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show ValueNotifier;
+
 import '../models/app_session.dart';
 import '../models/category.dart';
 import '../models/channel.dart';
@@ -20,6 +22,9 @@ class ListaDemo {
 
   /// Só a Play tem a demonstração; no APK do painel o compilador descarta tudo.
   static bool ativa(String? host) => Loja.play && host == ListaDemo.host;
+
+  /// A demonstração está aberta (a tela de licença deixa passar, mesmo com o teste vencido).
+  static final emUso = ValueNotifier<bool>(false);
 
   static AppSession sessao() => AppSession.xtream(host: host, username: usuario, password: senha);
 

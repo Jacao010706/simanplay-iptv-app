@@ -75,6 +75,7 @@ class ApiService {
       xtreamPassword: cs.xtreamPassword,
       clientId: cs.clientId,
       resellerSlug: cs.resellerSlug,
+      contaPainel: true,
     );
   }
 }

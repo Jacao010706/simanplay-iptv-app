@@ -9,6 +9,7 @@ import '../core/marca.dart';
 import '../core/lista_demo.dart';
 import '../core/loja.dart';
 import '../models/app_session.dart';
+import '../services/assistindo_service.dart';
 import '../services/device_lists_service.dart';
 import '../services/license_service.dart';
 import '../services/xtream_service.dart';
@@ -17,6 +18,10 @@ import 'home_screen_v2.dart';
 
 /// Abre a home com a sessão escolhida e a salva para a próxima abertura.
 Future<void> openHome(BuildContext context, AppSession session) async {
+  // Lista própria: o painel deixa de receber "assistindo agora"
+  await Assistindo.sessaoAberta(session);
+  // Play: a demonstração passa pela tela de licença mesmo sem acesso liberado
+  ListaDemo.emUso.value = ListaDemo.ativa(session.xtreamHost);
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('session', jsonEncode(session.toJson()));
   if (!context.mounted) return;

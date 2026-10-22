@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('session');
     await Assistindo.configurar(null); // sai da conta: para de avisar o painel
+    ListaDemo.emUso.value = false; // fora da demonstração a tela de licença volta a valer
     if (!mounted) return;
     // Volta para a tela do aparelho (MAC + listas), sem entrar sozinho de novo
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const DeviceHomeScreen(autoEnter: false)), (_) => false);

@@ -24,13 +24,15 @@ não conta como compartilhamento.
 | **IDs do dispositivo ou outros IDs** | Android ID (`hw_id`) no registro da licença; MAC/código do aparelho; ID aleatório `and-xxxx` do "assistindo" | `license_service.dart` `_register`; `assistindo_service.dart` | Sim | **Sim** (revendedor vê o MAC) | Sim | Funcionalidade do app; Prevenção de fraudes e segurança |
 | **Informações pessoais > IDs de usuário** | Usuário do painel (login usuário/senha) | `api_service.dart` `/app/login` | Sim | Sim (revendedor vê a conta) | Não (só quem entra com conta de painel) | Funcionalidade do app; Gerenciamento da conta |
 | **Atividade no app > Interações no app** | Tipo e nome do conteúdo tocando (canal/filme/série), a cada 30 s no vídeo e 60 s no menu | `assistindo_service.dart` `/app/tv/assistindo` | Sim | **Sim** (revendedor vê "assistindo agora") | Sim para contas de painel | Funcionalidade do app; Prevenção de fraudes e segurança (compartilhamento de conta) |
-| **Local > Local aproximado** | Cidade estimada pelo IP no servidor (a política declara) | servidor | Sim | Sim, se o revendedor vê a cidade (**confirmar no painel**) | Sim | Prevenção de fraudes e segurança |
+| **Local > Local aproximado** | Cidade estimada pelo IP no servidor (a política declara) | servidor | Sim | **Sim**: o revendedor vê a cidade e o começo do IP (`online.py:232-233`) | Sim para contas de painel (só no "assistindo agora") | Funcionalidade do app; Prevenção de fraudes e segurança |
 
 Senha do painel: vai ao servidor só para autenticar (`/app/login`). O app guarda no aparelho o
 token e também usuário e senha, na sessão local (`activation_screen_v3.dart` → `buildSession`
 → `SharedPreferences`), para reabrir a conta; saem ao tocar em Sair. Não é
 uma categoria própria no formulário; fica coberta por "IDs de usuário" + criptografia em trânsito.
-**Confirmar** que o servidor não grava a senha em texto puro.
+**Backend (lido em 22/10/2026):** a senha do cliente do painel fica em **texto puro** no banco (`models.py:50`, comparada em `main.py:861`). O formulário não pergunta isso, mas a política agora descreve a situação. Ver no relatório o plano de correção.
+
+Android ID: o servidor guarda só um hash SHA-256 com segredo (`licenses.py:85-87`). Na Play continua sendo "IDs do dispositivo" (ele é enviado).
 
 **Modo Livre** (lista digitada no app): servidor, usuário, senha e link M3U ficam só no aparelho
 e vão direto para o servidor do provedor; não são coletados por nós. **Lista de demonstração:**

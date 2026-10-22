@@ -19,6 +19,10 @@ class AppSession {
   final int? clientId;
   final String? resellerSlug;
 
+  /// true = login com usuário e senha do painel (conta do cliente). Só essa sessão avisa o
+  /// painel o que está tocando ("assistindo agora"). null = sessão salva por versão antiga.
+  final bool? contaPainel;
+
   const AppSession({
     required this.type,
     this.xtreamHost,
@@ -31,7 +35,17 @@ class AppSession {
     this.expiresAt,
     this.clientId,
     this.resellerSlug,
+    this.contaPainel,
   });
+
+  /// Conta do painel? Sessões antigas (sem a marca) eram de painel quando vinham do login com
+  /// usuário e senha; a lista M3U digitada usa o usuário "m3u" e senha vazia.
+  bool get daContaDoPainel =>
+      contaPainel ??
+      (type == SessionType.simanplay &&
+          (simanplayUsername ?? '').isNotEmpty &&
+          simanplayUsername != 'm3u' &&
+          (simanplayPassword ?? '').isNotEmpty);
 
   bool get isXtream =>
       type == SessionType.xtream ||
@@ -100,6 +114,7 @@ class AppSession {
     String? xtreamPassword,
     int? clientId,
     String? resellerSlug,
+    bool? contaPainel,
   }) {
     return AppSession(
       type: SessionType.simanplay,
@@ -113,6 +128,7 @@ class AppSession {
       xtreamPassword: xtreamPassword,
       clientId: clientId,
       resellerSlug: resellerSlug,
+      contaPainel: contaPainel,
     );
   }
 
@@ -129,6 +145,7 @@ class AppSession {
       'expiresAt': expiresAt?.toIso8601String(),
       'clientId': clientId,
       'resellerSlug': resellerSlug,
+      'contaPainel': contaPainel,
     };
   }
 
@@ -146,6 +163,7 @@ class AppSession {
           json['expiresAt'] != null ? DateTime.parse(json['expiresAt']) : null,
       clientId: json['clientId'],
       resellerSlug: json['resellerSlug'],
+      contaPainel: json['contaPainel'] as bool?,
     );
   }
 }

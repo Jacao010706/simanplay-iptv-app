@@ -32,12 +32,11 @@ que podem ter conteúdo adulto. Não marcar "pode atrair crianças".
 > Para revisar sem lista própria: abra o app e toque em **"Ver demonstração (filmes livres,
 > sem lista)"** na tela inicial. A demonstração tem 10 filmes abertos da Blender Foundation
 > (Creative Commons, servidos pelo Wikimedia Commons) em Filmes e 3 canais de demonstração em
-> TV ao Vivo. Nenhum login ou pagamento é necessário. O acesso de teste vale por 7 dias a partir
-> da primeira abertura no aparelho.
+> TV ao Vivo. Nenhum login ou pagamento é necessário, e a demonstração funciona mesmo que o
+> acesso do aparelho não esteja liberado (por exemplo, com o período de teste vencido).
 
-O botão existe só na versão Play (`test/play_variante_test.dart`). **Atenção:** se o período
-de teste do aparelho do revisor acabar, a tela de acesso bloqueia também a demonstração (ver o
-relatório, decisão pendente).
+O botão existe só na versão Play: na tela inicial e na tela de acesso bloqueado
+(`test/play_variante_test.dart` e `test/demo_e_assistindo_test.dart`).
 
 ## 4. Outras declarações do Console
 | Declaração | Resposta proposta |

@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/lista_demo.dart';
 import '../core/marca.dart';
 import '../core/loja.dart';
+import '../services/assistindo_service.dart';
 import '../services/license_service.dart';
+import 'home_screen_v2.dart';
 
 /// Verifica a licença ao abrir (e ao voltar para o app). Libera o [child]
 /// durante o teste grátis ou com plano ativo; senão mostra a tela de pagamento.
@@ -22,17 +25,40 @@ class _LicenseGateState extends State<LicenseGate> with WidgetsBindingObserver {
   LicenseState? _state;
   bool _trialNoticeShown = false;
 
+  /// Play: a demonstração foi aberta pela tela de acesso bloqueado (roda num Navigator próprio,
+  /// porque o do app só existe com o acesso liberado).
+  bool _demoPeloBloqueio = false;
+  final _demoNavKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ListaDemo.emUso.addListener(_demoMudou);
     _refresh();
   }
 
   @override
   void dispose() {
+    ListaDemo.emUso.removeListener(_demoMudou);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _demoMudou() {
+    if (!mounted) return;
+    setState(() {
+      if (!ListaDemo.emUso.value) _demoPeloBloqueio = false;
+    });
+  }
+
+  /// Play: abre a demonstração mesmo com o teste vencido e sem licença (o revisor da loja nunca
+  /// fica bloqueado). Só a demonstração passa: sair dela volta para esta tela.
+  Future<void> _abrirDemo() async {
+    await Assistindo.sessaoAberta(ListaDemo.sessao());
+    if (!mounted) return;
+    setState(() => _demoPeloBloqueio = true);
+    ListaDemo.emUso.value = true;
   }
 
   @override
@@ -68,14 +94,24 @@ class _LicenseGateState extends State<LicenseGate> with WidgetsBindingObserver {
       );
     }
     if (st.allowed) return widget.child;
-    return LicenseBlockedScreen(state: st, onCheckAgain: _refresh);
+    if (Loja.play && ListaDemo.emUso.value) {
+      if (!_demoPeloBloqueio) return widget.child; // já estava na demonstração quando o acesso venceu
+      return Navigator(
+        key: _demoNavKey,
+        onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => HomeScreen(session: ListaDemo.sessao())),
+      );
+    }
+    return LicenseBlockedScreen(state: st, onCheckAgain: _refresh, onDemo: Loja.play ? _abrirDemo : null);
   }
 }
 
 class LicenseBlockedScreen extends StatefulWidget {
   final LicenseState state;
   final Future<void> Function() onCheckAgain;
-  const LicenseBlockedScreen({super.key, required this.state, required this.onCheckAgain});
+
+  /// Play: abre a lista de demonstração sem licença (null = sem o botão).
+  final Future<void> Function()? onDemo;
+  const LicenseBlockedScreen({super.key, required this.state, required this.onCheckAgain, this.onDemo});
 
   @override
   State<LicenseBlockedScreen> createState() => _LicenseBlockedScreenState();
@@ -162,6 +198,18 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
                       : const Icon(Icons.refresh),
                   label: const Text('Verificar novamente', style: TextStyle(fontSize: 16)),
                 ),
+                if (widget.onDemo != null) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const Key('demo_sem_licenca'),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white38),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+                    onPressed: widget.onDemo,
+                    icon: const Icon(Icons.play_circle_outline),
+                    label: const Text('Ver demonstração (filmes livres, sem lista)', style: TextStyle(fontSize: 16)),
+                  ),
+                ],
                 if (_msg != null) ...[
                   const SizedBox(height: 12),
                   const Text('Ainda não liberado. Aguarde alguns segundos.',

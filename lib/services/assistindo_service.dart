@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_config.dart';
+import '../models/app_session.dart';
 
 /// "Assistindo agora": o app avisa o painel (admin e revendedor do cliente) que está aberto e o
 /// que está tocando. O vídeo não passa pelo nosso servidor, por isso o aviso vem do app:
@@ -42,9 +43,26 @@ class Assistindo {
         await prefs.setString(_kDevice, _device);
       }
       final t = prefs.getString(_kToken);
-      if (t != null && t.isNotEmpty) _ligar(t);
+      if (t == null || t.isEmpty) return;
+      // A última lista aberta é própria (Modo Livre, do site ou demonstração): não avisa o painel
+      final salva = prefs.getString('session');
+      if (salva != null && !AppSession.fromJson(jsonDecode(salva) as Map<String, dynamic>).daContaDoPainel) {
+        await configurar(null);
+        return;
+      }
+      _ligar(t);
     } catch (_) {}
   }
+
+  /// Chamar ao abrir uma lista. Só a conta do painel avisa o painel; lista própria (digitada no
+  /// app, do site ou a demonstração) desliga o aviso e esquece o token, então nenhum heartbeat
+  /// sai enquanto ela estiver em uso (nem depois de reabrir o app).
+  static Future<void> sessaoAberta(AppSession sessao) async {
+    if (!sessao.daContaDoPainel) await configurar(null);
+  }
+
+  /// Só para testes: há aviso periódico ligado?
+  static bool get ativo => _timer != null;
 
   /// Chamar depois do login/ativação com o tv_token do backend (null = saiu da conta).
   static Future<void> configurar(String? token) async {
