@@ -70,8 +70,8 @@ class _LicenseGateState extends State<LicenseGate> with WidgetsBindingObserver {
     final st = await LicenseService.check();
     if (!mounted) return;
     setState(() => _state = st);
-    // Play: sem aviso de teste grátis
-    if (st.allowed && st.isTrial && st.daysLeft > 0 && !_trialNoticeShown && !Loja.play) {
+    // Play e Sofae na TV (lojas): sem aviso de teste grátis
+    if (st.allowed && st.isTrial && st.daysLeft > 0 && !_trialNoticeShown && !Loja.semPagamento) {
       _trialNoticeShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final messenger = ScaffoldMessenger.maybeOf(context);
@@ -157,8 +157,8 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
     }
   }
 
-  /// Play: sem preço, PIX, plano, QR nem botão para o site. Só o aviso, o MAC e
-  /// "Verificar novamente" (a tela também libera sozinha a cada 15 s).
+  /// Play e Sofae na TV (lojas): sem preço, PIX, plano, QR nem botão para o site. Só o aviso,
+  /// o MAC e "Verificar novamente" (a tela também libera sozinha a cada 15 s).
   Widget _semPagamento(Color primary, Color bg, Color surface) {
     final st = widget.state;
     return Scaffold(
@@ -174,7 +174,7 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(Marca.appName, style: TextStyle(color: primary, fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                Text(st.plan != null ? 'Seu acesso venceu' : 'Acesso não liberado',
+                Text(st.plan != null ? 'Seu acesso venceu' : (Loja.play ? 'Acesso não liberado' : 'Seu período de teste terminou'),
                     style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 const Text('O acesso deste aparelho não está liberado no momento.\n${Loja.fraseProvedor}',
@@ -232,7 +232,7 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
     final primary = Color(Marca.primaryColor);
     final bg = Color(Marca.backgroundColor);
     final surface = Color(Marca.surfaceColor);
-    if (Loja.play) return _semPagamento(primary, bg, surface);
+    if (Loja.semPagamento) return _semPagamento(primary, bg, surface);
     final st = widget.state;
     final titulo = st.plan != null ? 'Sua assinatura venceu' : 'Seu período de teste grátis terminou';
 

@@ -15,6 +15,7 @@ import '../services/license_service.dart';
 import '../services/xtream_service.dart';
 import 'activation_screen_v3.dart';
 import 'home_screen_v2.dart';
+import '../widgets/modo_tv_widgets.dart';
 
 /// Abre a home com a sessão escolhida e a salva para a próxima abertura.
 Future<void> openHome(BuildContext context, AppSession session) async {
@@ -168,8 +169,9 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
           SelectableText(lic?.deviceKey.isNotEmpty == true ? lic!.deviceKey : '—',
               style: TextStyle(color: primary, fontSize: 26, fontWeight: FontWeight.bold, letterSpacing: 4)),
           const SizedBox(height: 14),
-          // Play: só o código e o pedido para informá-lo ao provedor; sem site, QR nem teste grátis
-          if (Loja.play)
+          // Play e Sofae na TV (lojas): só o código e o pedido para informá-lo ao provedor; sem
+          // site, QR nem teste grátis
+          if (Loja.semPagamento)
             const Text(Loja.fraseProvedor, style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4))
           else ...[
             const Text('Para adicionar suas listas, acesse pelo celular:',
@@ -223,7 +225,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(12)),
             child: Text(
-              Loja.play
+              Loja.semPagamento
                   ? 'Nenhuma lista liberada ainda.\nEla aparece aqui sozinha assim que o provedor liberar.'
                   : 'Nenhuma lista cadastrada ainda.\n'
                       'Cadastre pelo site com o MAC e a chave ao lado. Ela aparece aqui sozinha em alguns segundos.',
@@ -277,7 +279,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
       ],
     );
 
-    return Scaffold(
+    return ConfirmarSaida(child: Scaffold(
       backgroundColor: bg,
       body: SafeArea(
         child: SingleChildScrollView(
@@ -315,7 +317,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
