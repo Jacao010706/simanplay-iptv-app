@@ -39,13 +39,13 @@ Créditos da demonstração: filmes © Blender Foundation (blender.org), licenç
 vídeos servidos pelo Wikimedia Commons.
 
 Privacidade: veja como tratamos os dados em sofae.com.br/privacidade/android.
-Suporte: [E-MAIL DE CONTATO]
+Suporte: akitemtech@gmail.com
 
 ## Categoria sugerida
 Players e editores de vídeo (Video Players & Editors)
 
 ## Dados de contato (obrigatórios)
-E-mail: [E-MAIL DE CONTATO] · Site: https://sofae.com.br · Política: https://sofae.com.br/privacidade/android
+E-mail: akitemtech@gmail.com · Site: https://sofae.com.br · Política: https://sofae.com.br/privacidade/android
 
 ## Capturas de tela
 Usar só telas com **listas de demonstração legais** (ex.: canais/vídeos de domínio público ou

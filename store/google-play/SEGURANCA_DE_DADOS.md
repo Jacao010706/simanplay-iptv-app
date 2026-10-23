@@ -14,7 +14,7 @@ não conta como compartilhamento.
 |---|---|
 | O app coleta ou compartilha algum dos tipos de dados exigidos? | **Sim** |
 | Todos os dados coletados são criptografados em trânsito? | **Sim** para o nosso servidor (`https://web-production-d8671.up.railway.app`). Observação: listas e vídeos do provedor podem ser `http`, mas vão direto do aparelho para o servidor que o usuário cadastrou, não para nós |
-| O usuário pode pedir a exclusão dos dados? | **Sim**: e-mail para [E-MAIL DE CONTATO] com o MAC exibido no app (como diz a política). Recomendado: uma página própria, ex. sofae.com.br/excluir-dados |
+| O usuário pode pedir a exclusão dos dados? | **Sim**: e-mail para akitemtech@gmail.com com o MAC exibido no app (como diz a política). Recomendado: uma página própria, ex. sofae.com.br/excluir-dados |
 | Conta criada dentro do app? | **Não** (o registro do aparelho é automático; contas de painel são criadas pelo revendedor fora do app). Se a Play entender o registro do aparelho como conta, passa a exigir link de exclusão de conta |
 
 ## Tipos de dados
