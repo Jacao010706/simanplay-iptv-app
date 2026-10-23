@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/loja.dart';
 import '../core/marca.dart';
 import '../services/api_service.dart';
 import '../models/app_session.dart';
@@ -50,7 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (session.status == 'expirado') {
         setState(() {
-          _error = 'Sua assinatura expirou. Entre em contato com o suporte.';
+          _error = Loja.play // Play: sem falar em assinatura (nada de pagamento por fora)
+              ? 'Seu acesso expirou. ${Loja.fraseProvedor}'
+              : 'Sua assinatura expirou. Entre em contato com o suporte.';
           _loading = false;
         });
         return;

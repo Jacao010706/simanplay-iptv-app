@@ -1,6 +1,6 @@
-# Rascunho: ficha da loja (Google Play, pt-BR)
+# Ficha da loja (Google Play, pt-BR)
 
-RASCUNHO. Não publicado. Regras seguidas: sem preço, PIX, link de pagamento, "teste grátis",
+Pronto para colar na Play Console (Presença na loja > Página principal da loja). Regras seguidas: sem preço, PIX, link de pagamento, "teste grátis",
 nomes de canais, times, filmes ou emissoras, e sem imagens de filmes/séries/jogos (política de
 Propriedade Intelectual da Play proíbe arte promocional de terceiros e textos que incentivem
 assistir conteúdo protegido).
@@ -38,20 +38,19 @@ Como começar:
 Créditos da demonstração: filmes © Blender Foundation (blender.org), licenças Creative Commons;
 vídeos servidos pelo Wikimedia Commons.
 
-Privacidade: veja como tratamos os dados em sofae.com.br/privacidade.
-Suporte: akitemtech@gmail.com
+Privacidade: veja como tratamos os dados em sofae.com.br/privacidade/android.
+Suporte: [E-MAIL DE CONTATO]
 
 ## Categoria sugerida
 Players e editores de vídeo (Video Players & Editors)
 
 ## Dados de contato (obrigatórios)
-E-mail: akitemtech@gmail.com (confirmar) · Site: https://sofae.com.br · Política: https://sofae.com.br/privacidade
+E-mail: [E-MAIL DE CONTATO] · Site: https://sofae.com.br · Política: https://sofae.com.br/privacidade/android
 
 ## Capturas de tela
 Usar só telas com **listas de demonstração legais** (ex.: canais/vídeos de domínio público ou
 conteúdo próprio). Nada de logotipos de emissoras, pôsteres de filmes ou escudos de times.
-Necessário: ícone 512x512 (já existe em `store/android/icone-512.png`), banner de recursos
-1024x500, 2 a 8 capturas de celular; para Android TV, banner 1280x720 e capturas de TV.
+Gráficos: ver `graficos/LEIA-ME.md` (o que já existe e o que falta).
 
 ## Pontos que dependem de decisão
 - As capturas podem usar a própria demonstração (filmes da Blender, CC BY/BY-SA, com crédito).

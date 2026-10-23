@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sofae (Google Play): abertura escura com a cor da marca, no modo claro e no escuro (a mesma
+     cópia fica em values-night, que senão teria prioridade). No Android 12+ a abertura do sistema
+     usa windowSplashScreenBackground e o ícone do app. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/sofae_fundo</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/sofae_fundo</item>
+    </style>
+</resources>

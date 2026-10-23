@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/app_config.dart';
+import '../core/loja.dart';
 import '../core/marca.dart';
 import '../models/app_session.dart';
 import '../services/api_service.dart';
@@ -178,7 +179,9 @@ class _ActivationScreenState extends State<ActivationScreen>
       );
       if (clientSession.status == 'expirado') {
         setState(() {
-          _spError = 'Assinatura expirada. Contate o suporte.';
+          _spError = Loja.play // Play: sem falar em assinatura (nada de pagamento por fora)
+              ? 'Acesso expirado. ${Loja.fraseProvedor}'
+              : 'Assinatura expirada. Contate o suporte.';
           _spLoading = false;
         });
         return;

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidade do Sofae</title>
+<meta name="description" content="Como o app Sofae (Android, Google Play) trata os seus dados.">
+<style>
+  :root { --fundo: #ffffff; --texto: #1f1f24; --suave: #5b5b66; --linha: #e4e2ea; --marca: #c25e00; --caixa: #faf7f2; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fundo: #1a0b33; --texto: #f1eef7; --suave: #b9b2c9; --linha: #3a2b5c; --marca: #ff8a1a; --caixa: #241345; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 4px; }
+  h2 { font-size: 1.25rem; margin: 36px 0 8px; padding-top: 12px; border-top: 1px solid var(--linha); }
+  p, li { color: var(--texto); }
+  .data { color: var(--suave); font-size: .95rem; margin: 0 0 24px; }
+  .resumo { background: var(--caixa); border: 1px solid var(--linha); border-radius: 12px; padding: 4px 20px; }
+  a { color: var(--marca); }
+  code { font-size: .9em; }
+  footer { margin-top: 48px; color: var(--suave); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Política de Privacidade do Sofae</h1>
+<p class="data">Última atualização: [DATA] · Vale para o app Sofae para Android distribuído pela Google Play.</p>
+
+<p>O Sofae é um <strong>player de vídeo</strong>: ele toca as listas de canais e filmes que você já
+tem, do seu provedor ou digitadas por você. O Sofae <strong>não vende, não fornece e não escolhe
+nenhum conteúdo</strong>.</p>
+<p>Esta página explica, sem juridiquês, quais dados o app usa, para quê, e o que você pode fazer
+com eles.</p>
+
+<h2>Quem cuida dos seus dados</h2>
+<ul>
+  <li><strong>Responsável:</strong> [NOME COMPLETO], pessoa física, responsável pelo Sofae (Akitemtech).</li>
+  <li><strong>Contato:</strong> [E-MAIL DE CONTATO]</li>
+  <li>Seguimos a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018).</li>
+</ul>
+
+<h2>Resumo em 30 segundos</h2>
+<div class="resumo">
+<ul>
+  <li>O app manda ao nosso servidor um <strong>código do aparelho</strong> para liberar o acesso.</li>
+  <li>Se você entrar com <strong>usuário e senha do painel</strong>, o app avisa o painel
+    <strong>o que está tocando</strong> enquanto estiver aberto. Não guardamos histórico.</li>
+  <li>No <strong>Modo Livre</strong> (lista que você mesmo digita no app), os dados da lista
+    <strong>ficam só no seu aparelho</strong> e nunca são enviados para nós.</li>
+  <li>Não vendemos dados. Não há anúncios nem rastreadores de terceiros. O app não usa GPS,
+    câmera, microfone, contatos nem suas fotos.</li>
+  <li>O app da Google Play <strong>não tem compras nem pagamentos</strong>.</li>
+</ul>
+</div>
+
+<h2>1. Código do aparelho (sempre)</h2>
+<p>Quando você abre o app pela primeira vez, ele se registra no nosso servidor para liberar o uso
+neste aparelho. Para isso envia:</p>
+<ul>
+  <li>o <strong>Android ID</strong>, um código que o próprio Android cria para este app neste
+    aparelho. Ele não é o seu número de telefone, nem o seu e-mail, nem o IMEI;</li>
+  <li>o tipo de aparelho (por exemplo, “android”) e a versão do app.</li>
+</ul>
+<p>No nosso servidor, o Android ID <strong>não fica guardado como é</strong>: guardamos só um
+código derivado dele (um <em>hash</em> com chave secreta), que serve para reconhecer o mesmo
+aparelho e não pode ser transformado de volta no Android ID.</p>
+<p>O servidor devolve o <strong>MAC e a chave do aparelho</strong> que aparecem na tela. Depois
+disso o app consulta o servidor de tempos em tempos para saber se o acesso continua liberado.</p>
+<p><strong>Para quê:</strong> liberar e controlar o acesso deste aparelho e evitar abuso (por
+exemplo, o mesmo aparelho tentando se passar por vários).</p>
+<p>Na versão da Google Play, as atualizações são feitas só pela própria loja: o app não baixa
+nem instala atualizações por conta própria.</p>
+
+<h2>2. Login com usuário e senha do painel (só se você usar)</h2>
+<p>Se o seu provedor te deu um usuário e uma senha do nosso painel e você entra com eles:</p>
+<ul>
+  <li>O app envia usuário e senha ao nosso servidor, por conexão segura (HTTPS), <strong>só para
+    conferir o seu acesso</strong>.</li>
+  <li>No servidor, a senha é conferida por um <strong>hash bcrypt</strong>, uma forma embaralhada
+    que não pode ser revertida para a senha original.</li>
+  <li>A sua senha é criada pelo seu provedor, e o servidor ainda guarda também uma cópia dela que
+    o <strong>seu provedor consegue ver no painel</strong>, para poder reenviar os seus dados de
+    acesso. Estamos trabalhando para deixar de guardar essa cópia.</li>
+  <li>Para proteger a sua conta contra quem tenta adivinhar senhas, depois de
+    <strong>20 tentativas erradas para o mesmo usuário</strong> (ou 30 vindas do mesmo endereço IP)
+    em 15 minutos, o servidor bloqueia novas tentativas por um tempo, mesmo com a senha certa.</li>
+  <li>A senha <strong>não aparece nos registros técnicos</strong> do servidor: nesses registros ela
+    é substituída por <code>***</code>.</li>
+  <li>O servidor responde com os dados da sua lista e um <strong>código de acesso
+    temporário</strong> (vale até 30 dias, ou até a senha ser trocada ou o plano vencer).</li>
+  <li>O usuário e a senha ficam <strong>guardados no seu aparelho</strong>, para o app abrir direto
+    da próxima vez. Eles saem do aparelho quando você toca em <strong>Sair</strong> ou desinstala o
+    app.</li>
+</ul>
+
+<h2>3. “Assistindo agora” (só para quem entrou com o painel)</h2>
+<p>Enquanto o app está aberto com uma conta do painel, ele avisa o painel:</p>
+<ul>
+  <li><strong>a cada 30 segundos</strong> durante um vídeo, e <strong>a cada 60 segundos</strong> nos menus;</li>
+  <li>o que é avisado: o <strong>tipo</strong> (canal, filme, série ou menu), o <strong>nome</strong>
+    do que está tocando, “Android” e um código aleatório deste aparelho.</li>
+</ul>
+<p><strong>Quem vê:</strong> você não aparece para outros usuários. Quem vê é o <strong>seu provedor
+(revendedor)</strong> e a administração do painel. Isso serve para mostrar quem está conectado e
+para o provedor encerrar uma conexão em caso de uso indevido (por exemplo, conta compartilhada).</p>
+<p><strong>Não guardamos histórico do que foi assistido.</strong> Essa informação fica só na memória
+do servidor e some 3 minutos depois do último aviso (ou quando o servidor reinicia).</p>
+<p>O aviso para quando você toca em <strong>Sair</strong> na conta, e também <strong>na hora</strong>
+em que você abre uma lista própria (item 4), uma lista cadastrada pelo site (item 5) ou a
+demonstração (item 7).</p>
+
+<h2>4. Modo Livre: lista que você digita no app</h2>
+<p>Você pode usar o Sofae com uma lista sua, digitando no app o <strong>servidor, o usuário e a
+senha</strong> (Xtream) ou um <strong>link M3U</strong>. Nesse caso:</p>
+<ul>
+  <li>os dados da lista ficam <strong>somente no seu aparelho</strong>;</li>
+  <li>o app conversa <strong>direto</strong> com o servidor da lista que você digitou;</li>
+  <li><strong>nada disso é enviado para o nosso servidor</strong>: nem o endereço, nem o usuário,
+    nem a senha, nem os canais da lista;</li>
+  <li>quem recebe esses dados é o servidor do <strong>seu provedor</strong>, que tem a política de
+    privacidade dele;</li>
+  <li>enquanto você usa a lista própria, o app <strong>não avisa o painel</strong> o que você está
+    assistindo (item 3).</li>
+</ul>
+<p>Mesmo no Modo Livre, o app continua usando o código do aparelho do item 1 para liberar o acesso.</p>
+
+<h2>5. Listas cadastradas pelo site (MAC e chave)</h2>
+<p>Se você ou o seu provedor cadastrou listas para o MAC do aparelho no nosso site, o app baixa
+essas listas do nosso servidor (nome, servidor, usuário e senha, ou link M3U). Elas ficam
+guardadas no servidor para aparecer no app, e podem ser apagadas no próprio site de cadastro.</p>
+
+<h2>6. Endereço IP</h2>
+<p>Toda conexão com a internet mostra o seu endereço IP. O nosso servidor usa o IP para
+<strong>segurança</strong> (por exemplo, o limite de tentativas de senha do item 2) e, no
+“assistindo agora” (item 3), para estimar a <strong>cidade aproximada</strong> da conexão. Não
+usamos localização precisa (GPS).</p>
+<p>No “assistindo agora”, o <strong>seu provedor</strong> vê a cidade aproximada e só o começo do
+seu IP (por exemplo, <code>189.40.x.x</code>); a administração do Sofae vê o IP completo. Isso
+também fica só na memória do servidor e some 3 minutos depois do último aviso: o IP não é gravado
+no banco de dados.</p>
+<p>A empresa que hospeda o nosso servidor (Railway) registra, como qualquer site, o horário e o
+endereço de cada acesso (registros técnicos, sem a sua senha). Esses registros ficam guardados
+por [RETENCAO DOS LOGS NO RAILWAY].</p>
+
+<h2>7. Demonstração</h2>
+<p>O botão “Ver demonstração” toca filmes abertos da Blender Foundation (licença Creative Commons)
+a partir do Wikimedia Commons. Ele funciona mesmo sem acesso liberado. Nada é enviado ao nosso
+servidor por causa da demonstração; os servidores do Wikimedia Commons recebem o seu IP, como em
+qualquer vídeo da internet.</p>
+
+<h2>8. Com quem compartilhamos</h2>
+<ul>
+  <li><strong>Seu provedor (revendedor):</strong> vê o MAC e a conta do aparelho e, para contas do
+    painel, o “assistindo agora” (item 3).</li>
+  <li><strong>Hospedagem do nosso servidor:</strong> guarda os dados para nós, sem uso próprio.</li>
+  <li>O app da Google Play <strong>não tem compras nem pagamentos</strong>.</li>
+  <li>Não vendemos nem alugamos dados para ninguém.</li>
+</ul>
+
+<h2>9. Por quanto tempo guardamos</h2>
+<ul>
+  <li><strong>No aparelho:</strong> até você sair da conta, apagar os dados do app ou desinstalá-lo.</li>
+  <li><strong>No servidor:</strong>
+    <ul>
+      <li>o código de acesso do login vale até 30 dias e não fica guardado (é conferido por assinatura);</li>
+      <li>o “assistindo agora”, o IP e a cidade ficam só na memória e somem em 3 minutos;</li>
+      <li>as contagens de tentativas de senha erradas ficam só na memória e somem em 15 minutos;</li>
+      <li>os registros técnicos da hospedagem ficam pelo prazo do item 6;</li>
+      <li>o registro do aparelho (MAC, chave, código derivado do Android ID, tipo de aparelho,
+        versão do app e datas de início e último acesso), as listas cadastradas no site e a conta
+        do painel <strong>não são apagados automaticamente</strong>. Eles ficam guardados até serem
+        apagados por você (as listas, no site), pelo seu provedor (a conta do painel) ou a seu
+        pedido (item 10).</li>
+    </ul>
+  </li>
+</ul>
+
+<h2>10. Seus direitos e como apagar seus dados</h2>
+<p>Você pode pedir para ver, corrigir ou apagar os seus dados. Mande um e-mail para
+<strong>[E-MAIL DE CONTATO]</strong> com o <strong>MAC que aparece no app</strong>. Respondemos em até
+15 dias, prazo da LGPD (art. 19). As listas cadastradas pelo site também podem ser apagadas por lá.</p>
+
+<h2>11. Idade</h2>
+<p>O Sofae é destinado a <strong>maiores de 18 anos</strong>, porque toca listas de terceiros que
+podem ter qualquer tipo de conteúdo. Não coletamos de propósito dados de crianças ou adolescentes.</p>
+
+<h2>12. Segurança</h2>
+<p>A conexão com o nosso servidor é sempre criptografada (HTTPS). A senha do painel é conferida por
+hash bcrypt, com limite de tentativas, e não aparece nos registros técnicos (item 2). Algumas
+listas de provedores usam conexão sem criptografia (HTTP); nesse caso, a conversa é entre o seu
+aparelho e o servidor do provedor, não com o nosso.</p>
+
+<h2>13. Mudanças nesta política</h2>
+<p>Quando mudarmos algo importante, atualizamos esta página e a data lá em cima.</p>
+
+<footer>Sofae · [E-MAIL DE CONTATO]</footer>
+</main>
+</body>
+</html>

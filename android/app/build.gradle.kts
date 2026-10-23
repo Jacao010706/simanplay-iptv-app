@@ -61,6 +61,16 @@ android {
         sourceSets["main"].java.srcDir("src/instalador/kotlin")
     }
 
+    // Release da Play só com a chave de envio (key.properties). Sem ela, o fallback abaixo
+    // assinaria com a chave de debug, e a Play recusaria o AAB.
+    val pedeRelease = gradle.startParameter.taskNames.any { it.contains("Release") }
+    if (lojaPlay && pedeRelease && !rootProject.file("key.properties").let { it.exists() && it.length() > 0 }) {
+        throw GradleException(
+            "Build release da Play sem android/key.properties (chave de envio). " +
+                "Veja store/google-play/COMO_GERAR.md."
+        )
+    }
+
     buildTypes {
         release {
             val keyPropertiesFile = rootProject.file("key.properties")

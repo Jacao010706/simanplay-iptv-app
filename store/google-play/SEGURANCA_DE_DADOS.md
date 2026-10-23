@@ -1,8 +1,8 @@
-# Rascunho: formulário "Segurança dos dados" (Play Console)
+# Formulário "Segurança dos dados" (Play Console)
 
-RASCUNHO. Não enviado. Feito a partir do código da variante `play` (branch `feature/play-store`)
-e da política em sofae.com.br/privacidade (atualizada em 12/10/2026). O que o servidor guarda e
-por quanto tempo **não foi conferido** (backend fora do escopo): confirme antes de enviar.
+Respostas prontas, conferidas no código da variante `play` (branch `feature/sofae-release`) e do
+backend em produção (`37dcd09`, Fase 1 de senhas no ar desde 22/10/2026). Política publicada:
+`privacidade.html` (sofae.com.br/privacidade/android).
 
 Definições da Play usadas: "coletado" = sai do aparelho para o nosso servidor; "compartilhado" =
 vai para terceiro. Envio ao servidor IPTV que o próprio usuário cadastrou (ação dele, esperada)
@@ -14,7 +14,7 @@ não conta como compartilhamento.
 |---|---|
 | O app coleta ou compartilha algum dos tipos de dados exigidos? | **Sim** |
 | Todos os dados coletados são criptografados em trânsito? | **Sim** para o nosso servidor (`https://web-production-d8671.up.railway.app`). Observação: listas e vídeos do provedor podem ser `http`, mas vão direto do aparelho para o servidor que o usuário cadastrou, não para nós |
-| O usuário pode pedir a exclusão dos dados? | **Sim**: e-mail para akitemtech@gmail.com com o MAC exibido no app (como diz a política). Recomendado: uma página própria, ex. sofae.com.br/excluir-dados |
+| O usuário pode pedir a exclusão dos dados? | **Sim**: e-mail para [E-MAIL DE CONTATO] com o MAC exibido no app (como diz a política). Recomendado: uma página própria, ex. sofae.com.br/excluir-dados |
 | Conta criada dentro do app? | **Não** (o registro do aparelho é automático; contas de painel são criadas pelo revendedor fora do app). Se a Play entender o registro do aparelho como conta, passa a exigir link de exclusão de conta |
 
 ## Tipos de dados
@@ -30,7 +30,7 @@ Senha do painel: vai ao servidor só para autenticar (`/app/login`). O app guard
 token e também usuário e senha, na sessão local (`activation_screen_v3.dart` → `buildSession`
 → `SharedPreferences`), para reabrir a conta; saem ao tocar em Sair. Não é
 uma categoria própria no formulário; fica coberta por "IDs de usuário" + criptografia em trânsito.
-**Backend (lido em 22/10/2026):** a senha do cliente do painel fica em **texto puro** no banco (`models.py:50`, comparada em `main.py:861`). O formulário não pergunta isso, mas a política agora descreve a situação. Ver no relatório o plano de correção.
+**Backend (Fase 1 no ar desde 22/10/2026):** a senha é conferida por hash bcrypt (`clients.password_hash`), com limite de tentativas (20 por usuário / 30 por IP em 15 min → 429) e mascarada nos logs (`***`). A cópia em texto puro **ainda existe** (o painel mostra; sai na Fase 2), e a política diz isso. O formulário não pergunta sobre isso.
 
 Android ID: o servidor guarda só um hash SHA-256 com segredo (`licenses.py:85-87`). Na Play continua sendo "IDs do dispositivo" (ele é enviado).
 
@@ -46,14 +46,7 @@ Dados que **ficam só no aparelho** (não declaram): listas em cache, listas do 
 favoritos, sessão do painel (usuário e senha, para reabrir), tema escolhido. A versão Play não tem
 gravação.
 
-## Ajustes na política de privacidade antes de enviar
-Texto novo já escrito em `POLITICA_DE_PRIVACIDADE.md` (cobre os itens abaixo). Itens originais:
-
-1. Citar o **Android ID** (identificador do sistema) enviado no registro da licença; hoje a
-   política só fala do MAC.
-2. Frequência do "assistindo": o código envia a cada **30 s** durante o vídeo e **60 s** no menu
-   (a política diz "a cada minuto").
-3. Dizer que a senha do painel trafega para o servidor no login (só para autenticar).
-4. Informar prazo de retenção no servidor e, de preferência, CNPJ/endereço do controlador.
-5. Para a versão Play, a menção ao Mercado Pago/PIX pode ficar (é sobre o serviço), mas o app da
-   Play não processa pagamento.
+## Política de privacidade
+Os 5 ajustes apontados no rascunho (Android ID, 30 s / 60 s, senha só para autenticar, retenção,
+pagamento fora do app) estão na versão final `privacidade.html`, junto com a Fase 1 (bcrypt,
+limite de tentativas, senha mascarada nos registros).

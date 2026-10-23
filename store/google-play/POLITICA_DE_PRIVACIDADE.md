@@ -1,4 +1,7 @@
-# Política de Privacidade do Sofae
+# Política de Privacidade do Sofae (rascunho antigo)
+
+> **Substituído por `privacidade.html`** (versão final, com a Fase 1 de senhas). Este arquivo
+> fica só como histórico; não publique este texto.
 
 > RASCUNHO para revisão. Não publicado. Substitui o texto de sofae.com.br/privacidade
 > (versão de 12/10/2026) quando aprovado. Os itens entre [colchetes] dependem do Jacques.

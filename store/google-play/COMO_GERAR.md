@@ -31,11 +31,36 @@ reaproveitou a saída antiga de três tarefas: `mergePlayReleaseJniLibFolders`,
 Para conferir depois de gerar, procure no `base/lib/arm64-v8a/libapp.so` do AAB um texto que
 acabou de mudar.
 
-## Build de envio (só quando a conta existir; NÃO feito)
-1. Versão: ajuste `version:` no `pubspec.yaml`. O `versionCode` precisa crescer a cada envio.
-2. Chave de upload: decisão do Jacques (ver o relatório, item "Assinatura"). Nunca commite a
-   chave.
-3. Rode `flutter clean`.
-4. Rode `flutter build appbundle --release --no-tree-shake-icons --flavor play -Ploja=play`, com
-   o `android/key.properties` apontando para a **chave de upload**.
-5. Envie o `.aab` pelo Play Console, começando pelo teste fechado.
+## Chave de envio (upload key) — uma vez por PC
+O AAB da Play é assinado com a **chave de envio** `D:\chaves\simanplay-release.jks` (alias
+`simanplay`). No Play App Signing, a Google guarda a chave que assina o app instalado; a nossa só
+prova que o envio é nosso. As senhas ficam só em `android/key.properties`, que está no
+`android/.gitignore` e **nunca** vai para o Git. Sem esse arquivo, o build release da Play
+**para com erro** (de propósito: antes ele assinava com a chave de debug sem avisar).
+
+Criar o arquivo sem a senha aparecer na tela nem no histórico (PowerShell):
+```powershell
+$s = Read-Host "Senha da keystore" -AsSecureString
+$k = Read-Host "Senha da chave 'simanplay' (Enter = a mesma)" -AsSecureString
+$ps = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+$pk = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($k))
+if (-not $pk) { $pk = $ps }
+"storeFile=D:/chaves/simanplay-release.jks`nkeyAlias=simanplay`nstorePassword=$ps`nkeyPassword=$pk`n" |
+  Set-Content -NoNewline -Encoding ascii D:\projetos\simanplay-iptv\simanplay-iptv-app\android\key.properties
+Remove-Variable s, k, ps, pk
+git -C D:\projetos\simanplay-iptv\simanplay-iptv-app check-ignore android/key.properties
+```
+A última linha deve imprimir `android/key.properties` (prova de que o Git ignora o arquivo).
+Se a senha tiver `\`, escreva `\` no arquivo (formato `.properties`).
+
+## Build de envio
+1. Versão: `version:` no `pubspec.yaml` (`1.0.0+1` no primeiro envio). O número depois do `+`
+   (`versionCode`) precisa crescer a cada envio.
+2. `flutter clean`
+3. `flutter build appbundle --release --no-tree-shake-icons --flavor play -Ploja=play`
+4. Saída: `build/app/outputs/bundle/playRelease/app-play-release.aab`.
+5. Conferir a assinatura (não mostra senha):
+   `jarsigner -verify -verbose:summary -certs build\app\outputs\bundle\playRelease\app-play-release.aab`
+   deve dizer `jar verified.` e o certificado deve ter o mesmo SHA-256 de
+   `keytool -list -v -keystore D:\chaves\simanplay-release.jks -alias simanplay` (pede a senha).
+6. Envie o `.aab` pelo Play Console, começando pelo teste fechado.
