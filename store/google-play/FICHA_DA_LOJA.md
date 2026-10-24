@@ -1,58 +1,40 @@
 # Ficha da loja (Google Play, pt-BR)
 
-Pronto para colar na Play Console (Presença na loja > Página principal da loja). Regras seguidas: sem preço, PIX, link de pagamento, "teste grátis",
-nomes de canais, times, filmes ou emissoras, e sem imagens de filmes/séries/jogos (política de
-Propriedade Intelectual da Play proíbe arte promocional de terceiros e textos que incentivem
-assistir conteúdo protegido).
+**Texto para colar: `FICHA_DA_LOJA_PARA_COLAR.md`** (cada campo do Console em ordem). Este
+arquivo guarda as regras, a contagem e o porquê das escolhas.
 
-## Nome do app (até 30 caracteres)
-Sofae Player
+## Contagem (conferida por script em 24/10/2026)
+| Campo | Caracteres | Limite |
+|---|---|---|
+| Nome: `Sofae` | 5 | 30 |
+| Descrição curta | 80 | 80 |
+| Descrição completa | 1.454 | 4.000 |
 
-## Descrição curta (até 80 caracteres)
-Player de vídeo para listas M3U e Xtream que você já possui.
+Busca por termos proibidos na ficha (IPTV, grátis, Xtream, nomes de canais/emissoras/streamings,
+futebol, PIX, preço, assinatura): **nenhum**.
 
-## Descrição completa (até 4.000 caracteres)
-O Sofae é um player de vídeo para celular, tablet e Android TV. Ele reproduz as listas que você
-já possui, no formato M3U ou Xtream Codes, fornecidas pelo seu próprio provedor.
+## Regras seguidas
+- Marca **Sofae**; nome só "Sofae" (sem "IPTV" nem "Player" no título).
+- Deixa claro que é **player** e que o usuário usa a **lista do próprio provedor**; o app vem vazio.
+- Sem prometer conteúdo, sem citar canais, times, filmes comerciais, emissoras ou streamings.
+- Sem preço, PIX, plano, link de pagamento, "teste grátis" (o app da Play é só de consumo).
+- Sem marcas de terceiros, exceto: **Android TV** (plataforma da própria Google, para dizer onde
+  funciona) e **Blender Foundation** (crédito exigido pela licença Creative Commons dos filmes da
+  demonstração).
 
-IMPORTANTE: o Sofae não fornece, vende nem inclui nenhum canal, filme, série ou outro conteúdo.
-O app vem vazio. Para usar, você precisa de uma lista de um provedor de sua escolha, que é o
-único responsável pelo conteúdo e pela autorização para transmiti-lo. Use apenas conteúdo que
-você tem direito de assistir.
-
-Recursos:
-• Reprodução de listas M3U e Xtream Codes (ao vivo, filmes e séries da sua lista)
-• Guia de programação (EPG), quando a sua lista oferece
-• Favoritos e continuar assistindo
-• Vários temas de tela
-• Feito para controle remoto: funciona em Android TV e TV box, além de celular e tablet
-• Busca na sua lista
-• Demonstração com filmes abertos (Creative Commons) para conhecer o app antes de ter uma lista
-
-Como começar:
-1. Abra o app e anote o código do aparelho (MAC) exibido na tela.
-2. Informe esse código ao seu provedor para ele liberar o acesso e a sua lista, ou digite você
-   mesmo os dados da sua lista (servidor, usuário e senha, ou link M3U).
-3. Quer só conhecer? Toque em "Ver demonstração" e assista a filmes abertos da Blender.
-
-Créditos da demonstração: filmes © Blender Foundation (blender.org), licenças Creative Commons;
-vídeos servidos pelo Wikimedia Commons.
-
-Privacidade: veja como tratamos os dados em sofae.com.br/privacidade/android.
-Suporte: akitemtech@gmail.com
-
-## Categoria sugerida
-Players e editores de vídeo (Video Players & Editors)
-
-## Dados de contato (obrigatórios)
-E-mail: akitemtech@gmail.com · Site: https://sofae.com.br · Política: https://sofae.com.br/privacidade/android
+## Revisado contra o app (variante `play`, branch `feature/sofae-release`)
+| Rascunho anterior | Agora | Motivo |
+|---|---|---|
+| Nome "Sofae Player" | "Sofae" | pedido; igual ao nome do app no aparelho |
+| "M3U e Xtream Codes" | "M3U e listas com servidor, usuário e senha" | "Xtream Codes" é marca de terceiro (e ligada a pirataria na revisão) |
+| "Favoritos e continuar assistindo" | "Favoritos e busca" | não existe "continuar assistindo" no código |
+| "Vários temas de tela" | removido | a Play usa só o tema Sofae; não há tela para trocar de tema |
+| "Guia de programação (EPG)" | "guia de programação, quando a sua lista oferece" | existe (`epg_service.dart`), só para listas com servidor/usuário/senha |
+| "anote o código (MAC)" | "mostra o código deste aparelho" | mais simples; o código é o MAC exibido |
+| "ou digite você mesmo os dados" | "Com o acesso liberado, você também pode digitar…" | a entrada manual só funciona com o acesso do aparelho liberado |
+| Crédito "Wikimedia Commons" | removido | a licença pede crédito aos autores (Blender), não ao servidor |
+| — | "Sem anúncios e sem compras dentro do app." | verdade na variante `play` e coerente com o formulário de dados |
 
 ## Capturas de tela
-Usar só telas com **listas de demonstração legais** (ex.: canais/vídeos de domínio público ou
-conteúdo próprio). Nada de logotipos de emissoras, pôsteres de filmes ou escudos de times.
-Gráficos: ver `graficos/LEIA-ME.md` (o que já existe e o que falta).
-
-## Pontos que dependem de decisão
-- As capturas podem usar a própria demonstração (filmes da Blender, CC BY/BY-SA, com crédito).
-- O nome pode ser só "Sofae" se o nome estiver livre; evitar "IPTV" no título (chama atenção da
-  revisão de PI; não é proibido, mas é risco).
+Só com a **demonstração** (filmes da Blender, CC). Nada de logos de emissoras, pôsteres de filmes
+comerciais ou escudos de times. Ver `capturas/LEIA-ME.md` e `graficos/LEIA-ME.md`.
