@@ -32,9 +32,11 @@ Para conferir depois de gerar, procure no `base/lib/arm64-v8a/libapp.so` do AAB 
 acabou de mudar.
 
 ## Chave de envio (upload key) — uma vez por PC
-**Estado em 24/10/2026:** `android/key.properties` **não existe** neste PC; o AAB de envio ainda
-não foi gerado. Depois de criar o arquivo (bloco abaixo), peça o build ou rode a seção
-"Build de envio".
+**Estado em 24/10/2026:** `android/key.properties` criado (com `storePassword` = `keyPassword`);
+AAB `1.0.0 (1)` gerado e conferido: SHA-256
+`030C959957843A5556F1BD22D8A2604B65BEFF7E724C2F490053A6E84638B562`, certificado `5B:72:…:B2:32`.
+Se a senha da chave estiver errada, o build para com "Get Key failed: Given final block not
+properly padded".
 
 O AAB da Play é assinado com a **chave de envio** `D:\chaves\simanplay-release.jks` (alias
 `simanplay`). No Play App Signing, a Google guarda a chave que assina o app instalado; a nossa só
