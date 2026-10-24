@@ -1,4 +1,4 @@
-# Capturas de tela do celular (Google Play)
+# Capturas de tela: celular e Android TV (Google Play)
 
 4 capturas de celular 1080x1920 (9:16) e 3 de Android TV 1920x1080 (16:9), PNG 24 bits sem alfa, geradas em 24/10/2026 a partir das **telas
 reais** da variante `play` (mesmo código do app), num teste de widget com as fontes do Android
@@ -11,7 +11,6 @@ reais, sem credenciais; o código do aparelho é fictício.
 | `celular-2-inicio-demonstracao.png` | Início da demonstração |
 | `celular-3-filmes-abertos.png` | Filmes abertos da Blender |
 | `celular-4-tv-ao-vivo-demonstracao.png` | TV ao vivo da demonstração (favoritos e busca) |
-
 | `tv-1-codigo-do-aparelho.png` | TV: aparelho sem acesso (código e demonstração) |
 | `tv-2-inicio.png` | TV: tela de 4 blocos da Sofae, foco do controle em "TV ao Vivo" |
 | `tv-3-filmes-abertos.png` | TV: filmes abertos da Blender |

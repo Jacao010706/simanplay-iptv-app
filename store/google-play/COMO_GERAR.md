@@ -32,6 +32,10 @@ Para conferir depois de gerar, procure no `base/lib/arm64-v8a/libapp.so` do AAB 
 acabou de mudar.
 
 ## Chave de envio (upload key) — uma vez por PC
+**Estado em 24/10/2026:** `android/key.properties` **não existe** neste PC; o AAB de envio ainda
+não foi gerado. Depois de criar o arquivo (bloco abaixo), peça o build ou rode a seção
+"Build de envio".
+
 O AAB da Play é assinado com a **chave de envio** `D:\chaves\simanplay-release.jks` (alias
 `simanplay`). No Play App Signing, a Google guarda a chave que assina o app instalado; a nossa só
 prova que o envio é nosso. As senhas ficam só em `android/key.properties`, que está no
@@ -58,6 +62,9 @@ Se a senha tiver `\`, escreva `\` no arquivo (formato `.properties`).
    (`versionCode`) precisa crescer a cada envio.
 2. `flutter clean`
 3. `flutter build appbundle --release --no-tree-shake-icons --flavor play -Ploja=play`
+   **Atenção:** `flutter build appbundle --flavor play --release` sozinho **falha** ("Gradle
+   project does not define a task suitable for the requested build"): o flavor `play` só existe
+   com `-Ploja=play`.
 4. Saída: `build/app/outputs/bundle/playRelease/app-play-release.aab`.
 5. Conferir a assinatura (não mostra senha):
    `jarsigner -verify -verbose:summary -certs build\app\outputs\bundle\playRelease\app-play-release.aab`
