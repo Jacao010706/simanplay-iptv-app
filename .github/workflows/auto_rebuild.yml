@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - main
+    # Push que só muda documentação não refaz os APKs de todos os revendedores.
+    # Se o push tiver ao menos um arquivo fora desta lista, o rebuild roda normalmente.
+    # "**/*.md" pega .md em qualquer pasta, inclusive a raiz (CLAUDE.md, README.md...).
+    paths-ignore:
+      - '**/*.md'
+      - 'CLAUDE.md'
+      - 'docs/**'
+      - 'store/**'
+      - '.github/ISSUE_TEMPLATE/**'
 
 jobs:
   trigger-rebuilds:
