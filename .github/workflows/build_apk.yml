@@ -50,9 +50,16 @@ on:
         required: false
         default: 'com.simanplay.iptvplayer.iptv_player'
 
+# Um build por revendedor de cada vez: um segundo clique espera o primeiro terminar
+concurrency:
+  group: build-apk-${{ inputs.reseller_id }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Build travado é encerrado sozinho e cai no aviso de falha ao backend
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -239,7 +246,7 @@ jobs:
             || echo "::warning::O backend recusou o aviso de APK pronto (confira o secret BUILD_CALLBACK_SECRET)"
 
       - name: Notify backend - Failure
-        if: failure()
+        if: failure() || cancelled()
         run: |
           curl -sS --fail-with-body -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
             "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" \
