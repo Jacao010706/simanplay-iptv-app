@@ -241,13 +241,13 @@ jobs:
         run: |
           APK_URL="https://github.com/Jacao010706/simanplay-iptv-app/releases/download/apk-${{ inputs.reseller_username }}-${{ github.run_number }}/${{ inputs.reseller_username }}-simanplay.apk"
           # O backend só aceita o aviso com o segredo compartilhado (BUILD_CALLBACK_SECRET)
-          curl -sS --fail-with-body -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
+          curl -sS --fail-with-body --retry 3 --retry-all-errors --retry-delay 5 --max-time 30 -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
             "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=ready&apk_url=${APK_URL}&build_number=${{ github.run_number }}&sha256=${{ steps.apk.outputs.sha256 }}" \
-            || echo "::warning::O backend recusou o aviso de APK pronto (confira o secret BUILD_CALLBACK_SECRET)"
+            || { echo '::error::O backend recusou o aviso de APK pronto (confira BUILD_CALLBACK_SECRET e se o backend estava no ar)'; exit 1; }
 
       - name: Notify backend - Failure
         if: failure() || cancelled()
         run: |
-          curl -sS --fail-with-body -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
+          curl -sS --fail-with-body --retry 3 --retry-all-errors --retry-delay 5 --max-time 30 -X PATCH -H "X-Build-Secret: ${{ secrets.BUILD_CALLBACK_SECRET }}" \
             "${{ secrets.BACKEND_URL }}/resellers/${{ inputs.reseller_id }}/whitelabel/status?status=error" \
             || echo "::warning::O backend recusou o aviso de falha (confira o secret BUILD_CALLBACK_SECRET)"
