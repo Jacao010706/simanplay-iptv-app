@@ -7,6 +7,7 @@ import '../services/xtream_service.dart';
 import 'series_detail_screen.dart';
 import '../widgets/tv_focus.dart';
 import '../widgets/tv_search_field.dart';
+import '../core/erros.dart';
 
 class SeriesScreen extends StatefulWidget {
   final AppSession session;
@@ -63,7 +64,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
       });
     } catch (e) {
       setState(() {
-        _error   = e.toString().replaceFirst('Exception: ', '');
+        _error   = mensagemDeErro(e);
         _loading = false;
       });
     }

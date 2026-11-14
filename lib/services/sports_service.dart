@@ -200,14 +200,14 @@ class SportsService {
       username: session.effectiveXtreamUsername!,
       password: session.effectiveXtreamPassword!,
     );
-    final cats = (await svc.getLiveCategories()).where((c) => isSportsCategory(c.name));
-    final out = <Channel>[];
-    for (final cat in cats) {
-      try {
-        out.addAll(await svc.getLiveStreams(cat.id, cat.name));
-      } catch (_) {}
-      if (out.length >= maxSportsChannels) break;
+    // Uma chamada só para todos os canais (a mesma lista em cache da aba Ao Vivo),
+    // filtrada pelas categorias de esporte, na ordem das categorias
+    final cats = (await svc.getLiveCategories()).where((c) => isSportsCategory(c.name)).toList();
+    final porCategoria = <String, List<Channel>>{for (final c in cats) c.id: []};
+    for (final ch in await svc.getAllLiveStreams()) {
+      porCategoria[ch.categoryId]?.add(ch);
     }
+    final out = [for (final c in cats) ...porCategoria[c.id]!];
     _sportsChannels = out.take(maxSportsChannels).toList();
     _sportsChannelsAt = DateTime.now();
     _sportsChannelsKey = key;

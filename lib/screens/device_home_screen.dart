@@ -12,6 +12,7 @@ import '../services/license_service.dart';
 import '../services/xtream_service.dart';
 import 'activation_screen_v3.dart';
 import 'home_screen_v2.dart';
+import '../core/erros.dart';
 
 /// Abre a home com a sessão escolhida e a salva para a próxima abertura.
 Future<void> openHome(BuildContext context, AppSession session) async {
@@ -122,7 +123,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
       if (!mounted) return;
       setState(() {
         _opening = null;
-        _error = 'Não foi possível abrir "${p.name}": ${e.toString().replaceFirst('Exception: ', '')}';
+        _error = 'Não foi possível abrir "${p.name}": ${mensagemDeErro(e)}';
       });
     }
   }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/user_agent.dart';
 
 /// Gravacao agendada (ex.: "gravar o proximo programa").
 class ScheduledRecording {
@@ -337,7 +338,7 @@ class RecordingService {
 
   Future<bool> _isHls(String url) async {
     try {
-      final r = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      final r = await http.get(Uri.parse(url), headers: kIptvHeaders).timeout(const Duration(seconds: 10));
       return r.statusCode == 200 && r.body.contains('#EXTM3U');
     } catch (_) {
       return false;
@@ -352,7 +353,7 @@ class RecordingService {
       _directClient = client;
       try {
         final resp = await client
-            .send(http.Request('GET', Uri.parse(url)))
+            .send((http.Request('GET', Uri.parse(url))..headers.addAll(kIptvHeaders)))
             .timeout(const Duration(seconds: 15));
         if (resp.statusCode == 200) {
           await for (final chunk in resp.stream) {
@@ -391,7 +392,7 @@ class RecordingService {
 
   Future<void> _downloadNewSegments(String m3u8Url, RecordingInfo info) async {
     try {
-      final resp = await http.get(Uri.parse(m3u8Url)).timeout(const Duration(seconds: 10));
+      final resp = await http.get(Uri.parse(m3u8Url), headers: kIptvHeaders).timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) return;
 
       final lines = resp.body.split('\n');
@@ -410,7 +411,7 @@ class RecordingService {
 
       final segResp = playlistUrl == m3u8Url
           ? resp
-          : await http.get(Uri.parse(playlistUrl)).timeout(const Duration(seconds: 10));
+          : await http.get(Uri.parse(playlistUrl), headers: kIptvHeaders).timeout(const Duration(seconds: 10));
       if (segResp.statusCode != 200) return;
 
       final baseUrl = playlistUrl.substring(0, playlistUrl.lastIndexOf('/') + 1);
@@ -424,7 +425,7 @@ class RecordingService {
         if (_stopping || _sink == null) break;
 
         try {
-          final seg = await http.get(Uri.parse(segUrl)).timeout(const Duration(seconds: 15));
+          final seg = await http.get(Uri.parse(segUrl), headers: kIptvHeaders).timeout(const Duration(seconds: 15));
           if (seg.statusCode == 200 && _sink != null) {
             _sink!.add(seg.bodyBytes);
             info.bytesRecorded += seg.bodyBytes.length;

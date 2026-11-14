@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_config.dart';
+import '../core/plataforma.dart';
 import '../services/license_service.dart';
 
 /// Verifica a licença ao abrir (e ao voltar para o app). Libera o [child]
@@ -114,7 +115,9 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
     if (mounted) {
       setState(() {
         _checking = false;
-        _msg = 'Ainda não identificamos o pagamento. Se já pagou, aguarde alguns segundos.';
+        _msg = Plataforma.semPagamento
+            ? 'O acesso ainda não foi liberado. Confirme com o seu provedor e tente de novo.'
+            : 'Ainda não identificamos o pagamento. Se já pagou, aguarde alguns segundos.';
       });
     }
   }
@@ -135,11 +138,18 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
         const SizedBox(height: 12),
         Text(titulo, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        const Text(
-          'Para continuar usando, assine um plano pelo site com PIX:\n'
-          'Mensal R\$ 5,00  •  Semestral R\$ 10,00  •  Anual R\$ 15,00',
-          style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
-        ),
+        // PC: sem PIX, preços nem link de pagamento
+        if (Plataforma.semPagamento)
+          const Text(
+            'Para continuar usando, fale com o seu provedor e informe o MAC do aparelho abaixo.',
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+          )
+        else
+          const Text(
+            'Para continuar usando, assine um plano pelo site com PIX:\n'
+            'Mensal R\$ 5,00  •  Semestral R\$ 10,00  •  Anual R\$ 15,00',
+            style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+          ),
         const SizedBox(height: 16),
         const Text('MAC do aparelho', style: TextStyle(color: Colors.white54, fontSize: 13)),
         const SizedBox(height: 4),
@@ -147,6 +157,7 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
             style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold, letterSpacing: 2)),
         const SizedBox(height: 18),
         Wrap(spacing: 12, runSpacing: 12, children: [
+          if (!Plataforma.semPagamento)
           ElevatedButton.icon(
             autofocus: true,
             style: ElevatedButton.styleFrom(backgroundColor: primary, foregroundColor: Colors.black,
@@ -156,13 +167,15 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
             label: const Text('Pagar pelo site', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           OutlinedButton.icon(
+            autofocus: Plataforma.semPagamento,
             style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white38),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
             onPressed: _checking ? null : _check,
             icon: _checking
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.refresh),
-            label: const Text('Já paguei — verificar', style: TextStyle(fontSize: 16)),
+            label: Text(Plataforma.semPagamento ? 'Verificar novamente' : 'Já paguei — verificar',
+                style: const TextStyle(fontSize: 16)),
           ),
         ]),
         if (_msg != null) ...[
@@ -197,6 +210,8 @@ class _LicenseBlockedScreenState extends State<LicenseBlockedScreen> {
               constraints: const BoxConstraints(maxWidth: 900),
               decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(16)),
               child: LayoutBuilder(builder: (context, c) {
+                // PC: sem QR de pagamento
+                if (Plataforma.semPagamento) return info;
                 final wide = c.maxWidth > 620;
                 return wide
                     ? Row(crossAxisAlignment: CrossAxisAlignment.center, children: [

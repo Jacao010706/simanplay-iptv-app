@@ -5,6 +5,7 @@ import '../models/app_session.dart';
 import '../models/channel.dart';
 import '../models/category.dart';
 import '../core/app_config.dart';
+import '../core/erros.dart';
 import '../core/m3u_service.dart';
 import '../services/xtream_service.dart';
 import '../services/epg_service.dart';
@@ -78,12 +79,10 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           username: widget.session.effectiveXtreamUsername!,
           password: widget.session.effectiveXtreamPassword!,
         );
+        // Uma chamada para as categorias e uma para todos os canais (antes: uma por categoria)
         final cats = await service.getLiveCategories();
-        final List<Channel> allCh = [];
-        for (final cat in cats) {
-          final channels = await service.getLiveStreams(cat.id, cat.name);
-          allCh.addAll(channels);
-        }
+        final allCh = await service.getAllLiveStreams();
+        if (!mounted) return;
         setState(() { _categories = cats; _allChannels = allCh; _loading = false; });
       } else {
         final url = widget.session.primaryM3uUrl ?? '';
@@ -98,7 +97,8 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         setState(() { _categories = cats; _allChannels = channels; _loading = false; });
       }
     } catch (e) {
-      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+      if (!mounted) return;
+      setState(() { _error = mensagemDeErro(e); _loading = false; });
     }
   }
 

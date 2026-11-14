@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'user_agent.dart';
 import 'text_fix.dart';
 import '../models/channel.dart';
 
@@ -6,7 +7,7 @@ import '../models/channel.dart';
 class M3uService {
   /// Baixa o conteúdo de uma URL de lista M3U e retorna o texto bruto.
   Future<String> fetchPlaylist(String url) async {
-    final response = await http.get(Uri.parse(url));
+    final response = await http.get(Uri.parse(url), headers: kIptvHeaders);
     if (response.statusCode != 200) {
       throw Exception('Falha ao baixar a lista (${response.statusCode})');
     }

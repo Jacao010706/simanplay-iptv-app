@@ -1,11 +1,12 @@
-# Build do app Sofae para Windows (teste).
+# Builds de teste do app Sofae: Windows e APK de teste (Android).
 #
-# Roda só em push na branch sofae-windows. Gera Sofae.exe com a marca Sofae e publica a pasta
-# Release como artifact do workflow (sem MSIX, sem release, sem tag). Não usa nenhum secret.
+# Roda só em push na branch sofae-windows. Publica os resultados como artifacts do workflow
+# (sem MSIX, sem release, sem tag). Não usa nenhum secret.
 #
-# A marca é aplicada como no build_apk.yml: sed nas constantes de lib/core/app_config.dart.
-# Os ajustes só do Windows (nome do .exe, título da janela, ícone) também são feitos aqui no CI,
-# sem alterar os arquivos do repositório.
+# A marca é aplicada como no build_apk.yml (sed nas constantes de lib/core/app_config.dart),
+# pelo script .github/sofae/aplicar-marca.sh. Os ajustes só do Windows (nome do .exe, título
+# da janela, ícone) e só do APK de teste (nome, ícone, applicationId) também são feitos aqui
+# no CI, sem alterar os arquivos do repositório.
 name: Sofae Windows
 
 on:
@@ -33,11 +34,18 @@ env:
   # Logo (800x200) e banner (1920x1080) da Sofae, os mesmos do APK apk-sofae-147
   LOGO_URL: 'https://res.cloudinary.com/s4578vyw/image/upload/v1791816753/simanplay/whitelabel/lonqhumpockkwuramlpg.png'
   BANNER_URL: 'https://res.cloudinary.com/s4578vyw/image/upload/v1791816757/simanplay/whitelabel/gnkgzt1uovgbpmttkaqh.png'
-  # Ícone do .exe: ícone oficial da Sofae (512x512) da branch feature/sofae-release, fixado no commit 59f52fe
+  # Ícone: ícone oficial da Sofae (512x512) da branch feature/sofae-release, fixado no commit 59f52fe
   ICON_URL: 'https://raw.githubusercontent.com/Jacao010706/simanplay-iptv-app/59f52fe28802ac7a134419b7d7212bf843655591/store/google-play/graficos/icone-512.png'
   # Windows
   EXE_NAME: 'Sofae'
   COMPANY_NAME: 'Akitemtech'
+  # JSON público com a versão mais nova do app Windows (aviso "Nova versão"). Enquanto o
+  # arquivo não existir, a checagem só não mostra nada.
+  WINDOWS_VERSION_URL: 'https://app.sofae.com.br/windows-version.json'
+  # APK de teste: applicationId do app Sofae (com.sofae.app) + .teste, assinado com a chave de
+  # debug, para instalar ao lado do app oficial sem conflito
+  TEST_APPLICATION_ID: 'com.sofae.app.teste'
+  TEST_APP_LABEL: 'Sofae Teste'
   # Mesma versão do Flutter do build_apk.yml
   FLUTTER_VERSION: '3.44.5'
 
@@ -66,21 +74,14 @@ jobs:
           java-version: '17'
 
       - name: Marca Sofae no AppConfig (igual ao build_apk.yml)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: bash .github/sofae/aplicar-marca.sh
+
+      - name: Aviso de nova versão (URL do JSON)
         run: |
-          to_int() { echo "0xFF$(echo "$1" | sed 's/#//' | tr 'a-f' 'A-F')"; }
-          F=lib/core/app_config.dart
-          sed -i "s/static const String appName = .*/static const String appName = '${APP_NAME}';/" $F
-          sed -i "s/static const String appSubtitle = .*/static const String appSubtitle = '${APP_SUBTITLE}';/" $F
-          sed -i "s/static const int primaryColor = .*/static const int primaryColor = $(to_int "$PRIMARY_COLOR");/" $F
-          sed -i "s/static const int backgroundColor = .*/static const int backgroundColor = $(to_int "$BACKGROUND_COLOR");/" $F
-          sed -i "s/static const int surfaceColor = .*/static const int surfaceColor = $(to_int "$SURFACE_COLOR");/" $F
-          sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = true;/" $F
-          sed -i "s/static const int appTheme = .*/static const int appTheme = ${APP_THEME};/" $F
-          sed -i "s|static const String bannerUrl = .*|static const String bannerUrl = '${BANNER_URL}';|" $F
-          sed -i "s|static const String logoUrl = .*|static const String logoUrl = '${LOGO_URL}';|" $F
-          sed -i "s/static const int buildNumber = .*/static const int buildNumber = ${{ github.run_number }};/" $F
-          sed -i "s/static const String resellerUsername = .*/static const String resellerUsername = '${RESELLER_USERNAME}';/" $F
-          cat $F
+          sed -i "s|const String kWindowsVersionUrl = .*|const String kWindowsVersionUrl = '${WINDOWS_VERSION_URL}';|" lib/core/windows_update_config.dart
+          grep -n "kWindowsVersionUrl =" lib/core/windows_update_config.dart
 
       - name: Marca Sofae no runner do Windows (nome do .exe, janela, ícone)
         run: |
@@ -133,5 +134,100 @@ jobs:
         with:
           name: Sofae-Windows
           path: ${{ runner.temp }}/out
+          retention-days: 14
+          if-no-files-found: error
+
+  build-apk-teste:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Análise e testes (suíte inteira)
+        run: |
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+          flutter test
+
+      - name: Marca Sofae no AppConfig (igual ao build_apk.yml)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: bash .github/sofae/aplicar-marca.sh
+
+      - name: Nome, ícone e banner do APK de teste
+        run: |
+          sed -i "s/android:label=\"[^\"]*\"/android:label=\"${TEST_APP_LABEL}\"/" android/app/src/main/AndroidManifest.xml
+          grep -o 'android:label="[^"]*"' android/app/src/main/AndroidManifest.xml | head -1
+          pip install -q Pillow
+          curl -sSfL "$ICON_URL" -o /tmp/icon_source.png
+          curl -sSfL "$BANNER_URL" -o /tmp/banner_source.png
+          python3 - <<'PYEOF'
+          import os
+          from PIL import Image
+          bg_hex = os.environ["BACKGROUND_COLOR"].lstrip("#")
+          bg = tuple(int(bg_hex[i:i+2], 16) for i in (0, 2, 4)) + (255,)
+
+          def fit(img, w, h, pad, fill):
+              canvas = Image.new("RGBA", (w, h), fill)
+              box_w, box_h = int(w * (1 - 2 * pad)), int(h * (1 - 2 * pad))
+              im = img.copy()
+              im.thumbnail((box_w, box_h), Image.LANCZOS)
+              canvas.alpha_composite(im, ((w - im.width) // 2, (h - im.height) // 2))
+              return canvas
+
+          base = "android/app/src/main/res"
+          icon = Image.open("/tmp/icon_source.png").convert("RGBA")
+          for folder, size in {"mipmap-mdpi": 48, "mipmap-hdpi": 72, "mipmap-xhdpi": 96,
+                               "mipmap-xxhdpi": 144, "mipmap-xxxhdpi": 192}.items():
+              icon.resize((size, size), Image.LANCZOS).save(f"{base}/{folder}/ic_launcher.png")
+          banner = Image.open("/tmp/banner_source.png").convert("RGBA")
+          for folder, (w, h) in {"mipmap-mdpi": (320, 180), "mipmap-hdpi": (480, 270),
+                                 "mipmap-xhdpi": (640, 360), "mipmap-xxhdpi": (960, 540),
+                                 "mipmap-xxxhdpi": (1280, 720)}.items():
+              fit(banner, w, h, 0.0, bg).save(f"{base}/{folder}/tv_banner.png")
+          print("ícones e banners gerados")
+          PYEOF
+
+      # Sem android/key.properties o build.gradle.kts assina o release com a chave de debug
+      - name: Build APK de teste (assinatura de debug)
+        env:
+          APPLICATION_ID: ${{ env.TEST_APPLICATION_ID }}
+        run: |
+          test ! -e android/key.properties || { echo "::error::key.properties não deveria existir aqui"; exit 1; }
+          flutter build apk --release --no-tree-shake-icons --target-platform android-arm,android-arm64 --build-number=${{ github.run_number }}
+          mkdir -p "$RUNNER_TEMP/apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/apk/Sofae-Teste.apk"
+
+      - name: Conferir applicationId e assinatura de debug
+        run: |
+          APK="$RUNNER_TEMP/apk/Sofae-Teste.apk"
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" | head -1
+          "$AAPT" dump badging "$APK" | grep -q "package: name='${TEST_APPLICATION_ID}'" \
+            || { echo "::error::applicationId diferente de ${TEST_APPLICATION_ID}"; exit 1; }
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK" | grep -E "certificate DN|SHA-256 digest" | head -2
+          "$APKSIGNER" verify --print-certs "$APK" | grep -q "CN=Android Debug" \
+            || { echo "::error::o APK de teste não está com a assinatura de debug"; exit 1; }
+          ls -la "$APK"
+
+      - name: Publicar artifact Sofae-APK-Teste
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sofae-APK-Teste
+          path: ${{ runner.temp }}/apk/Sofae-Teste.apk
           retention-days: 14
           if-no-files-found: error

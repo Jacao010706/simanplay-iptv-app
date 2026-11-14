@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import '../core/erros.dart';
+import '../core/janela_pc.dart';
+import '../core/plataforma.dart';
 import '../core/stream_sources.dart';
+import '../core/user_agent.dart';
 import '../services/epg_service.dart';
 import '../services/recording_service.dart';
 import '../services/assistindo_service.dart';
@@ -36,18 +40,31 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen> {
   late final Player _player;
   late final VideoController _controller;
-  /// Fontes a tentar, em ordem (canal ao vivo: cada URL + o outro formato .ts/.m3u8)
+  /// Fontes a tentar, em ordem (canal ao vivo: cada URL + o outro formato .ts/.m3u8).
+  /// Cada fonte é tentada UMA vez: com contas de 1 conexão, tentar de novo em seguida
+  /// esbarra na conexão anterior que o servidor ainda está contando.
   late final List<String> _sources;
   int _currentUrlIndex = 0;
   String? _errorMessage;
-  /// Novas tentativas já feitas na fonte atual (cada fonte é tentada 2 vezes)
-  int _retries = 0;
   /// O vídeo da fonte atual já começou a tocar: erros depois disso são ignorados
   bool _started = false;
   DateTime _openedAt = DateTime.now();
   Timer? _startTimer;
-  String? _lastError;
-  String? _failedUrl;
+  /// Motivo real da falha de cada fonte já tentada (sem URL, usuário ou senha)
+  final List<String> _motivos = [];
+  /// Status HTTP visto no log do mpv para a fonte atual (ex.: 401)
+  int? _ultimoHttp;
+  bool _algumaRecusa = false;
+  /// Trocando de fonte (player parado, esperando [_pausaEntreFontes])
+  bool _trocando = false;
+  /// Aumenta a cada abertura: cancela trocas e timers de uma tentativa antiga
+  int _geracao = 0;
+  /// Aviso no meio da tela enquanto troca de fonte
+  String? _aviso;
+  /// PC: janela em tela cheia
+  bool _telaCheia = false;
+
+  static const _pausaEntreFontes = Duration(seconds: 3);
   final List<StreamSubscription<dynamic>> _subs = [];
   // Programacao do canal ao vivo (null = canal sem EPG)
   List<EpgProgram>? _epg;
@@ -87,6 +104,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     _sources = widget.isLive ? liveStreamSources(widget.urls) : List.of(widget.urls);
     _subs.add(_player.stream.error.listen(_onPlayerError));
+    // Status HTTP da fonte (o erro do mpv nem sempre traz o código)
+    _subs.add(_player.stream.log.listen((log) {
+      final m = RegExp(r'(?:HTTP error|Server returned) (\d{3})').firstMatch(log.text);
+      if (m != null) _ultimoHttp = int.tryParse(m[1]!);
+    }));
+    // User-Agent também na propriedade do mpv (além do cabeçalho de cada Media)
+    final plataforma = _player.platform;
+    if (plataforma is NativePlayer) {
+      plataforma.setProperty('user-agent', kIptvUserAgent).catchError((_) {});
+    }
     _subs.add(_player.stream.position.listen((p) {
       if (p > Duration.zero) _markStarted();
     }));
@@ -211,24 +238,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (mounted) setState(() {});
   }
 
-  void _tryPlayUrl(int index, {bool retry = false}) {
+  void _tryPlayUrl(int index) {
     _startTimer?.cancel();
+    _geracao++;
+    _trocando = false;
     if (index >= _sources.length) {
       setState(() {
         _errorMessage = 'Nenhuma playlist disponível no momento.';
       });
       return;
     }
+    if (index == 0) {
+      _motivos.clear();
+      _algumaRecusa = false;
+    }
     setState(() {
       _currentUrlIndex = index;
       _errorMessage = null;
       _paused = false;
+      _aviso = null;
     });
-    if (!retry) _retries = 0;
     _started = false;
+    _ultimoHttp = null;
     _openedAt = DateTime.now();
     _player.open(
-      Media(_sources[index]),
+      Media(_sources[index], httpHeaders: kIptvHeaders),
       play: true,
     );
     // Sem erro e sem imagem em 12 s: considera a fonte falha
@@ -243,9 +277,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _onPlayerError(String error) {
-    // Avisos do mpv com o vídeo já tocando não derrubam o canal
-    if (_started || _player.state.playing || _player.state.position > Duration.zero) {
-      _lastError = error;
+    // Avisos do mpv com o vídeo já tocando (ou do player parado na troca) não derrubam o canal
+    if (_trocando || _started || _player.state.playing || _player.state.position > Duration.zero) {
       return;
     }
     // Erros que chegam logo após abrir ainda são da fonte anterior
@@ -253,21 +286,60 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _sourceFailed(error);
   }
 
-  void _sourceFailed(String reason) {
-    if (!mounted || _started || _errorMessage != null) return;
+  /// Formato da fonte para mostrar na tela (nunca a URL).
+  static String _formato(String url) {
+    final path = Uri.tryParse(url)?.path ?? '';
+    final ultimo = path.substring(path.lastIndexOf('/') + 1);
+    final ponto = ultimo.lastIndexOf('.');
+    return ponto < 0 ? 'stream' : ultimo.substring(ponto + 1).toLowerCase();
+  }
+
+  static String _textoHttp(int code) => switch (code) {
+        401 || 403 => 'HTTP $code (acesso negado pelo servidor)',
+        404 => 'HTTP 404 (não encontrado no servidor)',
+        >= 500 => 'HTTP $code (erro no servidor)',
+        _ => 'HTTP $code',
+      };
+
+  Future<void> _sourceFailed(String reason) async {
+    if (!mounted || _started || _trocando || _errorMessage != null) return;
     _startTimer?.cancel();
-    _lastError = reason;
-    _failedUrl = _sources[_currentUrlIndex];
-    if (_retries < 1) {
-      _retries++;
-      _tryPlayUrl(_currentUrlIndex, retry: true);
-    } else if (_currentUrlIndex + 1 < _sources.length) {
-      _tryPlayUrl(_currentUrlIndex + 1);
+    _trocando = true;
+    final geracao = ++_geracao;
+    final i = _currentUrlIndex;
+    final http = _ultimoHttp;
+    if (http == 401 || http == 403) _algumaRecusa = true;
+    var detalhe = http != null ? _textoHttp(http) : semCredenciais(reason).trim();
+    if (detalhe.length > 140) detalhe = '${detalhe.substring(0, 140)}…';
+    _motivos.add('Fonte ${i + 1}/${_sources.length} (${_formato(_sources[i])}): $detalhe');
+
+    // Para e libera o player antes da próxima fonte
+    try {
+      await _player.stop();
+    } catch (_) {}
+    if (!mounted || geracao != _geracao) return;
+
+    if (i + 1 < _sources.length) {
+      setState(() => _aviso =
+          'A fonte ${i + 1} não abriu. Tentando a fonte ${i + 2}/${_sources.length} em ${_pausaEntreFontes.inSeconds} s…');
+      await Future<void>.delayed(_pausaEntreFontes);
+      if (!mounted || geracao != _geracao) return;
+      _tryPlayUrl(i + 1);
     } else {
       setState(() {
-        _errorMessage = 'Todas as fontes falharam. Verifique sua conexão.';
+        _trocando = false;
+        _aviso = null;
+        _errorMessage = _algumaRecusa
+            ? 'O servidor recusou o acesso a este conteúdo agora (a conta pode estar em uso em outro '
+                'aparelho ou bloqueada temporariamente). Feche outros apps com esta lista e tente em alguns minutos.'
+            : 'Não foi possível reproduzir este conteúdo. Verifique sua conexão e tente novamente.';
       });
     }
+  }
+
+  Future<void> _alternarTelaCheia() async {
+    final ligada = await JanelaPc.alternarTelaCheia();
+    if (mounted) setState(() => _telaCheia = ligada);
   }
 
   @override
@@ -277,6 +349,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _recTick?.cancel();
     _startTimer?.cancel();
+    _geracao++;
+    if (_telaCheia) JanelaPc.definirTelaCheia(false);
     _epgTick?.cancel();
     for (final sub in _subs) {
       sub.cancel();
@@ -294,9 +368,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ? _buildError()
           : PlayerRemoteControls(
               title: widget.title,
-              subtitle: widget.urls.length > 1 || _currentUrlIndex > 0
+              subtitle: _sources.length > 1
                   ? 'Fonte ${_currentUrlIndex + 1}/${_sources.length}'
                   : null,
+              onFullscreen: Plataforma.windows ? _alternarTelaCheia : null,
+              fullscreen: _telaCheia,
               paused: _paused,
               onPlayPause: _togglePause,
               onBack: () => Navigator.pop(context),
@@ -323,6 +399,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 controls: NoVideoControls,
               ),
             ),
+            if (_aviso != null)
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(10)),
+                  child: Text(_aviso!,
+                      style: const TextStyle(color: Colors.white, fontSize: 15), textAlign: TextAlign.center),
+                ),
+              ),
 
           ],
         ),
@@ -342,17 +428,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
             Text(_errorMessage!,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 textAlign: TextAlign.center),
-            if (_lastError != null || _failedUrl != null) ...[
+            if (_motivos.isNotEmpty) ...[
               const SizedBox(height: 8),
-              // Detalhe técnico para o suporte (sem usuário e senha)
+              // Motivo real de cada fonte, para o suporte (sem URL, usuário ou senha)
               Text(
-                [
-                  if (_lastError != null) _lastError!,
-                  if (_failedUrl != null) maskStreamUrl(_failedUrl!),
-                ].join('\n'),
+                _motivos.join('\n'),
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
                 textAlign: TextAlign.center,
-                maxLines: 3,
+                maxLines: 4,
                 overflow: TextOverflow.ellipsis,
               ),
             ],

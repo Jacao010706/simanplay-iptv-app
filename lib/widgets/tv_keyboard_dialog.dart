@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/plataforma.dart';
+
 /// Teclado customizado navegável via controle remoto (D-pad) para Android TV.
 /// Mostra um diálogo com grid de caracteres que responde a setas + OK/Select.
 class TvKeyboardDialog extends StatefulWidget {
@@ -111,6 +113,13 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog> {
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+    // PC: Enter do teclado físico confirma o texto digitado (o OK do controle continua
+    // apertando a tecla destacada no teclado da tela)
+    if (Plataforma.windows &&
+        (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+      Navigator.of(context).pop(_value);
+      return KeyEventResult.handled;
+    }
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowUp:
         _move(-1, 0);

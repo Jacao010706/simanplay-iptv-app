@@ -8,6 +8,7 @@ import '../services/xtream_service.dart';
 import 'player_screen.dart';
 import '../widgets/tv_focus.dart';
 import '../widgets/tv_search_field.dart';
+import '../core/erros.dart';
 
 class MoviesScreen extends StatefulWidget {
   final AppSession session;
@@ -57,7 +58,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+      setState(() { _error = mensagemDeErro(e); _loading = false; });
     }
   }
 

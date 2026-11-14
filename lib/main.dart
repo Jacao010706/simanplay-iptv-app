@@ -5,14 +5,19 @@ import 'core/providers/theme_provider.dart';
 import 'screens/device_home_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/app_config.dart';
+import 'core/janela_pc.dart';
+import 'core/plataforma.dart';
 import 'services/update_service.dart';
+import 'widgets/pc_input.dart';
 import 'widgets/tv_focus.dart';
 import 'services/recording_service.dart';
 import 'services/assistindo_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized(); // necessário para o player de vídeo
+  // PC: janela 1280x720 (mínimo 960x540) com o nome do app. Fora do Windows não faz nada.
+  await JanelaPc.iniciar();
   runApp(const IptvPlayerApp());
   // Novidades da versao + verificacao de atualizacao (em segundo plano)
   UpdateService.runStartupChecks();
@@ -34,6 +39,8 @@ class IptvPlayerApp extends StatelessWidget {
           return MaterialApp(
             navigatorKey: appNavigatorKey,
             shortcuts: appShortcuts,
+            // PC: listas também rolam arrastando com o mouse
+            scrollBehavior: Plataforma.windows ? const RolagemPc() : null,
             title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
@@ -48,8 +55,12 @@ class IptvPlayerApp extends StatelessWidget {
               return MediaQuery(
                 data: mq.copyWith(
                     textScaler: mq.textScaler.clamp(maxScaleFactor: 1.15)),
-                child: FocusRing(
-                    child: LicenseGate(child: child ?? const SizedBox.shrink())),
+                // PC: Esc/Backspace voltam uma tela
+                child: AtalhosPc(
+                  navigatorKey: appNavigatorKey,
+                  child: FocusRing(
+                      child: LicenseGate(child: child ?? const SizedBox.shrink())),
+                ),
               );
             },
           );

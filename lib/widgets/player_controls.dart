@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/plataforma.dart';
 import '../services/epg_service.dart';
 
 /// Controles do player pensados para o controle remoto da TV (e toque).
@@ -14,6 +15,10 @@ import '../services/epg_service.dart';
 /// Canal ao vivo com [programs]: painel "AGORA" acima dos botoes e botao
 /// Programacao, que abre a grade na lateral (cima/baixo escolhem, OK agenda,
 /// Voltar ou seta esquerda fecha).
+///
+/// No PC (Windows), além disso: Espaço pausa/continua, F ou duplo clique no vídeo
+/// alternam a tela cheia, Esc sai da tela cheia, e o mouse mostra os controles e
+/// destaca o botão embaixo do cursor.
 class PlayerRemoteControls extends StatefulWidget {
   const PlayerRemoteControls({
     super.key,
@@ -32,6 +37,8 @@ class PlayerRemoteControls extends StatefulWidget {
     this.isScheduled,
     this.onToggleSchedule,
     this.clock,
+    this.onFullscreen,
+    this.fullscreen = false,
   });
 
   final Widget child;
@@ -56,6 +63,10 @@ class PlayerRemoteControls extends StatefulWidget {
   final Future<void> Function(EpgProgram program)? onToggleSchedule;
   /// So para testes: relogio usado para "agora"
   final DateTime Function()? clock;
+  /// PC: alterna a tela cheia (null = sem tela cheia)
+  final VoidCallback? onFullscreen;
+  /// PC: a janela esta em tela cheia
+  final bool fullscreen;
 
   static const hideAfter = Duration(seconds: 5);
 
@@ -292,6 +303,26 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
       return KeyEventResult.handled;
     }
 
+    // PC: Espaço pausa, F alterna a tela cheia, Esc sai da tela cheia
+    if (Plataforma.windows) {
+      if (k == LogicalKeyboardKey.space) {
+        if (down) {
+          widget.onPlayPause();
+          _show(select: false);
+        }
+        return KeyEventResult.handled;
+      }
+      final fs = widget.onFullscreen;
+      if (fs != null && k == LogicalKeyboardKey.keyF) {
+        if (down) fs();
+        return KeyEventResult.handled;
+      }
+      if (fs != null && widget.fullscreen && !_guideOpen && k == LogicalKeyboardKey.escape) {
+        if (down) fs();
+        return KeyEventResult.handled;
+      }
+    }
+
     if (_guideOpen) return _onGuideKey(k, down);
 
     final hasSelection = _visible && _selected != null;
@@ -335,7 +366,15 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
       child: Semantics(
         button: true,
         label: label,
-        child: GestureDetector(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: Plataforma.windows ? (_) => _show(select: false) : null,
+          onHover: Plataforma.windows
+              ? (_) {
+                  if (_selected != id) setState(() => _selected = id);
+                }
+              : null,
+          child: GestureDetector(
           onTap: () {
             setState(() => _selected = id);
             _activate(id);
@@ -355,6 +394,7 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -373,8 +413,15 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
         autofocus: true,
         onKeyEvent: _onKey,
         child: Stack(fit: StackFit.expand, children: [
-        GestureDetector(
+        MouseRegion(
+          onHover: Plataforma.windows
+              ? (_) {
+                  if (!_visible) _show(select: false);
+                }
+              : null,
+          child: GestureDetector(
           behavior: HitTestBehavior.opaque,
+          onDoubleTap: Plataforma.windows ? widget.onFullscreen : null,
           onTap: () {
             if (_visible) {
               setState(() {
@@ -386,6 +433,7 @@ class PlayerRemoteControlsState extends State<PlayerRemoteControls> {
             }
           },
           child: widget.child,
+        ),
         ),
         if (widget.paused)
           const IgnorePointer(

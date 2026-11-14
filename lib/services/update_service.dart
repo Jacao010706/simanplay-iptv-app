@@ -7,8 +7,11 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
+import '../core/erros.dart';
+import '../core/plataforma.dart';
 import '../core/release_notes.dart';
 import '../core/update_check.dart';
+import 'atualizacao_windows.dart';
 
 /// Chave global do Navigator: permite mostrar avisos em qualquer tela.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -27,6 +30,12 @@ class UpdateService {
     _started = true;
     await Future.delayed(const Duration(seconds: 4));
     await _showReleaseNotesIfNeeded();
+    // PC: aviso de nova versão (JSON público); o atualizador de APK é só do Android
+    if (Plataforma.windows) {
+      await AtualizacaoWindows.verificar(() => appNavigatorKey.currentContext);
+      return;
+    }
+    if (!Plataforma.atualizadorApk) return;
     final ctx = appNavigatorKey.currentContext;
     if (ctx != null && ctx.mounted) await checkForUpdate(ctx);
   }
@@ -195,7 +204,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() { _error = 'Falha no download: $e'; _progress = null; });
+        setState(() { _error = 'Falha no download: ${mensagemDeErro(e)}'; _progress = null; });
       }
     }
   }
