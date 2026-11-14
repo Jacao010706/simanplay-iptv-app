@@ -1,0 +1,137 @@
+# Build do app Sofae para Windows (teste).
+#
+# Roda só em push na branch sofae-windows. Gera Sofae.exe com a marca Sofae e publica a pasta
+# Release como artifact do workflow (sem MSIX, sem release, sem tag). Não usa nenhum secret.
+#
+# A marca é aplicada como no build_apk.yml: sed nas constantes de lib/core/app_config.dart.
+# Os ajustes só do Windows (nome do .exe, título da janela, ícone) também são feitos aqui no CI,
+# sem alterar os arquivos do repositório.
+name: Sofae Windows
+
+on:
+  push:
+    branches:
+      - sofae-windows
+
+concurrency:
+  group: sofae-windows
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # ---------------- Valores da marca Sofae (confira aqui) ----------------
+  APP_NAME: 'Sofae'
+  APP_SUBTITLE: ''
+  RESELLER_USERNAME: 'sofae'
+  # Cores e tema: os mesmos da variante Play (lib/core/marca.dart na branch feature/sofae-release)
+  PRIMARY_COLOR: '#FF8A1A'
+  BACKGROUND_COLOR: '#1A0B33'
+  SURFACE_COLOR: '#2E1F4D'
+  APP_THEME: '6'
+  # Logo (800x200) e banner (1920x1080) da Sofae, os mesmos do APK apk-sofae-147
+  LOGO_URL: 'https://res.cloudinary.com/s4578vyw/image/upload/v1791816753/simanplay/whitelabel/lonqhumpockkwuramlpg.png'
+  BANNER_URL: 'https://res.cloudinary.com/s4578vyw/image/upload/v1791816757/simanplay/whitelabel/gnkgzt1uovgbpmttkaqh.png'
+  # Ícone do .exe: ícone oficial da Sofae (512x512) da branch feature/sofae-release, fixado no commit 59f52fe
+  ICON_URL: 'https://raw.githubusercontent.com/Jacao010706/simanplay-iptv-app/59f52fe28802ac7a134419b7d7212bf843655591/store/google-play/graficos/icone-512.png'
+  # Windows
+  EXE_NAME: 'Sofae'
+  COMPANY_NAME: 'Akitemtech'
+  # Mesma versão do Flutter do build_apk.yml
+  FLUTTER_VERSION: '3.44.5'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      # O plugin FFI "jni" (dependência indireta) também compila no Windows
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Marca Sofae no AppConfig (igual ao build_apk.yml)
+        run: |
+          to_int() { echo "0xFF$(echo "$1" | sed 's/#//' | tr 'a-f' 'A-F')"; }
+          F=lib/core/app_config.dart
+          sed -i "s/static const String appName = .*/static const String appName = '${APP_NAME}';/" $F
+          sed -i "s/static const String appSubtitle = .*/static const String appSubtitle = '${APP_SUBTITLE}';/" $F
+          sed -i "s/static const int primaryColor = .*/static const int primaryColor = $(to_int "$PRIMARY_COLOR");/" $F
+          sed -i "s/static const int backgroundColor = .*/static const int backgroundColor = $(to_int "$BACKGROUND_COLOR");/" $F
+          sed -i "s/static const int surfaceColor = .*/static const int surfaceColor = $(to_int "$SURFACE_COLOR");/" $F
+          sed -i "s/static const bool useCustomLogo = .*/static const bool useCustomLogo = true;/" $F
+          sed -i "s/static const int appTheme = .*/static const int appTheme = ${APP_THEME};/" $F
+          sed -i "s|static const String bannerUrl = .*|static const String bannerUrl = '${BANNER_URL}';|" $F
+          sed -i "s|static const String logoUrl = .*|static const String logoUrl = '${LOGO_URL}';|" $F
+          sed -i "s/static const int buildNumber = .*/static const int buildNumber = ${{ github.run_number }};/" $F
+          sed -i "s/static const String resellerUsername = .*/static const String resellerUsername = '${RESELLER_USERNAME}';/" $F
+          cat $F
+
+      - name: Marca Sofae no runner do Windows (nome do .exe, janela, ícone)
+        run: |
+          sed -i "s/set(BINARY_NAME \"[^\"]*\")/set(BINARY_NAME \"${EXE_NAME}\")/" windows/CMakeLists.txt
+          sed -i "s/window.Create(L\"[^\"]*\"/window.Create(L\"${APP_NAME}\"/" windows/runner/main.cpp
+          RC=windows/runner/Runner.rc
+          sed -i "s/VALUE \"CompanyName\", \"[^\"]*\"/VALUE \"CompanyName\", \"${COMPANY_NAME}\"/" $RC
+          sed -i "s/VALUE \"FileDescription\", \"[^\"]*\"/VALUE \"FileDescription\", \"${APP_NAME}\"/" $RC
+          sed -i "s/VALUE \"InternalName\", \"[^\"]*\"/VALUE \"InternalName\", \"${EXE_NAME}\"/" $RC
+          sed -i "s/VALUE \"OriginalFilename\", \"[^\"]*\"/VALUE \"OriginalFilename\", \"${EXE_NAME}.exe\"/" $RC
+          sed -i "s/VALUE \"ProductName\", \"[^\"]*\"/VALUE \"ProductName\", \"${APP_NAME}\"/" $RC
+          grep -n "BINARY_NAME \"" windows/CMakeLists.txt
+          grep -n "window.Create" windows/runner/main.cpp
+          grep -n -E "CompanyName|FileDescription|InternalName|OriginalFilename|ProductName" $RC
+
+          python -m pip install -q Pillow
+          curl -sSfL "$ICON_URL" -o "$RUNNER_TEMP/icon.png"
+          python - <<'PYEOF'
+          import os
+          from PIL import Image
+          src = Image.open(os.path.join(os.environ["RUNNER_TEMP"], "icon.png")).convert("RGBA")
+          sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+          src.save("windows/runner/resources/app_icon.ico", sizes=sizes)
+          print("app_icon.ico:", sizes)
+          PYEOF
+
+      - name: Dependências
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release --no-tree-shake-icons --build-number=${{ github.run_number }}
+
+      - name: Montar pasta do app (com runtime do Visual C++)
+        run: |
+          REL=build/windows/x64/runner/Release
+          test -f "$REL/${EXE_NAME}.exe" || { echo "::error::${EXE_NAME}.exe não encontrado em $REL"; ls -la "$REL"; exit 1; }
+          OUT="$RUNNER_TEMP/out/Sofae"
+          mkdir -p "$OUT"
+          cp -r "$REL"/. "$OUT"/
+          # Sem estas DLLs o app não abre em PCs sem o Visual C++ Redistributable instalado
+          for dll in msvcp140.dll vcruntime140.dll vcruntime140_1.dll; do
+            cp "/c/Windows/System32/$dll" "$OUT"/
+          done
+          ls -la "$OUT"
+          du -sh "$OUT"
+
+      # O artifact é baixado como Sofae-Windows.zip, com a pasta Sofae\ (Sofae.exe + DLLs + data\) dentro.
+      - name: Publicar artifact Sofae-Windows.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sofae-Windows
+          path: ${{ runner.temp }}/out
+          retention-days: 14
+          if-no-files-found: error
