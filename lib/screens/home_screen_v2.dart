@@ -85,9 +85,9 @@ Future<Map<String, List>> _loadXtream(AppSession session) async {
       password: session.effectiveXtreamPassword!,
     );
     final cats = await Future.wait([
-      svc.getLiveCategories(),
-      svc.getMovieCategories(),
-      svc.getSeriesCategories(),
+      svc.getLivePastas(),
+      svc.getMoviePastas(),
+      svc.getSeriesPastas(),
     ]);
     final liveCats = cats[0], movieCats = cats[1], seriesCats = cats[2];
     if (liveCats.isNotEmpty) {
@@ -262,7 +262,7 @@ class _SidebarLayoutState extends State<_SidebarLayout> {
     if (!widget.session.hasXtreamAccess) { setState(() => _loading = false); return; }
     try {
       final svc = XtreamService(host: widget.session.effectiveXtreamHost!, username: widget.session.effectiveXtreamUsername!, password: widget.session.effectiveXtreamPassword!);
-      final cats = await svc.getLiveCategories();
+      final cats = await svc.getLivePastas();
       if (cats.isNotEmpty) { final ch = await svc.getLiveStreams(cats[0].id, cats[0].name); setState(() { _cats = cats; _ch = ch; _loading = false; }); }
       else setState(() => _loading = false);
     } catch (_) { setState(() => _loading = false); }

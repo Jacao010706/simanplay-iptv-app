@@ -116,12 +116,65 @@ class XtreamService {
     return futuro;
   }
 
-  Future<Map<String, String>> _nomes(Future<List<Category>> categorias) async {
-    try {
-      return {for (final c in await categorias) c.id: c.name};
-    } catch (_) {
-      return const {};
+  // ---------------------------------------------------------------- Filtro por tipo
+
+  /// stream_type aceito em cada aba. Alguns painéis devolvem TODOS os tipos (canais,
+  /// filmes e séries) no get_live_streams sem category_id; o que não for do tipo da aba
+  /// é descartado.
+  static const tiposAoVivo = {'live', 'created_live', 'radio_streams'};
+  static const tiposFilme = {'movie'};
+  static const tiposSerie = {'series'};
+
+  /// Mantém só os itens com stream_type de [tipos] E com categoria em [categorias].
+  /// stream_type vazio ou ausente: vale só a regra da categoria. A categoria vem de
+  /// category_id ou, em alguns painéis, da lista category_ids.
+  static List<Map<String, dynamic>> filtrarItens(
+    List<dynamic> itens, {
+    required Set<String> tipos,
+    required Set<String> categorias,
+  }) {
+    final out = <Map<String, dynamic>>[];
+    for (final e in itens) {
+      if (e is! Map) continue;
+      final json = Map<String, dynamic>.from(e);
+      final tipo = (json['stream_type'] ?? '').toString().trim().toLowerCase();
+      if (tipo.isNotEmpty && !tipos.contains(tipo)) continue;
+      if (_categoriaDoItem(json, categorias) == null) continue;
+      out.add(json);
     }
+    return out;
+  }
+
+  /// Categoria do item que existe em [categorias] (category_id primeiro, depois category_ids).
+  static String? _categoriaDoItem(Map<String, dynamic> json, Set<String> categorias) {
+    final id = json['category_id']?.toString() ?? '';
+    if (id.isNotEmpty && categorias.contains(id)) return id;
+    final ids = json['category_ids'];
+    if (ids is List) {
+      for (final i in ids) {
+        if (categorias.contains('$i')) return '$i';
+      }
+    }
+    return null;
+  }
+
+  /// Lê e filtra a lista do tipo, já com o category_id que existe nas categorias do tipo.
+  Future<List<Map<String, dynamic>>> _itensFiltrados(
+      String action, Future<List<Category>> categorias, Set<String> tipos) async {
+    final cats = await categorias;
+    final ids = {for (final c in cats) c.id};
+    final data = await _getList(action);
+    return [
+      for (final json in filtrarItens(data, tipos: tipos, categorias: ids))
+        {...json, 'category_id': _categoriaDoItem(json, ids)},
+    ];
+  }
+
+  /// Pastas da aba: só categorias do get_*_categories que têm pelo menos um item
+  /// depois do filtro (nunca cria pasta a partir dos itens).
+  static List<Category> _pastasComItens(List<Category> cats, Iterable<String> idsDosItens) {
+    final usados = idsDosItens.toSet();
+    return cats.where((c) => usados.contains(c.id)).toList();
   }
 
   // ---------------------------------------------------------------- Conta
@@ -147,22 +200,26 @@ class XtreamService {
         return data.map((e) => Category.fromXtream(json: Map<String, dynamic>.from(e as Map), type: 'live')).toList();
       });
 
-  /// Todos os canais numa chamada só (get_live_streams sem category_id).
+  /// Todos os canais numa chamada só (get_live_streams sem category_id), só do tipo canal
+  /// e só das categorias de get_live_categories.
   Future<List<Channel>> getAllLiveStreams() async {
     final todos = await _memo('live_streams', () async {
-      final nomes = _nomes(getLiveCategories());
-      final data = await _getList('get_live_streams');
-      final n = await nomes;
-      return data.map((e) {
-        final json = Map<String, dynamic>.from(e as Map);
-        return Channel.fromXtream(
-          json: json, host: host, username: username, password: password,
-          categoryName: n[json['category_id']?.toString() ?? ''] ?? '',
-        );
-      }).toList();
+      final cats = getLiveCategories();
+      final itens = await _itensFiltrados('get_live_streams', cats, tiposAoVivo);
+      final n = {for (final c in await cats) c.id: c.name};
+      return itens
+          .map((json) => Channel.fromXtream(
+                json: json, host: host, username: username, password: password,
+                categoryName: n[json['category_id']] ?? '',
+              ))
+          .toList();
     });
     return List.of(todos);
   }
+
+  /// Pastas da aba Ao Vivo: categorias de get_live_categories que ficaram com canais.
+  Future<List<Category>> getLivePastas() async =>
+      _pastasComItens(await getLiveCategories(), (await getAllLiveStreams()).map((c) => c.categoryId));
 
   /// Canais de uma categoria: filtra a lista completa (não chama o servidor de novo).
   Future<List<Channel>> getLiveStreams(String categoryId, String categoryName) async =>
@@ -175,21 +232,24 @@ class XtreamService {
         return data.map((e) => Category.fromXtream(json: Map<String, dynamic>.from(e as Map), type: 'movie')).toList();
       });
 
+  /// Todos os filmes (get_vod_streams), só stream_type movie e categorias de get_vod_categories.
   Future<List<Movie>> getAllMovies() async {
     final todos = await _memo('vod_streams', () async {
-      final nomes = _nomes(getMovieCategories());
-      final data = await _getList('get_vod_streams');
-      final n = await nomes;
-      return data.map((e) {
-        final json = Map<String, dynamic>.from(e as Map);
-        return Movie.fromXtream(
-          json: json, host: host, username: username, password: password,
-          categoryName: n[json['category_id']?.toString() ?? ''] ?? '',
-        );
-      }).toList();
+      final cats = getMovieCategories();
+      final itens = await _itensFiltrados('get_vod_streams', cats, tiposFilme);
+      final n = {for (final c in await cats) c.id: c.name};
+      return itens
+          .map((json) => Movie.fromXtream(
+                json: json, host: host, username: username, password: password,
+                categoryName: n[json['category_id']] ?? '',
+              ))
+          .toList();
     });
     return List.of(todos);
   }
+
+  Future<List<Category>> getMoviePastas() async =>
+      _pastasComItens(await getMovieCategories(), (await getAllMovies()).map((m) => m.categoryId));
 
   Future<List<Movie>> getMovies(String categoryId, String categoryName) async =>
       (await getAllMovies()).where((m) => m.categoryId == categoryId).toList();
@@ -201,18 +261,21 @@ class XtreamService {
         return data.map((e) => Category.fromXtream(json: Map<String, dynamic>.from(e as Map), type: 'series')).toList();
       });
 
+  /// Todas as séries (get_series), só das categorias de get_series_categories.
   Future<List<Series>> getAllSeries() async {
     final todas = await _memo('series', () async {
-      final nomes = _nomes(getSeriesCategories());
-      final data = await _getList('get_series');
-      final n = await nomes;
-      return data.map((e) {
-        final json = Map<String, dynamic>.from(e as Map);
-        return Series.fromXtream(json: json, categoryName: n[json['category_id']?.toString() ?? ''] ?? '');
-      }).toList();
+      final cats = getSeriesCategories();
+      final itens = await _itensFiltrados('get_series', cats, tiposSerie);
+      final n = {for (final c in await cats) c.id: c.name};
+      return itens
+          .map((json) => Series.fromXtream(json: json, categoryName: n[json['category_id']] ?? ''))
+          .toList();
     });
     return List.of(todas);
   }
+
+  Future<List<Category>> getSeriesPastas() async =>
+      _pastasComItens(await getSeriesCategories(), (await getAllSeries()).map((s) => s.categoryId));
 
   Future<List<Series>> getSeries(String categoryId, String categoryName) async =>
       (await getAllSeries()).where((s) => s.categoryId == categoryId).toList();

@@ -202,7 +202,7 @@ class SportsService {
     );
     // Uma chamada só para todos os canais (a mesma lista em cache da aba Ao Vivo),
     // filtrada pelas categorias de esporte, na ordem das categorias
-    final cats = (await svc.getLiveCategories()).where((c) => isSportsCategory(c.name)).toList();
+    final cats = (await svc.getLivePastas()).where((c) => isSportsCategory(c.name)).toList();
     final porCategoria = <String, List<Channel>>{for (final c in cats) c.id: []};
     for (final ch in await svc.getAllLiveStreams()) {
       porCategoria[ch.categoryId]?.add(ch);

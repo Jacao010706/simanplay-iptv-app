@@ -54,7 +54,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
         password: widget.session.effectiveXtreamPassword!,
       );
       final results = await Future.wait([
-        service.getSeriesCategories(),
+        service.getSeriesPastas(),
         service.getAllSeries(),
       ]);
       setState(() {

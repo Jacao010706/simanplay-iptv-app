@@ -51,7 +51,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
         username: widget.session.effectiveXtreamUsername!,
         password: widget.session.effectiveXtreamPassword!,
       );
-      final results = await Future.wait([service.getMovieCategories(), service.getAllMovies()]);
+      final results = await Future.wait([service.getMoviePastas(), service.getAllMovies()]);
       setState(() {
         _categories = results[0] as List<Category>;
         _allMovies = results[1] as List<Movie>;

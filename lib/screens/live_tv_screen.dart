@@ -79,8 +79,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
           username: widget.session.effectiveXtreamUsername!,
           password: widget.session.effectiveXtreamPassword!,
         );
-        // Uma chamada para as categorias e uma para todos os canais (antes: uma por categoria)
-        final cats = await service.getLiveCategories();
+        // Uma chamada para as categorias e uma para todos os canais (antes: uma por categoria).
+        // Pastas só das categorias de get_live_categories que ficaram com canais.
+        final cats = await service.getLivePastas();
         final allCh = await service.getAllLiveStreams();
         if (!mounted) return;
         setState(() { _categories = cats; _allChannels = allCh; _loading = false; });
