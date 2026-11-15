@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_config.dart';
+import '../core/versao.dart';
 import '../models/app_session.dart';
 import '../services/device_lists_service.dart';
 import '../services/license_service.dart';
@@ -280,6 +281,8 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
                       device,
                     ]);
                   }),
+                  const SizedBox(height: 16),
+                  Center(child: Text(versaoApp, style: const TextStyle(color: Colors.white38, fontSize: 12))),
                 ],
               ),
             ),

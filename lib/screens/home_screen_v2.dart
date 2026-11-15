@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
+import '../core/versao.dart';
 import '../models/app_session.dart';
 import '../services/epg_service.dart';
 import '../services/xtream_service.dart';
@@ -569,6 +570,8 @@ class _IBO6Home extends StatelessWidget {
                 : Container(color: const Color(0xFF1a1a2e))),
             Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xFF0d0d0d)])))),
             Positioned(top: 8, right: 8, child: SafeArea(child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(versaoApp, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              const SizedBox(width: 8),
               if (session.expiresAt != null) Text('Vence: ${_fmtDate(session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
               const SizedBox(width: 4),
               TvTap(onTap: onLogout, child: const Icon(Icons.logout, color: Colors.white54, size: 20)),
@@ -662,6 +665,7 @@ class _HomeTab extends StatelessWidget {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(session.isXtream ? 'Conectado via Xtream Codes' : 'Conectado via ${AppConfig.appName}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
               if (session.isXtream) Text(session.xtreamHost ?? '', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(versaoApp, style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ])),
           ])),
         ])),
