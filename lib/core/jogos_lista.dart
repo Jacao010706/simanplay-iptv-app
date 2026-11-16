@@ -19,6 +19,12 @@ class JogoDaLista {
   /// Veio do nome de um canal de evento (horário mais confiável que o da grade).
   final bool doNome;
 
+  /// A grade marcou o programa como ao vivo ("AO VIVO", "LIVE").
+  final bool aoVivo;
+
+  /// Esporte quando dá para identificar (ver [detectarEsporte]); null = futebol/desconhecido.
+  final String? esporte;
+
   JogoDaLista({
     required this.inicio,
     required this.casa,
@@ -26,6 +32,8 @@ class JogoDaLista {
     this.campeonato,
     List<Channel>? canais,
     this.doNome = true,
+    this.aoVivo = false,
+    this.esporte,
   }) : canais = canais ?? [];
 
   /// Identificador estável (mesmo jogo, mesmo id entre recargas).
@@ -82,20 +90,101 @@ final RegExp _reConfronto = RegExp(r'\s+(?:x|vs\.?|versus)\s+', caseSensitive: f
 final RegExp _reParenteses = RegExp(r'\([^)]*\)|\[[^\]]*\]');
 final RegExp _reAoVivo = RegExp(r'\b(?:ao\s*vivo|live|aovivo)\b\s*[:\-–]?', caseSensitive: false);
 final RegExp _reBordas = RegExp(r'^[\s\-–—:,.;/]+|[\s\-–—:,.;/]+$');
-const Set<String> _qualidade = {'fhd', 'hd', 'sd', 'uhd', '4k', 'fullhd', 'h265', 'hevc', 'h264', 'alt'};
+/// Marcadores que não fazem parte do nome do time (qualidade, "PPV+", número do canal).
+const Set<String> _marcadores = {
+  'fhd', 'hd', 'sd', 'uhd', '4k', 'fullhd', 'h265', 'hevc', 'h264', 'alt', 'ppv', 'evento', 'canal',
+};
 
-/// Tira qualidade ("FHD", "HD²"), sinais e espaços das pontas do nome do time.
+bool _ehMarcador(String palavra) {
+  final n = normalizeText(palavra);
+  return n.isEmpty || _marcadores.contains(n) || RegExp(r'^\d{1,3}$').hasMatch(n);
+}
+
+/// Tira qualidade ("FHD", "HD²"), "PPV+", número do canal, sinais e espaços das pontas.
 String _limparTime(String s) {
   var t = s.replaceAll(RegExp(r'[²³¹]'), ' ').replaceAll(_reBordas, '').trim();
   final palavras = t.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-  while (palavras.isNotEmpty && _qualidade.contains(normalizeText(palavras.last))) {
+  while (palavras.isNotEmpty && _ehMarcador(palavras.last)) {
     palavras.removeLast();
   }
-  while (palavras.isNotEmpty && _qualidade.contains(normalizeText(palavras.first))) {
+  while (palavras.isNotEmpty && _ehMarcador(palavras.first)) {
     palavras.removeAt(0);
   }
   return palavras.join(' ').replaceAll(_reBordas, '').trim();
 }
+
+/// Campeonato (texto que sobra do nome): só se tiver letras de verdade.
+String? _campeonatoOuNull(String? s) {
+  if (s == null) return null;
+  final c = _limparTime(s.replaceAll(_reHora, ' ').replaceAll(_reData, ' ').replaceAll(_reParenteses, ' '));
+  return c.length >= 3 && RegExp(r'[A-Za-zÀ-ÿ]{3}').hasMatch(c) ? c : null;
+}
+
+/// Texto do visitante depois do nome (" - ATP Finals ...") = provável campeonato.
+String? _restoFora(String s) {
+  for (final sep in [' - ', ' – ']) {
+    final i = s.indexOf(sep);
+    if (i != -1) return s.substring(i + sep.length);
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Horário de Brasília
+// ---------------------------------------------------------------------------
+
+/// [t] no horário de Brasília (UTC−3; sem horário de verão desde 2019), como hora "de parede".
+DateTime emBrasilia(DateTime t) {
+  final u = t.toUtc().subtract(const Duration(hours: 3));
+  return DateTime(u.year, u.month, u.day, u.hour, u.minute, u.second);
+}
+
+DateTime agoraEmBrasilia() => emBrasilia(DateTime.now());
+
+// ---------------------------------------------------------------------------
+// Esporte
+// ---------------------------------------------------------------------------
+
+/// Palavras (sem acento, minúsculas, palavra inteira) de cada esporte que não é futebol.
+const Map<String, List<String>> _palavrasDoEsporte = {
+  'tenis': ['atp', 'wta', 'tenis', 'tennis', 'roland garros', 'wimbledon', 'us open', 'australian open', 'copa davis', 'davis cup', 'billie jean king'],
+  'basquete': ['nba', 'wnba', 'nbb', 'basquete', 'basketball', 'euroliga', 'euroleague', 'fiba'],
+  'mma': ['ufc', 'mma', 'pfl', 'bellator', 'one championship', 'lfa'],
+  'boxe': ['boxe', 'boxing'],
+  'volei': ['volei', 'voleibol', 'volleyball', 'vnl', 'vbtv'],
+  'futebol_americano': ['nfl', 'futebol americano', 'super bowl'],
+  'beisebol': ['mlb', 'beisebol', 'baseball'],
+  'hoquei': ['nhl', 'hoquei', 'hockey'],
+  'criquete': ['cricket', 'criquete', 't20', 'ipl'],
+  'rugby': ['rugby'],
+  'handebol': ['handebol', 'handball'],
+};
+
+/// Esporte citado no texto (nome do canal, categoria, campeonato, título); null = futebol.
+String? detectarEsporte(String texto) {
+  final n = ' ${normalizeText(texto)} ';
+  for (final e in _palavrasDoEsporte.entries) {
+    if (e.value.any((p) => n.contains(' $p '))) return e.key;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Grade: reprises, chamadas e ao vivo
+// ---------------------------------------------------------------------------
+
+final RegExp _reReprise = RegExp(
+    r'\b(vt|reprise|reprisado|reapresentacao|melhores momentos|compacto|gols da rodada|giro da rodada|'
+    r'resumo|highlights|bastidores|pre jogo|pos jogo|replay|gravado|reveja)\b');
+final RegExp _reMarcaAoVivo = RegExp(r'\b(ao vivo|aovivo|live|en vivo|em directo)\b');
+
+/// Reprise, VT, compacto, melhores momentos... (título ou descrição).
+bool ehReprise(String titulo, String descricao) =>
+    _reReprise.hasMatch(normalizeText(titulo)) || _reReprise.hasMatch(normalizeText(descricao));
+
+/// O programa diz que é ao vivo ("AO VIVO", "(AO VIVO)", "LIVE").
+bool marcadoAoVivo(String titulo, String descricao) =>
+    _reMarcaAoVivo.hasMatch(normalizeText(titulo)) || _reMarcaAoVivo.hasMatch(normalizeText(descricao));
 
 bool _timeValido(String t, {int maxPalavras = 6}) {
   if (t.length < 2 || t.length > 40) return false;
@@ -195,24 +284,46 @@ JogoDaLista? jogoDoNomeDoCanal(String nome, DateTime referencia) {
   final fora = _limparTime(_ladoFora(lados[1]));
   if (!_timeValido(casa) || !_timeValido(fora)) return null;
 
+  // Campeonato: outra parte do nome ("| FINAL DA COPA ... |") ou o que vem depois do
+  // visitante (" - ATP Finals")
   String? campeonato;
   for (final p in [...partes.skip(i + 1), ...partes.take(i).toList().reversed]) {
-    final c = _limparTime(p.replaceAll(_reHora, ' ').replaceAll(_reData, ' '));
-    if (c.length >= 3 && RegExp(r'[A-Za-zÀ-ÿ]{3}').hasMatch(c)) {
-      campeonato = c;
-      break;
-    }
+    campeonato = _campeonatoOuNull(p);
+    if (campeonato != null) break;
   }
-  return JogoDaLista(inicio: inicio, casa: casa, fora: fora, campeonato: campeonato);
+  campeonato ??= _campeonatoOuNull(_restoFora(lados[1]));
+  return JogoDaLista(
+    inicio: inicio,
+    casa: casa,
+    fora: fora,
+    campeonato: campeonato,
+    esporte: detectarEsporte('$nome ${campeonato ?? ''}'),
+  );
 }
 
-/// Jogo no título de um programa da grade ("Copa do Brasil: Inter x Flamengo",
-/// "Futebol - Grêmio vs Palmeiras (ao vivo)"). Mais conservador que o nome do canal:
-/// cada time com no máximo 4 palavras e sem números.
-JogoDaLista? jogoDoTituloDoPrograma(String titulo, DateTime inicio) {
+/// Jogo no título de um programa da grade ("Copa do Brasil: Inter x Flamengo (AO VIVO)").
+/// [inicio] e [fim] já no horário de Brasília. Fica de fora (null):
+/// - reprise/VT/compacto/melhores momentos (título ou descrição);
+/// - sem fim ou sem horário confiável (bloco de 12 h ou mais, ex.: 00:00 com 24 h);
+/// - chamada de jogo de outro dia ("Dia 18/11 - Corinthians x Botafogo" na grade de 16/11).
+/// Mais conservador que o nome do canal: cada time com até 4 palavras e sem números.
+/// [JogoDaLista.aoVivo] diz se o programa se marca como ao vivo; quem chama decide.
+JogoDaLista? jogoDoTituloDoPrograma(String titulo, DateTime inicio, {String descricao = '', DateTime? fim}) {
+  if (fim == null || !fim.isAfter(inicio)) return null;
+  if (fim.difference(inicio) >= const Duration(hours: 12)) return null;
+  if (ehReprise(titulo, descricao)) return null;
+
   final partes = titulo.split('|').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
   final i = partes.indexWhere((p) => _reConfronto.hasMatch(p));
   if (i == -1) return null;
+
+  // Data no título diferente do dia do programa: é chamada de outro jogo
+  final data = _reData.firstMatch(titulo);
+  if (data != null) {
+    final d = _dataSemAno(int.parse(data.group(1)!), int.parse(data.group(2)!), inicio);
+    if (d == null || !mesmoDia(d, inicio)) return null;
+  }
+
   final principal = partes[i]
       .replaceAll(_reParenteses, ' ')
       .replaceAll(_reAoVivo, ' ')
@@ -225,13 +336,15 @@ JogoDaLista? jogoDoTituloDoPrograma(String titulo, DateTime inicio) {
   final fora = _limparTime(_ladoFora(lados[1]));
   bool ok(String t) => _timeValido(t, maxPalavras: 4) && !RegExp(r'\d').hasMatch(t);
   if (!ok(casa) || !ok(fora)) return null;
-  final camp = antes == null ? null : _limparTime(antes);
+  final campeonato = _campeonatoOuNull(antes) ?? _campeonatoOuNull(_restoFora(lados[1]));
   return JogoDaLista(
     inicio: inicio,
     casa: casa,
     fora: fora,
-    campeonato: camp != null && camp.length >= 3 ? camp : null,
+    campeonato: campeonato,
     doNome: false,
+    aoVivo: marcadoAoVivo(titulo, descricao),
+    esporte: detectarEsporte('$titulo ${campeonato ?? ''}'),
   );
 }
 
@@ -264,7 +377,7 @@ List<JogoDaLista> juntarJogos(Iterable<JogoDaLista> jogos) {
     if (igual == null) {
       out.add(JogoDaLista(
         inicio: j.inicio, casa: j.casa, fora: j.fora, campeonato: j.campeonato,
-        canais: [...j.canais], doNome: j.doNome,
+        canais: [...j.canais], doNome: j.doNome, aoVivo: j.aoVivo, esporte: j.esporte,
       ));
       continue;
     }
@@ -277,6 +390,8 @@ List<JogoDaLista> juntarJogos(Iterable<JogoDaLista> jogos) {
           if (!igual.canais.any((x) => x.id == c.id)) c,
       ],
       doNome: igual.doNome,
+      aoVivo: igual.aoVivo || j.aoVivo,
+      esporte: igual.esporte ?? j.esporte,
     );
     out[out.indexOf(igual)] = out2;
   }
@@ -315,8 +430,11 @@ AnaliseDaLista analisarCanais((List<Channel>, DateTime) entrada) {
     if (ehCategoriaDeJogos(c.categoryName)) {
       final j = jogoDoNomeDoCanal(c.name, referencia);
       if (j != null) {
-        j.canais.add(c);
-        jogos.add(j);
+        final esporte = j.esporte ?? detectarEsporte(c.categoryName);
+        jogos.add(JogoDaLista(
+          inicio: j.inicio, casa: j.casa, fora: j.fora, campeonato: j.campeonato,
+          canais: [c], esporte: esporte,
+        ));
         continue;
       }
     }

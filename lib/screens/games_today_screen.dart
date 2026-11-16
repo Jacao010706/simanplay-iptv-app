@@ -57,6 +57,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
   bool _loading = true;
   /// Plano B: o backend de jogos não respondeu e os jogos vêm da lista do cliente.
   bool _daLista = false;
+  Map<int, JogoDaLista> _jogosDaLista = const {};
   List<Fixture> _fixtures = const [];
   Map<int, List<Channel>> _where = const {};
   bool _searchingChannels = false;
@@ -114,6 +115,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       setState(() {
         _daLista = true;
         _fixtures = r.jogos.map(_fixtureDe).toList();
+        _jogosDaLista = {for (final j in r.jogos) j.id: j};
         _where = r.canaisPorJogo;
         _loading = false;
       });
@@ -143,6 +145,12 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       update(await finder(fixtures, update));
     } catch (_) {}
     if (mounted && token == _loadToken) setState(() => _searchingChannels = false);
+  }
+
+  /// Escudo só para futebol (esporte não identificado) ou seleção; tênis, UFC etc.: iniciais.
+  bool _buscarEscudo(int id, String time) {
+    final j = _jogosDaLista[id];
+    return j == null || j.esporte == null || ehSelecao(time);
   }
 
   void _setDay(int offset) {
@@ -244,10 +252,11 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           : 'Nenhum jogo dos campeonatos acompanhados neste dia.');
     }
 
-    // Agrupa por campeonato, na ordem do primeiro jogo de cada um
+    // Agrupa por campeonato, na ordem do primeiro jogo de cada um. No plano B: lista única
+    // por horário (o campeonato vai numa linha menor em cada jogo)
     final groups = <String, List<Fixture>>{};
     for (final f in _fixtures) {
-      (groups['${f.leagueName}|${f.leagueCountry}'] ??= []).add(f);
+      (groups[_daLista ? '' : '${f.leagueName}|${f.leagueCountry}'] ??= []).add(f);
     }
     final children = <Widget>[
       if (_daLista)
@@ -263,7 +272,8 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     ];
     for (final g in groups.values) {
       final first = g.first;
-      children.add(Padding(
+      if (!_daLista) {
+        children.add(Padding(
         key: ValueKey('league-${first.leagueName}'),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
         child: Row(children: [
@@ -281,6 +291,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           ],
         ]),
       ));
+      }
       for (final f in g) {
         children.add(_fixtureCard(f, primary));
       }
@@ -302,7 +313,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     );
   }
 
-  Widget _team(String name, String? logo, {required bool home}) {
+  Widget _team(String name, String? logo, {required bool home, bool buscarEscudo = true}) {
     final text = Flexible(
       child: Text(name,
           style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
@@ -311,7 +322,8 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           textAlign: home ? TextAlign.right : TextAlign.left),
     );
     final shield = _daLista && (logo == null || logo.isEmpty)
-        ? EscudoDoTime(nome: name, size: 34, escudos: widget.debugEscudos ?? EscudosService.instance)
+        ? EscudoDoTime(
+            nome: name, size: 34, buscar: buscarEscudo, escudos: widget.debugEscudos ?? EscudosService.instance)
         : _logo(logo, 34, Icons.shield_outlined);
     return Expanded(
       child: Row(
@@ -374,12 +386,32 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(children: [
-              _team(f.homeName, f.homeLogo, home: true),
+              _team(f.homeName, f.homeLogo, home: true, buscarEscudo: _buscarEscudo(f.id, f.homeName)),
               SizedBox(width: 76, child: Center(child: _center(f))),
-              _team(f.awayName, f.awayLogo, home: false),
+              _team(f.awayName, f.awayLogo, home: false, buscarEscudo: _buscarEscudo(f.id, f.awayName)),
             ]),
           ),
         ),
+        if (_jogosDaLista[f.id] case final j? when _daLista && (j.campeonato != null || j.esporte != null))
+          Padding(
+            key: ValueKey('detalhe-${f.id}'),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              if (j.esporte != null) ...[
+                Icon(iconeDoEsporte(j.esporte), color: Colors.white54, size: 13),
+                const SizedBox(width: 4),
+                Text(nomeDoEsporte(j.esporte!), style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                if (j.campeonato != null) const Text('  ·  ', style: TextStyle(color: Colors.white24, fontSize: 11)),
+              ],
+              if (j.campeonato != null)
+                Flexible(
+                  child: Text(j.campeonato!,
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+            ]),
+          ),
         if (f.emissoras.isNotEmpty)
           Padding(
             key: ValueKey('emissoras-${f.id}'),
@@ -455,7 +487,8 @@ class EscudoDoTime extends StatelessWidget {
   final String nome;
   final double size;
   final EscudosService escudos;
-  const EscudoDoTime({super.key, required this.nome, required this.size, required this.escudos});
+  final bool buscar;
+  const EscudoDoTime({super.key, required this.nome, required this.size, required this.escudos, this.buscar = true});
 
   @override
   Widget build(BuildContext context) {
@@ -469,7 +502,7 @@ class EscudoDoTime extends StatelessWidget {
           style: TextStyle(color: Colors.white70, fontSize: size * 0.32, fontWeight: FontWeight.bold)),
     );
     return ValueListenableBuilder<String?>(
-      valueListenable: escudos.escudo(nome),
+      valueListenable: escudos.escudo(nome, buscar: buscar),
       builder: (_, url, __) => url == null
           ? iniciais
           : CachedNetworkImage(
@@ -483,3 +516,33 @@ class EscudoDoTime extends StatelessWidget {
     );
   }
 }
+
+/// Ícone e nome do esporte identificado no plano B.
+IconData iconeDoEsporte(String? esporte) => switch (esporte) {
+      'tenis' => Icons.sports_tennis,
+      'basquete' => Icons.sports_basketball,
+      'mma' || 'boxe' => Icons.sports_mma,
+      'volei' => Icons.sports_volleyball,
+      'futebol_americano' => Icons.sports_football,
+      'beisebol' => Icons.sports_baseball,
+      'hoquei' => Icons.sports_hockey,
+      'criquete' => Icons.sports_cricket,
+      'rugby' => Icons.sports_rugby,
+      'handebol' => Icons.sports_handball,
+      _ => Icons.sports_soccer,
+    };
+
+String nomeDoEsporte(String esporte) => const {
+      'tenis': 'Tênis',
+      'basquete': 'Basquete',
+      'mma': 'UFC/MMA',
+      'boxe': 'Boxe',
+      'volei': 'Vôlei',
+      'futebol_americano': 'Futebol americano',
+      'beisebol': 'Beisebol',
+      'hoquei': 'Hóquei',
+      'criquete': 'Críquete',
+      'rugby': 'Rugby',
+      'handebol': 'Handebol',
+    }[esporte] ??
+    esporte;

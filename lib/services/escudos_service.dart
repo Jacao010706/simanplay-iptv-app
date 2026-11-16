@@ -39,11 +39,58 @@ String normalizarNomeTime(String nome) {
   return _apelidos[n] ?? n;
 }
 
+/// Seleções: nome em português (normalizado) -> nome em inglês, como a TheSportsDB escreve.
+const Map<String, String> selecoesEmIngles = {
+  'africa do sul': 'South Africa', 'afeganistao': 'Afghanistan', 'albania': 'Albania',
+  'alemanha': 'Germany', 'arabia saudita': 'Saudi Arabia', 'argelia': 'Algeria',
+  'armenia': 'Armenia', 'australia': 'Australia', 'austria': 'Austria', 'azerbaijao': 'Azerbaijan',
+  'belgica': 'Belgium', 'bielorrussia': 'Belarus', 'bolivia': 'Bolivia', 'brasil': 'Brazil',
+  'bulgaria': 'Bulgaria', 'camaroes': 'Cameroon', 'canada': 'Canada', 'catar': 'Qatar',
+  'cazaquistao': 'Kazakhstan', 'chipre': 'Cyprus', 'colombia': 'Colombia',
+  'coreia do sul': 'South Korea', 'coreia do norte': 'North Korea', 'costa do marfim': 'Ivory Coast',
+  'croacia': 'Croatia', 'curacao': 'Curacao', 'dinamarca': 'Denmark', 'egito': 'Egypt',
+  'emirados arabes': 'United Arab Emirates', 'emirados arabes unidos': 'United Arab Emirates',
+  'equador': 'Ecuador', 'escocia': 'Scotland', 'eslovaquia': 'Slovakia', 'eslovenia': 'Slovenia',
+  'espanha': 'Spain', 'estados unidos': 'United States', 'eua': 'United States', 'estonia': 'Estonia',
+  'finlandia': 'Finland', 'franca': 'France', 'gales': 'Wales', 'pais de gales': 'Wales',
+  'gana': 'Ghana', 'georgia': 'Georgia', 'grecia': 'Greece', 'holanda': 'Netherlands',
+  'paises baixos': 'Netherlands', 'hungria': 'Hungary', 'india': 'India', 'inglaterra': 'England',
+  'ira': 'Iran', 'iraque': 'Iraq', 'irlanda': 'Ireland', 'irlanda do norte': 'Northern Ireland',
+  'islandia': 'Iceland', 'italia': 'Italy', 'japao': 'Japan', 'jordania': 'Jordan',
+  'letonia': 'Latvia', 'lituania': 'Lithuania', 'luxemburgo': 'Luxembourg',
+  'macedonia do norte': 'North Macedonia', 'marrocos': 'Morocco', 'mexico': 'Mexico',
+  'moldavia': 'Moldova', 'noruega': 'Norway', 'nova zelandia': 'New Zealand',
+  'papua nova guine': 'Papua New Guinea', 'paquistao': 'Pakistan', 'paraguai': 'Paraguay',
+  'polonia': 'Poland', 'quenia': 'Kenya', 'republica tcheca': 'Czech Republic',
+  'tchequia': 'Czech Republic', 'romenia': 'Romania', 'russia': 'Russia', 'servia': 'Serbia',
+  'suecia': 'Sweden', 'suica': 'Switzerland', 'tunisia': 'Tunisia', 'turquia': 'Turkey',
+  'ucrania': 'Ukraine', 'uruguai': 'Uruguay', 'uzbequistao': 'Uzbekistan', 'zimbabue': 'Zimbabwe',
+  'panama': 'Panama', 'peru': 'Peru', 'chile': 'Chile', 'argentina': 'Argentina',
+  'portugal': 'Portugal', 'senegal': 'Senegal', 'nigeria': 'Nigeria', 'jamaica': 'Jamaica',
+  'montenegro': 'Montenegro', 'san marino': 'San Marino', 'kosovo': 'Kosovo', 'malta': 'Malta',
+  'sri lanka': 'Sri Lanka', 'bangladesh': 'Bangladesh', 'nepal': 'Nepal', 'oma': 'Oman',
+};
+
+/// É uma seleção (nome de país em português ou inglês)?
+bool ehSelecao(String nome) {
+  final n = normalizarNomeTime(nome);
+  return selecoesEmIngles.containsKey(n) || selecoesEmIngles.values.any((e) => normalizarNomeTime(e) == n);
+}
+
 /// Nome a buscar, ou null quando é ambíguo/curto demais (mostra as iniciais).
 String? chaveDeBusca(String nome) {
   final n = normalizarNomeTime(nome);
   if (n.length < 3 || nomesAmbiguos.contains(n)) return null;
   return n;
+}
+
+/// Buscas para o time, na ordem: seleção pelo nome em inglês e depois o nome como veio
+/// ("Irlanda" -> "ireland", "irlanda"). Vazio = não buscar.
+List<String> buscasPara(String nome) {
+  final chave = chaveDeBusca(nome);
+  if (chave == null) return const [];
+  final ingles = selecoesEmIngles[chave];
+  return [if (ingles != null) normalizarNomeTime(ingles), chave];
 }
 
 /// Iniciais para o círculo no lugar do escudo ("Internacional" -> "INT", "São Paulo" -> "SP").
@@ -63,7 +110,10 @@ String iniciaisTime(String nome) {
 
 /// Escolhe o escudo na resposta de searchteams.php: só futebol e nome (ou nome alternativo)
 /// IGUAL ao buscado; mais de um igual -> prefere Brasil; se ainda sobrar mais de um, nenhum.
-String? escolherEscudo(String chave, dynamic resposta) {
+String? escolherEscudo(String chave, dynamic resposta) => escolherEscudoEntre([chave], resposta);
+
+/// Igual a [escolherEscudo], aceitando qualquer um dos nomes de [chaves] (português/inglês).
+String? escolherEscudoEntre(List<String> chaves, dynamic resposta) {
   final times = resposta is Map ? resposta['teams'] : null;
   if (times is! List) return null;
   final iguais = <Map>[];
@@ -74,7 +124,7 @@ String? escolherEscudo(String chave, dynamic resposta) {
       ...'${t['strTeamAlternate'] ?? ''}'.split(','),
       '${t['strTeamShort'] ?? ''}',
     ].map(normalizarNomeTime).where((n) => n.isNotEmpty);
-    if (nomes.contains(chave)) iguais.add(t);
+    if (nomes.any(chaves.contains)) iguais.add(t);
   }
   var escolhidos = iguais;
   if (escolhidos.length > 1) {
@@ -114,16 +164,21 @@ class EscudosService {
   bool _rodando = false;
 
   /// Escudo do time (null = mostrar iniciais). Atualiza sozinho quando a busca termina.
-  ValueListenable<String?> escudo(String nomeDoTime) {
-    final chave = chaveDeBusca(nomeDoTime);
-    if (chave == null) return ValueNotifier<String?>(null);
+  /// [buscar] falso (ex.: jogador de tênis) = só iniciais, sem chamar a rede.
+  ValueListenable<String?> escudo(String nomeDoTime, {bool buscar = true}) {
+    final buscas = buscar ? buscasPara(nomeDoTime) : const <String>[];
+    if (buscas.isEmpty) return ValueNotifier<String?>(null);
+    final chave = buscas.last; // o nome como veio identifica o time no cache
     final existente = _escudos[chave];
     if (existente != null) return existente;
     final v = ValueNotifier<String?>(null);
     _escudos[chave] = v;
+    _buscas[chave] = buscas;
     _pedir(chave);
     return v;
   }
+
+  final Map<String, List<String>> _buscas = {};
 
   Future<void> _pedir(String chave) async {
     await (_carregandoDisco ??= _lerDisco());
@@ -161,28 +216,40 @@ class EscudosService {
     try {
       while (_fila.isNotEmpty) {
         final chave = _fila.removeFirst();
-        final http.Response res;
-        try {
-          final uri = Uri.parse(_url).replace(queryParameters: {'t': chave});
-          res = await (client != null ? client!.get(uri) : http.get(uri)).timeout(const Duration(seconds: 10));
-        } catch (_) {
-          await Future.delayed(intervalo);
-          continue; // sem rede: iniciais
+        final buscas = _buscas[chave] ?? [chave];
+        String? url;
+        var respondeu = false;
+        var limite = false;
+        for (final termo in buscas) {
+          final http.Response res;
+          try {
+            final uri = Uri.parse(_url).replace(queryParameters: {'t': termo});
+            res = await (client != null ? client!.get(uri) : http.get(uri)).timeout(const Duration(seconds: 10));
+          } catch (_) {
+            break; // sem rede: iniciais
+          } finally {
+            await Future.delayed(intervalo); // no máximo uma busca a cada [intervalo]
+          }
+          if (res.statusCode == 429) {
+            limite = true;
+            break;
+          }
+          if (res.statusCode != 200) break;
+          respondeu = true;
+          try {
+            url = escolherEscudoEntre(buscas, jsonDecode(utf8.decode(res.bodyBytes)));
+          } catch (_) {}
+          if (url != null) break;
         }
-        if (res.statusCode == 429) {
+        if (limite) {
           _fila.addFirst(chave); // limite da API: espera e tenta de novo
           await Future.delayed(pausaLimite);
           continue;
         }
-        if (res.statusCode == 200) {
-          String? url;
-          try {
-            url = escolherEscudo(chave, jsonDecode(utf8.decode(res.bodyBytes)));
-          } catch (_) {}
+        if (respondeu) {
           _escudos[chave]?.value = url;
           await _salvar(chave, url); // "sem escudo seguro" também fica guardado
         }
-        await Future.delayed(intervalo);
       }
     } finally {
       _rodando = false;

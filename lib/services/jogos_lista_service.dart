@@ -49,7 +49,7 @@ class JogosDaListaService {
     final f = () async {
       final canais = await _carregarCanais(s);
       // Fora da interface: listas grandes têm milhares de canais
-      return compute(analisarCanais, (canais, DateTime.now()));
+      return compute(analisarCanais, (canais, agoraEmBrasilia()));
     }();
     _analise = f;
     f.catchError((_) {
@@ -72,10 +72,11 @@ class JogosDaListaService {
     } catch (_) {
       return const JogosEncontrados([]);
     }
-    final achados = <JogoDaLista>[
+    final dosNomes = [
       for (final j in analise.jogosDosNomes)
         if (mesmoDia(j.inicio, dia)) j,
     ];
+    final achados = <JogoDaLista>[...dosNomes];
     JogosEncontrados atual() => JogosEncontrados(juntarJogos(achados));
     parcial?.call(atual());
 
@@ -93,9 +94,13 @@ class JogosDaListaService {
       }
       var novo = false;
       for (final p in programas) {
-        if (!mesmoDia(p.start, dia)) continue;
-        final j = jogoDoTituloDoPrograma(p.title, p.start);
+        // Horário da grade (timestamp) convertido para Brasília; filtro pelo dia escolhido
+        final inicio = emBrasilia(p.start);
+        if (!mesmoDia(inicio, dia)) continue;
+        final j = jogoDoTituloDoPrograma(p.title, inicio, descricao: p.description, fim: emBrasilia(p.end));
         if (j == null) continue;
+        // Só jogo marcado como ao vivo, ou que também está nos eventos da lista
+        if (!j.aoVivo && !dosNomes.any((n) => mesmoJogo(n, j))) continue;
         j.canais.add(c);
         achados.add(j);
         novo = true;

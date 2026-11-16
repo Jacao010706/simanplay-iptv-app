@@ -65,14 +65,89 @@ void main() {
 
   group('Jogo no título da grade', () {
     final ini = DateTime(2026, 11, 15, 15, 50);
-    test('campeonato antes de ":"', () {
-      final j = jogoDoTituloDoPrograma('Copa do Brasil Feminina: Inter x Flamengo (ao vivo)', ini)!;
-      expect((j.casa, j.fora, j.campeonato, j.doNome), ('Inter', 'Flamengo', 'Copa do Brasil Feminina', false));
+    final fim = DateTime(2026, 11, 15, 18);
+    test('campeonato antes de ":" e marca de ao vivo', () {
+      final j = jogoDoTituloDoPrograma('Copa do Brasil Feminina: Inter x Flamengo (ao vivo)', ini, fim: fim)!;
+      expect((j.casa, j.fora, j.campeonato, j.doNome, j.aoVivo), ('Inter', 'Flamengo', 'Copa do Brasil Feminina', false, true));
+      expect(jogoDoTituloDoPrograma('Brasileirão: Grêmio x Bahia', ini, fim: fim)!.aoVivo, isFalse);
+      expect(jogoDoTituloDoPrograma('Grêmio x Bahia', ini, descricao: 'Transmissão AO VIVO da Arena', fim: fim)!.aoVivo, isTrue);
     });
     test('títulos que não são jogo', () {
       for (final t in ['SporTV News', 'Seleção SporTV', 'Os Simpsons', 'Futebol Brasileirão 2026 Flamengo x Vasco']) {
-        expect(jogoDoTituloDoPrograma(t, ini), isNull, reason: t);
+        expect(jogoDoTituloDoPrograma(t, ini, fim: fim), isNull, reason: t);
       }
+    });
+  });
+
+  group('Grade real (Premiere, jes.lat, 16/11/2026)', () {
+    // Entradas reais do get_short_epg: start/stop em timestamp (UTC). O servidor diz
+    // America/Moncton (UTC-4), mas o "start" em texto vem em hora de Brasília.
+    DateTime ts(int s) => emBrasilia(DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true));
+
+    test('fuso: timestamp vira hora de Brasília (UTC-3), seja qual for o fuso do aparelho', () {
+      expect(ts(1794834000), DateTime(2026, 11, 16, 10, 0)); // start='2026-11-16 10:00:00'
+      expect(ts(1794884400), DateTime(2026, 11, 17, 0, 0)); // start='2026-11-17 00:00:00'
+      expect(emBrasilia(DateTime.utc(2026, 11, 17, 2, 30)), DateTime(2026, 11, 16, 23, 30));
+    });
+
+    test('"Dia 18/11 - Corinthians x Botafogo" na grade de 16/11 e 17/11 00:00: chamada, fora', () {
+      for (final (ini, fim) in [(1794834000, 1794841200), (1794884400, 1794891600)]) {
+        expect(
+            jogoDoTituloDoPrograma('Dia 18/11 - Corinthians x Botafogo', ts(ini),
+                descricao: 'Corinthians e Botafogo jogam pela 35ª rodada do Segundo Turno do Brasileirão',
+                fim: ts(fim)),
+            isNull);
+      }
+      expect(jogoDoTituloDoPrograma('Dia 18/11 - Grêmio x Bahia', ts(1794884400), fim: ts(1794891600)), isNull);
+      // No próprio dia 18/11 a data bate: vale (se estiver ao vivo)
+      expect(jogoDoTituloDoPrograma('Dia 18/11 - Grêmio x Bahia (AO VIVO)', DateTime(2026, 11, 18, 21, 30),
+              fim: DateTime(2026, 11, 18, 23, 30))?.aoVivo, isTrue);
+    });
+
+    test('reprises fora: VT, reprise, melhores momentos, compacto, gols da rodada', () {
+      final ini = DateTime(2026, 11, 16, 11, 30), fim = DateTime(2026, 11, 16, 12);
+      for (final (titulo, desc) in [
+        ('VT - Botafogo x Atlético-MG', 'Aqui no Brasileirão tem coisa pra caramba!'),
+        ('REPRISE: Flamengo x Palmeiras', ''),
+        ('Melhores Momentos - Santos x Vasco', ''),
+        ('Compacto: Bahia x Flamengo', ''),
+        ('Gols da Rodada: Grêmio x Inter', ''),
+        ('Grêmio x Inter', 'Reapresentação do clássico (VT)'),
+      ]) {
+        expect(jogoDoTituloDoPrograma('$titulo (AO VIVO)', ini, descricao: desc, fim: fim), isNull, reason: titulo);
+      }
+    });
+
+    test('sem horário confiável: 00:00 com 24 h, bloco de 12 h, sem fim', () {
+      final meiaNoite = DateTime(2026, 11, 16);
+      expect(jogoDoTituloDoPrograma('Inter x Flamengo (AO VIVO)', meiaNoite, fim: DateTime(2026, 11, 17)), isNull);
+      expect(jogoDoTituloDoPrograma('Inter x Flamengo (AO VIVO)', DateTime(2026, 11, 16, 8), fim: DateTime(2026, 11, 16, 20)), isNull);
+      expect(jogoDoTituloDoPrograma('Inter x Flamengo (AO VIVO)', meiaNoite), isNull);
+    });
+  });
+
+  group('Nomes dos times', () {
+    test('PPV+, (ESP), (USA), qualidade e campeonato depois do "-"', () {
+      final a = jogoDoNomeDoCanal(
+          'PPV+ 01: Carlos Alcaraz (ESP) x Frances Tiafoe (USA) - ATP Finals (Round Robin - Day #2) 14:00 FHD', _ref)!;
+      expect((a.casa, a.fora, a.campeonato, a.esporte), ('Carlos Alcaraz', 'Frances Tiafoe', 'ATP Finals', 'tenis'));
+      final b = jogoDoNomeDoCanal('PPV 3 | 16/11 09:30 - Sri Lanka x Papua New Guinea 4K | ICC T20 World Cup Qualifier', _ref)!;
+      expect((b.casa, b.fora, b.campeonato, b.esporte), ('Sri Lanka', 'Papua New Guinea', 'ICC T20 World Cup Qualifier', 'criquete'));
+      final c = jogoDoNomeDoCanal('Irlanda x Portugal - 16:45 HD²', _ref)!;
+      expect((c.casa, c.fora, c.campeonato, c.esporte), ('Irlanda', 'Portugal', null, null));
+    });
+
+    test('esporte pela categoria do canal (NBA PAY-PER-VIEW)', () {
+      final r = analisarCanais(([_canal('9', 'Lakers x Celtics - 21:30', 'NBA PAY-PER-VIEW')], _ref));
+      expect(r.jogosDosNomes.single.esporte, 'basquete');
+    });
+
+    test('detectarEsporte', () {
+      expect(detectarEsporte('UFC 320: Pereira x Ankalaev'), 'mma');
+      expect(detectarEsporte('Superliga de Vôlei'), 'volei');
+      expect(detectarEsporte('NFL: Chiefs x Bills'), 'futebol_americano');
+      expect(detectarEsporte('Copa do Brasil'), isNull);
+      expect(detectarEsporte('Atlético-MG x Cruzeiro'), isNull);
     });
   });
 
@@ -80,7 +155,8 @@ void main() {
     test('FHD/HD do mesmo jogo e a grade viram um jogo só, com todos os canais', () {
       final fhd = jogoDoNomeDoCanal('Internacional x Flamengo - 16:00 FHD', _ref)!..canais.add(_canal('1', 'Internacional x Flamengo - 16:00 FHD'));
       final hd = jogoDoNomeDoCanal('Internacional x Flamengo - 16:00 HD', _ref)!..canais.add(_canal('2', 'Internacional x Flamengo - 16:00 HD'));
-      final grade = jogoDoTituloDoPrograma('Copa do Brasil: Inter x Flamengo', DateTime(2026, 11, 15, 15, 45))!
+      final grade = jogoDoTituloDoPrograma('Copa do Brasil: Inter x Flamengo', DateTime(2026, 11, 15, 15, 45),
+          fim: DateTime(2026, 11, 15, 18))!
         ..canais.add(_canal('3', 'SporTV FHD', 'ESPORTES'));
       final outro = jogoDoNomeDoCanal('Chipre x Montenegro - 11:00 FHD', _ref)!..canais.add(_canal('4', 'Chipre x Montenegro - 11:00 FHD'));
       final r = juntarJogos([grade, hd, outro, fhd]);
@@ -128,6 +204,37 @@ void main() {
       expect(chaveDeBusca('América'), isNull);
       expect(chaveDeBusca('Inter'), isNull);
       expect(chaveDeBusca('Internacional'), 'internacional');
+    });
+
+    test('seleções: busca em inglês e no nome como veio', () {
+      expect(buscasPara('Irlanda'), ['ireland', 'irlanda']);
+      expect(buscasPara('Papua-Nova Guiné'), ['papua new guinea', 'papua nova guine']);
+      expect(buscasPara('República Tcheca'), ['czech republic', 'republica tcheca']);
+      expect(buscasPara('Sri Lanka'), ['sri lanka', 'sri lanka']);
+      expect(buscasPara('Flamengo'), ['flamengo']);
+      expect(buscasPara('Atlético'), isEmpty);
+      expect(ehSelecao('Ireland'), isTrue);
+      expect(ehSelecao('Irlanda'), isTrue);
+      expect(ehSelecao('Carlos Alcaraz'), isFalse);
+      // Resposta real da TheSportsDB para "Czech Republic" (alternativo em português)
+      final czech = {'teams': [{'strTeam': 'Czech Republic', 'strSport': 'Soccer', 'strCountry': 'Czechia', 'strTeamAlternate': 'República Tcheca', 'strBadge': 'https://r2.thesportsdb.com/b.png'}]};
+      expect(escolherEscudoEntre(buscasPara('República Tcheca'), czech), 'https://r2.thesportsdb.com/b.png');
+    });
+
+    test('serviço: seleção tenta o nome em inglês primeiro', () async {
+      SharedPreferences.setMockInitialValues({});
+      final termos = <String>[];
+      final s = EscudosService(
+          client: MockClient((req) async {
+            termos.add(req.url.queryParameters['t']!);
+            return http.Response(jsonEncode({'teams': [{'strTeam': 'Ireland', 'strSport': 'Soccer', 'strCountry': 'Ireland', 'strBadge': 'https://r2.thesportsdb.com/ie.png'}]}), 200);
+          }),
+          intervalo: Duration.zero);
+      final v = s.escudo('Irlanda');
+      await _esperar(v);
+      expect(v.value, 'https://r2.thesportsdb.com/ie.png');
+      expect(termos, ['ireland']);
+      expect(s.escudo('Carlos Alcaraz', buscar: false).value, isNull);
     });
 
     test('iniciais', () {
@@ -200,6 +307,36 @@ void main() {
   });
 
   group('Plano B (serviço)', () {
+    test('grade: só entra ao vivo ou o que também está nos eventos; chamada e VT não', () async {
+      final hoje = agoraEmBrasilia();
+      final dia = DateTime(hoje.year, hoje.month, hoje.day);
+      // Hora de Brasília (UTC-3) -> timestamp, independente do fuso da máquina do teste
+      int s(int h, [int m = 0]) => DateTime.utc(dia.year, dia.month, dia.day, h + 3, m).millisecondsSinceEpoch ~/ 1000;
+      final amanha2 = dia.add(const Duration(days: 2));
+      final data = '${amanha2.day.toString().padLeft(2, '0')}/${amanha2.month.toString().padLeft(2, '0')}';
+      final epg = EpgService(fetcher: (id, limit) async => {
+            'epg_listings': [
+              {'title': 'Dia $data - Corinthians x Botafogo', 'start_timestamp': s(0), 'stop_timestamp': s(2)},
+              {'title': 'VT - Bahia x Flamengo', 'start_timestamp': s(1), 'stop_timestamp': s(1, 30)},
+              {'title': 'Brasileirão: Grêmio x Bahia', 'start_timestamp': s(2), 'stop_timestamp': s(4)},
+              {'title': 'Copa do Brasil: Inter x Flamengo', 'start_timestamp': s(15, 50), 'stop_timestamp': s(18)},
+              {'title': 'Eliminatórias: França x Turquia (AO VIVO)', 'start_timestamp': s(16, 45), 'stop_timestamp': s(19)},
+              {'title': 'Programa 24h', 'start_timestamp': s(0), 'stop_timestamp': s(23, 59)},
+            ]
+          }, clock: () => DateTime(dia.year, dia.month, dia.day));
+      final svc = JogosDaListaService(
+        carregarCanais: (_) async => [
+          _canal('1', 'Internacional x Flamengo - 16:00 FHD'),
+          _canal('3', 'Premiere Clubes FHD', 'PREMIERE'),
+        ],
+        epg: epg,
+      );
+      final r = await svc.buscar(const AppSession(type: SessionType.simanplay), dia);
+      expect(r.jogos.map((j) => '${j.casa} x ${j.fora}'), ['Internacional x Flamengo', 'França x Turquia']);
+      expect(r.jogos.first.canais.map((c) => c.id), ['1', '3'], reason: 'grade sem "ao vivo" entra porque o jogo está nos eventos');
+    });
+
+
     test('jogos do dia pelos nomes e pela grade, juntos e ordenados', () async {
       final epg = EpgService(
         fetcher: (id, limit) async => id == '3'
