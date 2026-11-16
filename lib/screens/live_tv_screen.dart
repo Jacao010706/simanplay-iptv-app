@@ -6,7 +6,8 @@ import '../models/channel.dart';
 import '../models/category.dart';
 import '../core/marca.dart';
 import '../core/loja.dart';
-import '../core/m3u_service.dart';
+import '../core/erros.dart';
+import '../services/ao_vivo_loader.dart';
 import '../services/xtream_service.dart';
 import '../services/epg_service.dart';
 import '../services/recording_service.dart';
@@ -76,33 +77,14 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   Future<void> _loadContent() async {
     setState(() { _loading = true; _error = null; });
     try {
-      if (widget.session.isXtream) {
-        final service = XtreamService(
-          host: widget.session.xtreamHost!,
-          username: widget.session.effectiveXtreamUsername!,
-          password: widget.session.effectiveXtreamPassword!,
-        );
-        final cats = await service.getLiveCategories();
-        final List<Channel> allCh = [];
-        for (final cat in cats) {
-          final channels = await service.getLiveStreams(cat.id, cat.name);
-          allCh.addAll(channels);
-        }
-        setState(() { _categories = cats; _allChannels = allCh; _loading = false; });
-      } else {
-        final url = widget.session.primaryM3uUrl ?? '';
-        if (url.isEmpty) throw Exception('URL da playlist não configurada');
-        final service = M3uService();
-        final channels = await service.fetchAndParse(url);
-        final cats = channels
-            .map((c) => c.categoryName)
-            .toSet()
-            .map((name) => Category(id: name, name: name, type: 'live'))
-            .toList();
-        setState(() { _categories = cats; _allChannels = channels; _loading = false; });
-      }
+      // API Xtream quando houver credenciais (com volta automática para o M3U se a API
+      // falhar numa lista M3U); M3U só com os canais ao vivo
+      final lista = await CarregadorAoVivo.carregar(widget.session);
+      if (!mounted) return;
+      setState(() { _categories = lista.categorias; _allChannels = lista.canais; _loading = false; });
     } catch (e) {
-      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+      if (!mounted) return;
+      setState(() { _error = mensagemDeErro(e); _loading = false; });
     }
   }
 

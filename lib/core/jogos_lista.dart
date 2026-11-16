@@ -1,0 +1,680 @@
+// Plano B da aba Jogos: monta os jogos a partir da própria lista do cliente, quando o
+// backend de jogos (/sports/fixtures) não responde.
+//   1) nomes dos canais de evento ("15/11 14:00 - INTER X FLAMENGO | FINAL ... |",
+//      "Internacional x Flamengo - 16:00 FHD");
+//   2) programação (EPG) dos canais de esporte ("Copa do Brasil: Inter x Flamengo").
+// Funções puras (testáveis e executáveis em outro isolate).
+
+import '../models/channel.dart';
+import 'sports_match.dart';
+
+/// Um jogo achado na lista, com os canais onde passa.
+class JogoDaLista {
+  final DateTime inicio; // hora local
+  final String casa;
+  final String fora;
+  final String? campeonato;
+  final List<Channel> canais;
+
+  /// Veio do nome de um canal de evento (horário mais confiável que o da grade).
+  final bool doNome;
+
+  /// A grade marcou o programa como ao vivo ("AO VIVO", "LIVE") ou anunciou o horário do
+  /// jogo no mesmo dia ("Hoje a partir das 20:30 - Cruzeiro x Palmeiras").
+  final bool aoVivo;
+
+  /// Esporte quando dá para identificar (ver [detectarEsporte]); null = futebol/desconhecido.
+  final String? esporte;
+
+  JogoDaLista({
+    required this.inicio,
+    required this.casa,
+    required this.fora,
+    this.campeonato,
+    List<Channel>? canais,
+    this.doNome = true,
+    this.aoVivo = false,
+    this.esporte,
+  }) : canais = canais ?? [];
+
+  /// Identificador estável (mesmo jogo, mesmo id entre recargas).
+  int get id {
+    var h = 0x811c9dc5;
+    final chave = '${normalizeTeamName(casa)}|${normalizeTeamName(fora)}|'
+        '${inicio.year}-${inicio.month}-${inicio.day} ${inicio.hour}:${inicio.minute}';
+    for (final c in chave.codeUnits) {
+      h = ((h ^ c) * 0x01000193) & 0x7fffffff;
+    }
+    return h;
+  }
+
+  @override
+  String toString() => 'JogoDaLista($inicio $casa x $fora | $campeonato | ${canais.map((c) => c.name).toList()})';
+}
+
+// ---------------------------------------------------------------------------
+// Categorias e canais
+// ---------------------------------------------------------------------------
+
+/// Palavras de categorias de canais de evento (comparadas sem acento, minúsculas).
+const List<String> palavrasCategoriaDeJogos = ['jogos', 'ppv', 'pay per view', 'eventos', 'evento', 'ao vivo'];
+
+bool ehCategoriaDeJogos(String categoria) {
+  final n = ' ${normalizeText(categoria)} ';
+  return palavrasCategoriaDeJogos.any((p) => n.contains(' $p '));
+}
+
+/// Emissoras de esporte cuja programação é lida (nome do canal começa com uma delas).
+/// Em ordem de prioridade (as primeiras são consultadas antes).
+const List<String> emissorasDeEsporte = [
+  'sportv', 'premiere', 'espn', 'globo', 'tnt', 'caze', 'cazetv', 'band', 'combate', 'dazn',
+  'goat', 'record', 'sbt', 'nosso futebol',
+];
+
+/// Canais mais relevantes para a grade canal a canal (quando não há xmltv.php).
+const List<String> emissorasRelevantes = [
+  'sportv', 'premiere', 'espn', 'tnt', 'caze', 'cazetv', 'combate', 'dazn', 'globo', 'band', 'ppv',
+];
+const int maxCanaisGradeCanalACanal = 25;
+
+/// Até [maxCanaisGradeCanalACanal] canais das emissoras relevantes (no máximo 4 por marca),
+/// na ordem de [emissorasRelevantes].
+List<Channel> canaisRelevantes(List<Channel> canaisDeEsporte) {
+  int prioridade(Channel c) {
+    final base = channelBaseName(c.name);
+    final i = emissorasRelevantes.indexWhere((e) => base == e || base.startsWith('$e '));
+    if (i != -1) return i;
+    final cat = normalizeText(c.categoryName);
+    return cat.contains('ppv') || cat.contains('pay per view') ? emissorasRelevantes.length : -1;
+  }
+
+  // "TNT Series", "TNT Novelas", "... Legendado": mesma marca, mas não é esporte
+  final naoEsporte = RegExp(r'\b(series|novelas|filmes|kids|legendado)\b');
+  final relevantes =
+      canaisDeEsporte.where((c) => prioridade(c) >= 0 && !naoEsporte.hasMatch(normalizeText(c.name))).toList();
+  final pos = {for (var k = 0; k < relevantes.length; k++) relevantes[k].id: k};
+  relevantes.sort((a, b) {
+    final p = prioridade(a).compareTo(prioridade(b));
+    return p != 0 ? p : pos[a.id]!.compareTo(pos[b.id]!);
+  });
+  final porMarca = <String, int>{};
+  final out = <Channel>[];
+  for (final c in relevantes) {
+    final marca = channelBaseName(c.name).split(' ').first;
+    final n = porMarca[marca] = (porMarca[marca] ?? 0) + 1;
+    if (n > 4) continue;
+    out.add(c);
+    if (out.length >= maxCanaisGradeCanalACanal) break;
+  }
+  return out;
+}
+
+/// No máximo tantos canais por marca ("Band SP", "Band RJ"...: a grade quase sempre é a mesma).
+const int maxCanaisPorMarca = 8;
+
+/// Canal de esporte que vale a pena consultar a programação.
+bool ehCanalDeEsporte(Channel c) {
+  if (isSportsCategory(c.categoryName)) return true;
+  final base = channelBaseName(c.name);
+  return emissorasDeEsporte.any((e) => base == e || base.startsWith('$e '));
+}
+
+// ---------------------------------------------------------------------------
+// Nome do canal / título do programa
+// ---------------------------------------------------------------------------
+
+final RegExp _reData = RegExp(r'(?<![\d/])(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?(?![\d/])');
+final RegExp _reHora = RegExp(r'(?<![\d:])([01]?\d|2[0-3])\s*[:hH]\s*([0-5]\d)(?![\d:])');
+final RegExp _reConfronto = RegExp(r'\s+(?:x|vs\.?|versus)\s+', caseSensitive: false);
+final RegExp _reParenteses = RegExp(r'\([^)]*\)|\[[^\]]*\]');
+final RegExp _reAoVivo = RegExp(r'\b(?:ao\s*vivo|live|aovivo)\b\s*[:\-–]?', caseSensitive: false);
+final RegExp _reBordas = RegExp(r'^[\s\-–—:,.;/!]+|[\s\-–—:,.;/!]+$');
+/// "AO VIVO E COM IMAGENS", "COM IMAGENS", "E EXCLUSIVO": não fazem parte do nome do time.
+final RegExp _reExtras = RegExp(r'(?:\b(?:e\s+)?com\s+imagens\b|\b(?:e\s+)?exclusivo\b)', caseSensitive: false);
+/// Marcadores que não fazem parte do nome do time (qualidade, "PPV+", número do canal).
+const Set<String> _marcadores = {
+  'fhd', 'hd', 'sd', 'uhd', '4k', 'fullhd', 'h265', 'hevc', 'h264', 'alt', 'ppv', 'evento', 'canal',
+};
+
+bool _ehMarcador(String palavra) {
+  final n = normalizeText(palavra);
+  return n.isEmpty || _marcadores.contains(n) || RegExp(r'^\d{1,3}$').hasMatch(n);
+}
+
+/// Tira qualidade ("FHD", "HD²"), "PPV+", número do canal, sinais e espaços das pontas.
+String _limparTime(String s) {
+  var t = s.replaceAll(RegExp(r'[²³¹]'), ' ').replaceAll(_reBordas, '').trim();
+  final palavras = t.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  while (palavras.isNotEmpty && _ehMarcador(palavras.last)) {
+    palavras.removeLast();
+  }
+  while (palavras.isNotEmpty && _ehMarcador(palavras.first)) {
+    palavras.removeAt(0);
+  }
+  return palavras.join(' ').replaceAll(_reBordas, '').trim();
+}
+
+/// Campeonato (texto que sobra do nome): só se tiver letras de verdade.
+String? _campeonatoOuNull(String? s) {
+  if (s == null) return null;
+  final c = _limparTime(s.replaceAll(_reHora, ' ').replaceAll(_reData, ' ').replaceAll(_reParenteses, ' '));
+  return c.length >= 3 && RegExp(r'[A-Za-zÀ-ÿ]{3}').hasMatch(c) ? c : null;
+}
+
+/// Texto do visitante depois do nome (" - ATP Finals ...") = provável campeonato.
+String? _restoFora(String s) {
+  for (final sep in [' - ', ' – ']) {
+    final i = s.indexOf(sep);
+    if (i != -1) return s.substring(i + sep.length);
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Horário de Brasília
+// ---------------------------------------------------------------------------
+
+/// [t] no horário de Brasília (UTC−3; sem horário de verão desde 2019), como hora "de parede".
+DateTime emBrasilia(DateTime t) {
+  final u = t.toUtc().subtract(const Duration(hours: 3));
+  return DateTime(u.year, u.month, u.day, u.hour, u.minute, u.second);
+}
+
+DateTime agoraEmBrasilia() => emBrasilia(DateTime.now());
+
+// ---------------------------------------------------------------------------
+// Esporte
+// ---------------------------------------------------------------------------
+
+/// Palavras (sem acento, minúsculas, palavra inteira) de cada esporte que não é futebol.
+const Map<String, List<String>> _palavrasDoEsporte = {
+  'tenis': ['atp', 'wta', 'tenis', 'tennis', 'roland garros', 'wimbledon', 'us open', 'australian open', 'copa davis', 'davis cup', 'billie jean king'],
+  'basquete': ['nba', 'wnba', 'nbb', 'basquete', 'basketball', 'euroliga', 'euroleague', 'fiba'],
+  'mma': ['ufc', 'mma', 'pfl', 'bellator', 'one championship', 'lfa'],
+  'boxe': ['boxe', 'boxing'],
+  'volei': ['volei', 'voleibol', 'volleyball', 'vnl', 'vbtv'],
+  'futebol_americano': ['nfl', 'futebol americano', 'super bowl'],
+  'beisebol': ['mlb', 'beisebol', 'baseball'],
+  'hoquei': ['nhl', 'hoquei', 'hockey'],
+  'criquete': ['cricket', 'criquete', 't20', 'ipl'],
+  'rugby': ['rugby'],
+  'handebol': ['handebol', 'handball'],
+};
+
+/// Esporte citado no texto (nome do canal, categoria, campeonato, título); null = futebol.
+String? detectarEsporte(String texto) {
+  final n = ' ${normalizeText(texto)} ';
+  for (final e in _palavrasDoEsporte.entries) {
+    if (e.value.any((p) => n.contains(' $p '))) return e.key;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Grade: reprises, chamadas e ao vivo
+// ---------------------------------------------------------------------------
+
+final RegExp _reReprise = RegExp(
+    r'\b(vt|reprise|reprisado|reapresentacao|melhores momentos|compacto|gols da rodada|giro da rodada|'
+    r'resumo|highlights|bastidores|pre jogo|pos jogo|replay|gravado|reveja|jogo completo)\b');
+/// Programas sobre o jogo, não o jogo ("LOGO APÓS O AMISTOSO BRASIL X CINGAPURA",
+/// "PREPARAÇÃO DA SELEÇÃO PARA BRASIL X SINGAPURA").
+final RegExp _reNaoEJogo = RegExp(r'\b(logo apos|preparacao|aquecimento|fechamento|resenha|apos o jogo)\b');
+/// "Hoje a partir das 20:30", "a partir das 21h30": horário do jogo anunciado no título.
+final RegExp _reAPartir = RegExp(r'a\s+partir\s+d[ao]s?\s+([01]?\d|2[0-3])\s*[:hH]\s*([0-5]\d)', caseSensitive: false);
+final RegExp _reMarcaAoVivo = RegExp(r'\b(ao vivo|aovivo|live|en vivo|em directo)\b');
+
+/// Reprise, VT, compacto, melhores momentos... (título ou descrição).
+bool ehReprise(String titulo, String descricao) =>
+    _reReprise.hasMatch(normalizeText(titulo)) || _reReprise.hasMatch(normalizeText(descricao));
+
+/// O programa diz que é ao vivo ("AO VIVO", "(AO VIVO)", "LIVE").
+bool marcadoAoVivo(String titulo, String descricao) =>
+    _reMarcaAoVivo.hasMatch(normalizeText(titulo)) || _reMarcaAoVivo.hasMatch(normalizeText(descricao));
+
+bool _timeValido(String t, {int maxPalavras = 6}) {
+  if (t.length < 2 || t.length > 40) return false;
+  if (!RegExp(r'[A-Za-zÀ-ÿ]{2}').hasMatch(t)) return false;
+  return t.split(' ').length <= maxPalavras;
+}
+
+/// Ano mais próximo de [ref] para uma data sem ano ("15/11" em janeiro = novembro passado).
+DateTime? _dataSemAno(int dia, int mes, DateTime ref) {
+  DateTime? melhor;
+  for (final ano in [ref.year - 1, ref.year, ref.year + 1]) {
+    final d = DateTime(ano, mes, dia);
+    if (d.month != mes || d.day != dia) return null;
+    if (melhor == null || d.difference(ref).abs() < melhor.difference(ref).abs()) melhor = d;
+  }
+  return melhor;
+}
+
+/// Lado da casa: o que vem depois do último ":" ou " - "; visitante: antes do primeiro.
+(String, String?) _ladoCasa(String s) {
+  String? antes;
+  var t = s;
+  for (final sep in [':', ' - ', ' – ', '|']) {
+    final i = t.lastIndexOf(sep);
+    if (i != -1) {
+      final a = t.substring(0, i).trim();
+      if (a.isNotEmpty) antes = antes == null ? a : '$a $antes';
+      t = t.substring(i + sep.length);
+    }
+  }
+  return (t, antes);
+}
+
+String _ladoFora(String s) {
+  var t = s;
+  for (final sep in [' - ', ' – ', ':', '|', ',', '(']) {
+    final i = t.indexOf(sep);
+    if (i != -1) t = t.substring(0, i);
+  }
+  return t;
+}
+
+/// Jogo no nome de um canal de evento. Precisa de horário e de "A x B" (ou "A vs B").
+/// Data opcional ("15/11"); sem data, vale o dia de [referencia].
+/// Ex.: "15/11 14:00 - INTER X FLAMENGO | FINAL DA COPA DO BRASIL FEMININA | ..."
+///      "Internacional x Flamengo - 16:00 FHD"
+JogoDaLista? jogoDoNomeDoCanal(String nome, DateTime referencia) {
+  final partes = nome.split('|').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+  // Parte com o confronto (de preferência a que também tem o horário)
+  var i = partes.indexWhere((p) => _reConfronto.hasMatch(p) && _reHora.hasMatch(p));
+  if (i == -1) i = partes.indexWhere((p) => _reConfronto.hasMatch(p));
+  if (i == -1) return null;
+  var principal = partes[i];
+
+  // Data e hora: na parte do confronto ou, se não estiverem lá, em qualquer parte
+  final RegExpMatch? hora;
+  final RegExpMatch? data;
+  if (_reHora.hasMatch(principal)) {
+    hora = _reHora.firstMatch(principal);
+    data = _reData.firstMatch(principal);
+  } else {
+    final outras = partes.where((p) => !_reConfronto.hasMatch(p) && _reHora.hasMatch(p)).firstOrNull;
+    if (outras == null) return null;
+    hora = _reHora.firstMatch(outras);
+    data = _reData.firstMatch(outras);
+    principal = ' $principal'; // sem hora para tirar
+  }
+  if (hora == null) return null;
+  DateTime dia;
+  if (data != null) {
+    final d = int.parse(data.group(1)!), m = int.parse(data.group(2)!);
+    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+    final anoTxt = data.group(3);
+    if (anoTxt != null) {
+      final a = int.parse(anoTxt);
+      dia = DateTime(a < 100 ? 2000 + a : a, m, d);
+      if (dia.month != m) return null;
+    } else {
+      final achou = _dataSemAno(d, m, referencia);
+      if (achou == null) return null;
+      dia = achou;
+    }
+  } else {
+    dia = DateTime(referencia.year, referencia.month, referencia.day);
+  }
+  final inicio = DateTime(dia.year, dia.month, dia.day, int.parse(hora.group(1)!), int.parse(hora.group(2)!));
+
+  // Tira data, hora, parênteses e "AO VIVO" e separa os times
+  principal = principal
+      .replaceAll(_reHora, ' ')
+      .replaceAll(_reData, ' ')
+      .replaceAll(_reParenteses, ' ')
+      .replaceAll(_reAoVivo, ' ');
+  final lados = principal.split(_reConfronto);
+  if (lados.length != 2) return null;
+  final casa = _limparTime(_ladoCasa(lados[0]).$1);
+  final fora = _limparTime(_ladoFora(lados[1]));
+  if (!_timeValido(casa) || !_timeValido(fora)) return null;
+
+  // Campeonato: outra parte do nome ("| FINAL DA COPA ... |") ou o que vem depois do
+  // visitante (" - ATP Finals")
+  String? campeonato;
+  for (final p in [...partes.skip(i + 1), ...partes.take(i).toList().reversed]) {
+    campeonato = _campeonatoOuNull(p);
+    if (campeonato != null) break;
+  }
+  campeonato ??= _campeonatoOuNull(_restoFora(lados[1]));
+  return JogoDaLista(
+    inicio: inicio,
+    casa: casa,
+    fora: fora,
+    campeonato: campeonato,
+    esporte: detectarEsporte('$nome ${campeonato ?? ''}'),
+  );
+}
+
+/// Confronto do título, sem filtros de reprise/horário ("VT - Brasil x Japão" -> Brasil x Japão).
+/// Cada time com até 4 palavras e sem números.
+(String casa, String fora, String? campeonato)? confrontoDoTitulo(String titulo) {
+  final partes = titulo.split('|').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
+  final i = partes.indexWhere((p) => _reConfronto.hasMatch(p));
+  if (i == -1) return null;
+  final principal = partes[i]
+      .replaceAll(_reAPartir, ' ')
+      .replaceAll(_reParenteses, ' ')
+      .replaceAll(_reExtras, ' ')
+      .replaceAll(_reAoVivo, ' ')
+      .replaceAll(_reHora, ' ')
+      .replaceAll(_reData, ' ');
+  final lados = principal.split(_reConfronto);
+  if (lados.length != 2) return null;
+  final (casaBruta, antes) = _ladoCasa(lados[0]);
+  final casa = _limparTime(casaBruta.replaceAll(_reExtras, ' '));
+  final fora = _limparTime(_ladoFora(lados[1]).replaceAll(_reExtras, ' '));
+  bool ok(String t) => _timeValido(t, maxPalavras: 4) && !RegExp(r'\d').hasMatch(t);
+  if (!ok(casa) || !ok(fora)) return null;
+  var campeonato = _campeonatoOuNull(antes) ?? _campeonatoOuNull(_restoFora(lados[1]));
+  if (campeonato == null) {
+    for (final p in [...partes.skip(i + 1), ...partes.take(i).toList().reversed]) {
+      final c = _campeonatoOuNull(p.replaceAll(_reAoVivo, ' ').replaceAll(_reExtras, ' '));
+      if (c != null && !RegExp(r'^(ge tv|sportv|premiere)$', caseSensitive: false).hasMatch(c)) {
+        campeonato = c;
+        break;
+      }
+    }
+  }
+  return (casa, fora, campeonato);
+}
+
+/// Jogo no título de um programa da grade ("Copa do Brasil: Inter x Flamengo (AO VIVO)").
+/// [inicio] e [fim] já no horário de Brasília. Fica de fora (null):
+/// - reprise/VT/compacto/melhores momentos/jogo completo (título ou descrição);
+/// - programa sobre o jogo ("LOGO APÓS O AMISTOSO...", "PREPARAÇÃO...");
+/// - sem fim ou sem horário confiável (bloco de 12 h ou mais, ex.: 00:00 com 24 h);
+/// - chamada de jogo de outro dia ("Dia 18/11 - Corinthians x Botafogo" na grade de 16/11).
+/// "Hoje a partir das 20:30 - X x Y" vira jogo às 20:30 do mesmo dia (anúncio do horário).
+/// [JogoDaLista.aoVivo] diz se o programa se marca como ao vivo (ou é anúncio do dia).
+JogoDaLista? jogoDoTituloDoPrograma(String titulo, DateTime inicio, {String descricao = '', DateTime? fim}) {
+  if (fim == null || !fim.isAfter(inicio)) return null;
+  if (fim.difference(inicio) >= const Duration(hours: 12)) return null;
+  if (ehReprise(titulo, descricao)) return null;
+  if (_reNaoEJogo.hasMatch(normalizeText(titulo))) return null;
+
+  // Data no título diferente do dia do programa: é chamada de outro jogo
+  final data = _reData.firstMatch(titulo);
+  if (data != null) {
+    final d = _dataSemAno(int.parse(data.group(1)!), int.parse(data.group(2)!), inicio);
+    if (d == null || !mesmoDia(d, inicio)) return null;
+  }
+  final c = confrontoDoTitulo(titulo);
+  if (c == null) return null;
+  final (casa, fora, campeonato) = c;
+
+  var horario = inicio;
+  var aoVivo = marcadoAoVivo(titulo, descricao);
+  final anuncio = _reAPartir.firstMatch(titulo);
+  if (anuncio != null) {
+    horario = DateTime(inicio.year, inicio.month, inicio.day, int.parse(anuncio.group(1)!), int.parse(anuncio.group(2)!));
+    aoVivo = true;
+  }
+  return JogoDaLista(
+    inicio: horario,
+    casa: casa,
+    fora: fora,
+    campeonato: campeonato,
+    doNome: false,
+    aoVivo: aoVivo,
+    esporte: detectarEsporte('$titulo ${campeonato ?? ''}'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Grade completa (xmltv.php ou get_simple_data_table)
+// ---------------------------------------------------------------------------
+
+/// Um programa da grade de um canal, com horários no horário de Brasília.
+class ProgramaGrade {
+  final String canal; // id do canal (stream_id)
+  final String titulo;
+  final String descricao;
+  final DateTime inicio;
+  final DateTime fim;
+  const ProgramaGrade(this.canal, this.titulo, this.descricao, this.inicio, this.fim);
+
+  Map<String, Object> toJson() => {
+        'c': canal, 't': titulo, 'd': descricao,
+        'i': inicio.millisecondsSinceEpoch, 'f': fim.millisecondsSinceEpoch,
+      };
+  static ProgramaGrade? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    final i = j['i'], f = j['f'];
+    if (i is! int || f is! int) return null;
+    return ProgramaGrade('${j['c']}', '${j['t'] ?? ''}', '${j['d'] ?? ''}',
+        DateTime.fromMillisecondsSinceEpoch(i), DateTime.fromMillisecondsSinceEpoch(f));
+  }
+}
+
+/// Programa que pode ser jogo (tem "X"/"vs"): só esses são guardados.
+bool pareceJogo(String titulo) => _reConfronto.hasMatch(titulo);
+
+/// "20261115135500 -0300" -> horário de Brasília.
+DateTime? horaXmltv(String s) {
+  final m = RegExp(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?\s*([+-])?(\d{2})?(\d{2})?').firstMatch(s.trim());
+  if (m == null) return null;
+  int g(int i) => int.parse(m.group(i) ?? '0');
+  var utc = DateTime.utc(g(1), g(2), g(3), g(4), g(5), g(6));
+  if (m.group(7) != null) {
+    final off = Duration(hours: g(8), minutes: g(9));
+    utc = m.group(7) == '+' ? utc.subtract(off) : utc.add(off);
+  }
+  return emBrasilia(utc);
+}
+
+String _xmlTexto(String s) => s
+    .replaceAll(RegExp(r'<!\[CDATA\[|\]\]>'), '')
+    .replaceAllMapped(RegExp(r'&#(x?)([0-9a-fA-F]+);'),
+        (m) => String.fromCharCode(int.parse(m.group(2)!, radix: m.group(1)!.isEmpty ? 10 : 16)))
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&amp;', '&')
+    .trim();
+
+final RegExp _reProgramme = RegExp(r'<programme\b([^>]*)>(.*?)</programme>', dotAll: true);
+final RegExp _reTitle = RegExp(r'<title\b[^>]*>(.*?)</title>', dotAll: true);
+final RegExp _reDesc = RegExp(r'<desc\b[^>]*>(.*?)</desc>', dotAll: true);
+String? _atributo(String attrs, String nome) => RegExp('\\b$nome="([^"]*)"').firstMatch(attrs)?.group(1);
+
+/// Lê o xmltv.php (roda num isolate). [canaisPorEpg]: epg_channel_id -> ids dos canais de
+/// esporte. Só guarda programas desses canais que parecem jogo.
+List<ProgramaGrade> lerXmltv((String, Map<String, List<String>>) entrada) => lerXmltvComCobertura(entrada).$1;
+
+/// Igual a [lerXmltv] e também até quando a grade desses canais vai (fim do último
+/// programa, jogo ou não): o xmltv de alguns painéis cobre só ~24 h à frente.
+(List<ProgramaGrade>, DateTime?) lerXmltvComCobertura((String, Map<String, List<String>>) entrada) {
+  final (xml, canaisPorEpg) = entrada;
+  final out = <ProgramaGrade>[];
+  DateTime? ate;
+  for (final m in _reProgramme.allMatches(xml)) {
+    final attrs = m.group(1)!;
+    final canais = canaisPorEpg[_xmlTexto(_atributo(attrs, 'channel') ?? '')];
+    if (canais == null) continue;
+    final fim = horaXmltv(_atributo(attrs, 'stop') ?? '');
+    if (fim != null && (ate == null || fim.isAfter(ate))) ate = fim;
+    final titulo = _xmlTexto(_reTitle.firstMatch(m.group(2)!)?.group(1) ?? '');
+    if (!pareceJogo(titulo)) continue;
+    final ini = horaXmltv(_atributo(attrs, 'start') ?? '');
+    if (ini == null || fim == null) continue;
+    final desc = _xmlTexto(_reDesc.firstMatch(m.group(2)!)?.group(1) ?? '');
+    for (final c in canais) {
+      out.add(ProgramaGrade(c, titulo, desc, ini, fim));
+    }
+  }
+  return (out, ate);
+}
+
+/// Mínimo de jogos "AO VIVO" no dia para o painel ser considerado um que marca ao vivo.
+const int minMarcadosAoVivo = 3;
+
+/// Jogos de [dia] na grade, com a regra adaptável ao painel:
+/// - painel que marca "AO VIVO" (pelo menos [minMarcadosAoVivo] jogos marcados no dia):
+///   só entra o marcado (ou anunciado no dia) ou o que também está nos eventos da lista;
+/// - painel que não marca: "Time X Time" que não é reprise, com início entre 08:00 e 23:59
+///   e sem o mesmo confronto nas 48 h anteriores (reprise sem a palavra "VT").
+List<JogoDaLista> jogosDaGrade(
+  List<ProgramaGrade> programas,
+  DateTime dia,
+  List<JogoDaLista> dosNomes,
+  Map<String, Channel> canais,
+) {
+  final candidatos = <(ProgramaGrade, JogoDaLista)>[];
+  for (final p in programas) {
+    if (!mesmoDia(p.inicio, dia)) continue;
+    final j = jogoDoTituloDoPrograma(p.titulo, p.inicio, descricao: p.descricao, fim: p.fim);
+    if (j != null) candidatos.add((p, j));
+  }
+  final marcados = candidatos.where((c) => c.$2.aoVivo).length;
+  final exigeAoVivo = marcados >= minMarcadosAoVivo;
+
+  // Todas as exibições de cada confronto (inclusive VT), para achar repetições
+  final exibicoes = <(DateTime, String, String)>[
+    for (final p in programas)
+      if (confrontoDoTitulo(p.titulo) case (final casa, final fora, _)) (p.inicio, casa, fora),
+  ];
+  bool repetido(JogoDaLista j) => exibicoes.any((e) {
+        final antes = j.inicio.difference(e.$1);
+        if (antes <= Duration.zero || antes > const Duration(hours: 48)) return false;
+        return mesmoJogo(j, JogoDaLista(inicio: j.inicio, casa: e.$2, fora: e.$3));
+      });
+
+  final out = <JogoDaLista>[];
+  for (final (p, j) in candidatos) {
+    final nosEventos = dosNomes.any((n) => mesmoJogo(n, j));
+    final aceito = j.aoVivo ||
+        nosEventos ||
+        (!exigeAoVivo && j.inicio.hour >= 8 && !repetido(j));
+    if (!aceito) continue;
+    final c = canais[p.canal];
+    if (c != null) j.canais.add(c);
+    out.add(j);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Juntar duplicatas
+// ---------------------------------------------------------------------------
+
+bool _cita(String outroConfronto, String time) => titleMentionsTeam(normalizeText(outroConfronto), time);
+
+/// Mesmo confronto (em qualquer ordem, com nomes parciais: "Inter" = "Internacional")
+/// no mesmo dia e com até 3 h de diferença (a grade às vezes repete o jogo em dois blocos
+/// seguidos; o mesmo confronto duas vezes no mesmo dia não acontece).
+bool mesmoJogo(JogoDaLista a, JogoDaLista b) {
+  if (!mesmoDia(a.inicio, b.inicio)) return false;
+  if (a.inicio.difference(b.inicio).abs() > const Duration(hours: 3)) return false;
+  final ta = '${a.casa} ${a.fora}', tb = '${b.casa} ${b.fora}';
+  return (_cita(tb, a.casa) && _cita(tb, a.fora)) || (_cita(ta, b.casa) && _cita(ta, b.fora));
+}
+
+/// Junta jogos repetidos (canais FHD/HD do mesmo jogo, nome + grade), soma os canais
+/// (cada um uma vez; os de evento primeiro, depois a melhor qualidade) e ordena por horário.
+/// Quem vem do nome do canal define horário e nomes.
+List<JogoDaLista> juntarJogos(Iterable<JogoDaLista> jogos) {
+  final ordenados = jogos.toList()
+    ..sort((a, b) {
+      if (a.doNome != b.doNome) return a.doNome ? -1 : 1;
+      return a.inicio.compareTo(b.inicio);
+    });
+  final out = <JogoDaLista>[];
+  for (final j in ordenados) {
+    final igual = out.where((o) => mesmoJogo(o, j)).firstOrNull;
+    if (igual == null) {
+      out.add(JogoDaLista(
+        inicio: j.inicio, casa: j.casa, fora: j.fora, campeonato: j.campeonato,
+        canais: [...j.canais], doNome: j.doNome, aoVivo: j.aoVivo, esporte: j.esporte,
+      ));
+      continue;
+    }
+    final out2 = JogoDaLista(
+      inicio: igual.inicio, casa: igual.casa, fora: igual.fora,
+      campeonato: igual.campeonato ?? j.campeonato,
+      canais: [
+        ...igual.canais,
+        for (final c in j.canais)
+          if (!igual.canais.any((x) => x.id == c.id)) c,
+      ],
+      doNome: igual.doNome,
+      aoVivo: igual.aoVivo || j.aoVivo,
+      esporte: igual.esporte ?? j.esporte,
+    );
+    out[out.indexOf(igual)] = out2;
+  }
+  for (final j in out) {
+    final evento = {for (final c in j.canais) c.id: nameLooksLikeEvent(c.name)};
+    j.canais.sort((a, b) {
+      final e = (evento[b.id]! ? 1 : 0) - (evento[a.id]! ? 1 : 0);
+      return e != 0 ? e : channelQualityRank(b.name).compareTo(channelQualityRank(a.name));
+    });
+  }
+  out.sort((a, b) => a.inicio.compareTo(b.inicio));
+  return out;
+}
+
+bool mesmoDia(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+
+// ---------------------------------------------------------------------------
+// Análise da lista inteira (roda num isolate)
+// ---------------------------------------------------------------------------
+
+/// Resultado da leitura dos canais: jogos dos nomes (todas as datas) e os canais de
+/// esporte cuja programação vale consultar (um por emissora, na melhor qualidade).
+class AnaliseDaLista {
+  final List<JogoDaLista> jogosDosNomes;
+  final List<Channel> canaisParaEpg;
+  const AnaliseDaLista(this.jogosDosNomes, this.canaisParaEpg);
+}
+
+const int maxCanaisEpg = 120;
+
+AnaliseDaLista analisarCanais((List<Channel>, DateTime) entrada) {
+  final (canais, referencia) = entrada;
+  final jogos = <JogoDaLista>[];
+  final porEmissora = <String, Channel>{};
+  for (final c in canais) {
+    if (ehCategoriaDeJogos(c.categoryName)) {
+      final j = jogoDoNomeDoCanal(c.name, referencia);
+      if (j != null) {
+        final esporte = j.esporte ?? detectarEsporte(c.categoryName);
+        jogos.add(JogoDaLista(
+          inicio: j.inicio, casa: j.casa, fora: j.fora, campeonato: j.campeonato,
+          canais: [c], esporte: esporte,
+        ));
+        continue;
+      }
+    }
+    if (nameLooksLikeEvent(c.name) || !ehCanalDeEsporte(c)) continue;
+    final base = channelBaseName(c.name);
+    final atual = porEmissora[base];
+    if (atual == null || channelQualityRank(c.name) > channelQualityRank(atual.name)) porEmissora[base] = c;
+  }
+  // Emissoras conhecidas primeiro (na ordem da lista acima), depois o resto das categorias
+  // de esporte; poucas por marca
+  int prioridade(Channel c) {
+    final base = channelBaseName(c.name);
+    final i = emissorasDeEsporte.indexWhere((e) => base == e || base.startsWith('$e '));
+    return i == -1 ? emissorasDeEsporte.length : i;
+  }
+
+  final ordem = porEmissora.values.toList();
+  final pos = {for (var k = 0; k < ordem.length; k++) ordem[k].id: k};
+  ordem.sort((a, b) {
+    final p = prioridade(a).compareTo(prioridade(b));
+    return p != 0 ? p : pos[a.id]!.compareTo(pos[b.id]!);
+  });
+  final porMarca = <String, int>{};
+  final escolhidos = <Channel>[];
+  for (final c in ordem) {
+    final marca = channelBaseName(c.name).split(' ').first;
+    final n = porMarca[marca] = (porMarca[marca] ?? 0) + 1;
+    if (n > maxCanaisPorMarca) continue;
+    escolhidos.add(c);
+    if (escolhidos.length >= maxCanaisEpg) break;
+  }
+  return AnaliseDaLista(jogos, escolhidos);
+}

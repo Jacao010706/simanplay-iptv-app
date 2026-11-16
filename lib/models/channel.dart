@@ -7,6 +7,8 @@ class Channel {
   final String categoryId;
   final String categoryName;
   final int? epgChannelId;
+  /// epg_channel_id como veio (ex.: "SPORTV"), para achar o canal no xmltv.php.
+  final String? epgKey;
   final bool isFavorite;
 
   Channel({
@@ -17,6 +19,7 @@ class Channel {
     required this.categoryId,
     required this.categoryName,
     this.epgChannelId,
+    this.epgKey,
     this.isFavorite = false,
   });
 
@@ -40,6 +43,9 @@ class Channel {
       epgChannelId: json['epg_channel_id'] != null
           ? int.tryParse(json['epg_channel_id'].toString())
           : null,
+      epgKey: (json['epg_channel_id']?.toString().trim().isEmpty ?? true)
+          ? null
+          : json['epg_channel_id'].toString().trim(),
     );
   }
 
@@ -50,6 +56,7 @@ class Channel {
     required String streamUrl,
     String? logoUrl,
     required String categoryName,
+    String? epgKey,
   }) {
     return Channel(
       id: id,
@@ -58,6 +65,7 @@ class Channel {
       logoUrl: logoUrl,
       categoryId: categoryName,
       categoryName: categoryName,
+      epgKey: epgKey,
     );
   }
 
@@ -70,6 +78,7 @@ class Channel {
       categoryId: categoryId,
       categoryName: categoryName,
       epgChannelId: epgChannelId,
+      epgKey: epgKey,
       isFavorite: isFavorite ?? this.isFavorite,
     );
   }

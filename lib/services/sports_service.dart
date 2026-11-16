@@ -177,7 +177,8 @@ class SportsService {
 
   Future<List<Fixture>> fixtures(DateTime day) async {
     final uri = Uri.parse('${AppConfig.backendUrl}/sports/fixtures?date=${fixtureDateParam(day)}');
-    final res = await http.get(uri).timeout(const Duration(seconds: 20));
+    // Timeout curto: se o backend não responder, a tela usa o plano B (jogos da lista)
+    final res = await http.get(uri).timeout(const Duration(seconds: 5));
     if (res.statusCode == 503) throw SportsUnavailableException();
     if (res.statusCode == 403) throw SportsDateUnavailableException();
     if (res.statusCode != 200) throw Exception('Erro ao carregar os jogos (${res.statusCode})');
@@ -200,14 +201,14 @@ class SportsService {
       username: session.effectiveXtreamUsername!,
       password: session.effectiveXtreamPassword!,
     );
-    final cats = (await svc.getLiveCategories()).where((c) => isSportsCategory(c.name));
-    final out = <Channel>[];
-    for (final cat in cats) {
-      try {
-        out.addAll(await svc.getLiveStreams(cat.id, cat.name));
-      } catch (_) {}
-      if (out.length >= maxSportsChannels) break;
+    // Uma chamada só para todos os canais (a mesma lista em cache da aba Ao Vivo),
+    // filtrada pelas categorias de esporte, na ordem das categorias
+    final cats = (await svc.getLivePastas()).where((c) => isSportsCategory(c.name)).toList();
+    final porCategoria = <String, List<Channel>>{for (final c in cats) c.id: []};
+    for (final ch in await svc.getAllLiveStreams()) {
+      porCategoria[ch.categoryId]?.add(ch);
     }
+    final out = [for (final c in cats) ...porCategoria[c.id]!];
     _sportsChannels = out.take(maxSportsChannels).toList();
     _sportsChannelsAt = DateTime.now();
     _sportsChannelsKey = key;

@@ -6,6 +6,7 @@ import '../core/app_config.dart';
 import '../core/marca.dart';
 import '../core/lista_demo.dart';
 import '../core/loja.dart';
+import '../core/versao.dart';
 import '../models/app_session.dart';
 import '../services/epg_service.dart';
 import '../services/xtream_service.dart';
@@ -101,9 +102,9 @@ Future<Map<String, List>> _loadXtream(AppSession session) async {
       password: session.effectiveXtreamPassword!,
     );
     final cats = await Future.wait([
-      svc.getLiveCategories(),
-      svc.getMovieCategories(),
-      svc.getSeriesCategories(),
+      svc.getLivePastas(),
+      svc.getMoviePastas(),
+      svc.getSeriesPastas(),
     ]);
     final liveCats = cats[0], movieCats = cats[1], seriesCats = cats[2];
     if (liveCats.isNotEmpty) {
@@ -281,7 +282,7 @@ class _SidebarLayoutState extends State<_SidebarLayout> {
     if (!widget.session.hasXtreamAccess) { setState(() => _loading = false); return; }
     try {
       final svc = XtreamService(host: widget.session.effectiveXtreamHost!, username: widget.session.effectiveXtreamUsername!, password: widget.session.effectiveXtreamPassword!);
-      final cats = await svc.getLiveCategories();
+      final cats = await svc.getLivePastas();
       if (cats.isNotEmpty) { final ch = await svc.getLiveStreams(cats[0].id, cats[0].name); setState(() { _cats = cats; _ch = ch; _loading = false; }); }
       else setState(() => _loading = false);
     } catch (_) { setState(() => _loading = false); }
@@ -593,6 +594,8 @@ class _IBO6Home extends StatelessWidget {
                 : Container(color: const Color(0xFF1a1a2e))),
             Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xFF0d0d0d)])))),
             Positioned(top: 8, right: 8, child: SafeArea(child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(versaoApp, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+              const SizedBox(width: 8),
               if (session.expiresAt != null) Text('Vence: ${_fmtDate(session.expiresAt!)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
               const SizedBox(width: 4),
               TvTap(onTap: onLogout, child: const Icon(Icons.logout, color: Colors.white54, size: 20)),
@@ -686,6 +689,7 @@ class _HomeTab extends StatelessWidget {
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(session.isXtream ? 'Conectado via Xtream Codes' : 'Conectado via ${Marca.appName}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
               if (session.isXtream) Text(ListaDemo.ativa(session.xtreamHost) ? ListaDemo.nome : session.xtreamHost ?? '', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(versaoApp, style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ])),
           ])),
         ])),

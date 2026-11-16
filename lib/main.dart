@@ -7,7 +7,10 @@ import 'screens/license_gate.dart';
 import 'core/marca.dart';
 import 'core/loja.dart';
 import 'core/modo_tv.dart';
+import 'core/janela_pc.dart';
+import 'core/plataforma.dart';
 import 'services/update_service.dart';
+import 'widgets/pc_input.dart';
 import 'widgets/tv_focus.dart';
 import 'widgets/modo_tv_widgets.dart';
 import 'services/recording_service.dart';
@@ -18,6 +21,8 @@ Future<void> main() async {
   MediaKit.ensureInitialized(); // necessário para o player de vídeo
   // TV/TV box/Fire TV e pacote do APK: fonte, overscan, saída e (Sofae) telas sem pagamento
   await ModoTv.iniciar();
+  // PC: janela 1280x720 (mínimo 960x540) com o nome do app. Fora do Windows não faz nada.
+  await JanelaPc.iniciar();
   runApp(const IptvPlayerApp());
   // Novidades da versao + verificacao de atualizacao (em segundo plano).
   // Na Play quem atualiza e a loja: o atualizador nem entra no build.
@@ -40,6 +45,8 @@ class IptvPlayerApp extends StatelessWidget {
           return MaterialApp(
             navigatorKey: appNavigatorKey,
             shortcuts: appShortcuts,
+            // PC: listas também rolam arrastando com o mouse
+            scrollBehavior: Plataforma.windows ? const RolagemPc() : null,
             title: Marca.appName,
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
@@ -57,9 +64,13 @@ class IptvPlayerApp extends StatelessWidget {
                     textScaler: ModoTv.tv
                         ? const TextScaler.linear(ModoTv.escalaTexto)
                         : mq.textScaler.clamp(maxScaleFactor: 1.15)),
-                child: MargemTv(
-                    child: FocusRing(
-                        child: LicenseGate(child: child ?? const SizedBox.shrink()))),
+                // PC: Esc/Backspace voltam uma tela
+                child: AtalhosPc(
+                  navigatorKey: appNavigatorKey,
+                  child: MargemTv(
+                      child: FocusRing(
+                          child: LicenseGate(child: child ?? const SizedBox.shrink()))),
+                ),
               );
             },
           );

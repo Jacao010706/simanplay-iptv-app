@@ -8,8 +8,10 @@ import 'package:http/http.dart' as http;
 /// (muito comum em painéis IPTV), e aí "Brasileirão" vira "BrasileirÃ£o" e "SD²" vira
 /// "SDÂ²". Aqui decodificamos os bytes como UTF-8; só se não forem UTF-8 válido
 /// (servidor realmente em Latin-1) usamos Latin-1.
-String decodeBody(http.Response response) {
-  var bytes = response.bodyBytes;
+String decodeBody(http.Response response) => decodeBytes(response.bodyBytes);
+
+/// Mesmo que [decodeBody], a partir dos bytes (usado no isolate do M3U).
+String decodeBytes(List<int> bytes) {
   if (bytes.length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
     bytes = bytes.sublist(3); // BOM
   }

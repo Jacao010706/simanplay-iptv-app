@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/loja.dart';
 import '../core/marca.dart';
+import '../core/erros.dart';
 import '../services/api_service.dart';
 import '../models/app_session.dart';
 import 'home_screen_v2.dart';
@@ -95,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = mensagemDeErro(e);
         _loading = false;
       });
     }

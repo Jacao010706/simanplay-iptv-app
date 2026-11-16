@@ -5,10 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simanplay_iptv/core/loja.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:simanplay_iptv/core/jogos_lista.dart';
 import 'package:simanplay_iptv/models/app_session.dart';
 import 'package:simanplay_iptv/models/channel.dart';
 import 'package:simanplay_iptv/screens/games_today_screen.dart';
 import 'package:simanplay_iptv/screens/home_screen_v2.dart';
+import 'package:simanplay_iptv/services/escudos_service.dart';
+import 'package:simanplay_iptv/services/jogos_lista_service.dart';
 import 'package:simanplay_iptv/services/sports_service.dart';
 import 'package:simanplay_iptv/widgets/tv_focus.dart';
 
@@ -75,6 +81,8 @@ Future<List<Channel>> abrir(
   WidgetTester tester, {
   FixturesLoader? fixtures,
   WhereToWatchLoader? onde,
+  JogosDaListaLoader? daLista,
+  EscudosService? escudos,
 }) async {
   _telaTv(tester);
   final abertos = <Channel>[];
@@ -91,6 +99,8 @@ Future<List<Channel>> abrir(
                 2: [canal('20', 'ESPN')],
               },
       debugOnOpenChannel: abertos.add,
+      debugJogosDaLista: daLista,
+      debugEscudos: escudos,
     ),
   ));
   await tester.pump();
@@ -172,14 +182,99 @@ void main() {
     expect(find.text('Canal não encontrado na sua lista'), findsNWidgets(2));
   });
 
-  testWidgets('backend sem chave: Jogos indisponiveis no momento', (tester) async {
-    await abrir(tester, fixtures: (day) async => throw SportsUnavailableException());
-    expect(find.text('Jogos indisponíveis no momento'), findsOneWidget);
-  });
+  group('Plano B: backend fora, jogos da lista', () {
+    final inter = JogoDaLista(
+      inicio: DateTime(2026, 10, 1, 16),
+      casa: 'Internacional',
+      fora: 'ATLETICO',
+      canais: [canal('1', 'Internacional x Atletico - 16:00 FHD'), canal('2', 'SporTV FHD')],
+    );
+    EscudosService escudos() {
+      SharedPreferences.setMockInitialValues({});
+      return EscudosService(
+        client: MockClient((_) async => http.Response('', 500)),
+        intervalo: Duration.zero,
+      );
+    }
 
-  testWidgets('data fora do plano da API: mensagem propria', (tester) async {
-    await abrir(tester, fixtures: (day) async => throw SportsDateUnavailableException());
-    expect(find.text('Jogos desta data não estão disponíveis.'), findsOneWidget);
+    for (final erro in <String, Object>{
+      'sem chave (503)': SportsUnavailableException(),
+      'data fora do plano (403)': SportsDateUnavailableException(),
+      '502/timeout': Exception('Erro ao carregar os jogos (502)'),
+    }.entries) {
+      testWidgets('backend ${erro.key}: mostra os jogos da lista, sem placar', (tester) async {
+        final abertos = await abrir(
+          tester,
+          fixtures: (day) async => throw erro.value,
+          daLista: (day, parcial) async => JogosEncontrados([inter]),
+          escudos: escudos(),
+        );
+        expect(find.text('Jogos encontrados na sua lista'), findsOneWidget);
+        expect(find.text('Internacional'), findsOneWidget);
+        expect(find.text('16:00'), findsOneWidget);
+        expect(find.textContaining('Verifique'), findsNothing);
+        expect(find.byKey(const ValueKey('iniciais-ATLETICO')), findsOneWidget,
+            reason: 'ATLETICO sem estado: iniciais, nunca um escudo talvez errado');
+        expect(find.text('ATL'), findsOneWidget);
+        await tester.tap(find.byKey(ValueKey('channel-chip-${inter.id}-2')));
+        await tester.pump();
+        expect(abertos.map((c) => c.id), ['2']);
+      });
+    }
+
+    testWidgets('nada na lista: mensagem propria (nunca "Verifique a conexao")', (tester) async {
+      await abrir(tester,
+          fixtures: (day) async => throw Exception('502'),
+          daLista: (day, parcial) async => const JogosEncontrados([]));
+      expect(find.text('Nenhum jogo encontrado na sua lista para esta data.'), findsOneWidget);
+      expect(find.textContaining('Verifique'), findsNothing);
+    });
+
+    testWidgets('plano B que falha: "sua lista nao traz" (nunca "Verifique a conexao")', (tester) async {
+      await abrir(tester,
+          fixtures: (day) async => throw Exception('502'),
+          daLista: (day, parcial) async => throw Exception('lista fora'));
+      expect(find.text('Sua lista não traz a programação de jogos para esta data.'), findsOneWidget);
+      expect(find.textContaining('Verifique'), findsNothing);
+    });
+
+    testWidgets('lista sem dados de ontem: esconde "Ontem"; dia sem dados: mensagem propria', (tester) async {
+      final hoje = DateTime(agora.year, agora.month, agora.day);
+      await abrir(tester,
+          fixtures: (day) async => throw Exception('502'),
+          daLista: (day, parcial) async => JogosEncontrados(
+                day == hoje ? [inter] : const [],
+                temDadosDoDia: day == hoje,
+                diasComDados: {hoje},
+              ),
+          escudos: escudos());
+      expect(find.text('Ontem'), findsNothing);
+      expect(find.text('Hoje'), findsOneWidget);
+      expect(find.text('Amanhã'), findsOneWidget);
+      await tester.tap(find.text('Amanhã'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Sua lista não traz a programação de jogos para esta data.'), findsOneWidget);
+    });
+
+    testWidgets('lista com dados de ontem: "Ontem" aparece', (tester) async {
+      final hoje = DateTime(agora.year, agora.month, agora.day);
+      await abrir(tester,
+          fixtures: (day) async => throw Exception('502'),
+          daLista: (day, parcial) async => JogosEncontrados(const [],
+              diasComDados: {hoje, hoje.subtract(const Duration(days: 1))}));
+      expect(find.text('Ontem'), findsOneWidget);
+    });
+
+    testWidgets('backend respondendo: fonte normal, sem aviso da lista', (tester) async {
+      var usouLista = false;
+      await abrir(tester, daLista: (day, parcial) async {
+        usouLista = true;
+        return const JogosEncontrados([]);
+      });
+      expect(find.text('Jogos encontrados na sua lista'), findsNothing);
+      expect(usouLista, isFalse);
+    });
   });
 
   testWidgets('Ontem/Hoje/Amanha trocam a data pedida', (tester) async {

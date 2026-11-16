@@ -5,6 +5,9 @@ import '../core/marca.dart';
 import '../models/app_session.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart' show formatHm;
+import '../core/jogos_lista.dart';
+import '../services/escudos_service.dart';
+import '../services/jogos_lista_service.dart';
 import '../services/sports_service.dart';
 import '../widgets/tv_focus.dart';
 import 'player_screen.dart';
@@ -12,6 +15,8 @@ import 'player_screen.dart';
 typedef FixturesLoader = Future<List<Fixture>> Function(DateTime day);
 typedef WhereToWatchLoader = Future<Map<int, List<Channel>>> Function(
     List<Fixture> fixtures, void Function(Map<int, List<Channel>> partial) onUpdate);
+typedef JogosDaListaLoader = Future<JogosEncontrados> Function(
+    DateTime day, void Function(JogosEncontrados parcial) parcial);
 
 /// "Jogos do Dia": jogos dos campeonatos acompanhados, com escudos, horário ou
 /// placar e os canais da lista do cliente que transmitem cada jogo.
@@ -26,6 +31,10 @@ class GamesTodayScreen extends StatefulWidget {
   @visibleForTesting
   final void Function(Channel channel)? debugOnOpenChannel;
   @visibleForTesting
+  final JogosDaListaLoader? debugJogosDaLista;
+  @visibleForTesting
+  final EscudosService? debugEscudos;
+  @visibleForTesting
   final DateTime Function()? clock;
 
   const GamesTodayScreen({
@@ -34,6 +43,8 @@ class GamesTodayScreen extends StatefulWidget {
     this.debugFixtures,
     this.debugWhereToWatch,
     this.debugOnOpenChannel,
+    this.debugJogosDaLista,
+    this.debugEscudos,
     this.clock,
   });
 
@@ -44,9 +55,12 @@ class GamesTodayScreen extends StatefulWidget {
 class _GamesTodayScreenState extends State<GamesTodayScreen> {
   int _dayOffset = 0; // -1 ontem, 0 hoje, 1 amanhã
   bool _loading = true;
-  bool _unavailable = false;
-  bool _dateUnavailable = false;
-  String? _error;
+  /// Plano B: o backend de jogos não respondeu e os jogos vêm da lista do cliente.
+  bool _daLista = false;
+  Map<int, JogoDaLista> _jogosDaLista = const {};
+  bool _semDadosDoDia = false;
+  /// Dias com dados na lista (plano B); null = ainda não se sabe (mostra os três botões).
+  Set<DateTime>? _diasComDados;
   List<Fixture> _fixtures = const [];
   Map<int, List<Channel>> _where = const {};
   bool _searchingChannels = false;
@@ -69,9 +83,9 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     final token = ++_loadToken;
     setState(() {
       _loading = true;
-      _unavailable = false;
-      _dateUnavailable = false;
-      _error = null;
+      _daLista = false;
+      _semDadosDoDia = false;
+      _fixtures = const [];
       _where = const {};
       _searchingChannels = false;
     });
@@ -79,30 +93,52 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       final fixtures = await (widget.debugFixtures ?? SportsService.instance.fixtures)(_day);
       if (!mounted || token != _loadToken) return;
       setState(() {
+        _diasComDados = null; // backend no ar: Ontem/Hoje/Amanhã como sempre
         _fixtures = fixtures;
         _loading = false;
         _searchingChannels = fixtures.isNotEmpty;
       });
       if (fixtures.isNotEmpty) _findChannels(fixtures, token);
-    } on SportsUnavailableException {
-      if (!mounted || token != _loadToken) return;
-      setState(() {
-        _unavailable = true;
-        _loading = false;
-      });
-    } on SportsDateUnavailableException {
-      if (!mounted || token != _loadToken) return;
-      setState(() {
-        _dateUnavailable = true;
-        _loading = false;
-      });
     } catch (_) {
+      // Backend fora (qualquer erro, 5xx ou 5 s sem resposta): jogos da própria lista
+      if (!mounted || token != _loadToken) return;
+      await _carregarDaLista(token);
+    }
+  }
+
+  static Fixture _fixtureDe(JogoDaLista j) => Fixture(
+        id: j.id,
+        leagueName: j.campeonato ?? 'Jogos da sua lista',
+        kickoff: j.inicio,
+        homeName: j.casa,
+        awayName: j.fora,
+      );
+
+  Future<void> _carregarDaLista(int token) async {
+    void aplicar(JogosEncontrados r) {
       if (!mounted || token != _loadToken) return;
       setState(() {
-        _error = 'Não foi possível carregar os jogos. Verifique a conexão.';
+        _daLista = true;
+        _fixtures = r.jogos.map(_fixtureDe).toList();
+        _jogosDaLista = {for (final j in r.jogos) j.id: j};
+        _semDadosDoDia = !r.temDadosDoDia;
+        _diasComDados = {...?_diasComDados, ...r.diasComDados};
+        _where = r.canaisPorJogo;
         _loading = false;
       });
     }
+
+    final loader = widget.debugJogosDaLista ??
+        (day, parcial) => JogosDaListaService.instance.buscar(widget.session, day, parcial: parcial);
+    if (mounted && token == _loadToken) setState(() => _searchingChannels = true);
+    JogosEncontrados fim;
+    try {
+      fim = await loader(_day, aplicar);
+    } catch (_) {
+      fim = const JogosEncontrados([], temDadosDoDia: false);
+    }
+    aplicar(fim);
+    if (mounted && token == _loadToken) setState(() => _searchingChannels = false);
   }
 
   Future<void> _findChannels(List<Fixture> fixtures, int token) async {
@@ -116,6 +152,22 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       update(await finder(fixtures, update));
     } catch (_) {}
     if (mounted && token == _loadToken) setState(() => _searchingChannels = false);
+  }
+
+  /// Backend fora e a lista sem dados de ontem: esconde "Ontem" (a grade dos painéis
+  /// quase nunca traz o passado). "Amanhã" fica sempre.
+  bool _mostrarDia(int offset) {
+    if (offset != -1 || _dayOffset == -1) return true;
+    final dias = _diasComDados;
+    if (!_daLista || dias == null) return true;
+    final n = _now;
+    return dias.contains(DateTime(n.year, n.month, n.day - 1));
+  }
+
+  /// Escudo só para futebol (esporte não identificado) ou seleção; tênis, UFC etc.: iniciais.
+  bool _buscarEscudo(int id, String time) {
+    final j = _jogosDaLista[id];
+    return j == null || j.esporte == null || ehSelecao(time);
   }
 
   void _setDay(int offset) {
@@ -137,7 +189,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           title: ch.name,
           isLive: true,
           recordName: ch.name,
-          streamId: widget.session.hasXtreamAccess ? ch.id : null,
+          streamId: widget.session.hasXtreamAccess && !ch.id.startsWith('m3u_') ? ch.id : null,
         ),
       ),
     );
@@ -160,6 +212,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
                     style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               for (final d in const [(-1, 'Ontem'), (0, 'Hoje'), (1, 'Amanhã')])
+                if (_mostrarDia(d.$1))
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: TvTap(
@@ -211,20 +264,37 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
 
   Widget _body(Color primary) {
     if (_loading) return Center(child: CircularProgressIndicator(color: primary));
-    if (_unavailable) return _message('Jogos indisponíveis no momento', icon: Icons.event_busy);
-    if (_dateUnavailable) return _message('Jogos desta data não estão disponíveis.', icon: Icons.event_busy);
-    if (_error != null) return _message(_error!, icon: Icons.wifi_off, retry: true);
-    if (_fixtures.isEmpty) return _message('Nenhum jogo dos campeonatos acompanhados neste dia.');
+    if (_fixtures.isEmpty) {
+      if (_daLista && _semDadosDoDia) {
+        return _message('Sua lista não traz a programação de jogos para esta data.', icon: Icons.event_busy);
+      }
+      return _message(_daLista
+          ? 'Nenhum jogo encontrado na sua lista para esta data.'
+          : 'Nenhum jogo dos campeonatos acompanhados neste dia.');
+    }
 
-    // Agrupa por campeonato, na ordem do primeiro jogo de cada um
+    // Agrupa por campeonato, na ordem do primeiro jogo de cada um. No plano B: lista única
+    // por horário (o campeonato vai numa linha menor em cada jogo)
     final groups = <String, List<Fixture>>{};
     for (final f in _fixtures) {
-      (groups['${f.leagueName}|${f.leagueCountry}'] ??= []).add(f);
+      (groups[_daLista ? '' : '${f.leagueName}|${f.leagueCountry}'] ??= []).add(f);
     }
-    final children = <Widget>[];
+    final children = <Widget>[
+      if (_daLista)
+        const Padding(
+          key: ValueKey('aviso-da-lista'),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Row(children: [
+            Icon(Icons.playlist_play, color: Colors.white38, size: 14),
+            SizedBox(width: 6),
+            Text('Jogos encontrados na sua lista', style: TextStyle(color: Colors.white38, fontSize: 11)),
+          ]),
+        ),
+    ];
     for (final g in groups.values) {
       final first = g.first;
-      children.add(Padding(
+      if (!_daLista) {
+        children.add(Padding(
         key: ValueKey('league-${first.leagueName}'),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
         child: Row(children: [
@@ -242,6 +312,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           ],
         ]),
       ));
+      }
       for (final f in g) {
         children.add(_fixtureCard(f, primary));
       }
@@ -263,7 +334,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     );
   }
 
-  Widget _team(String name, String? logo, {required bool home}) {
+  Widget _team(String name, String? logo, {required bool home, bool buscarEscudo = true}) {
     final text = Flexible(
       child: Text(name,
           style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
@@ -271,7 +342,10 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           overflow: TextOverflow.ellipsis,
           textAlign: home ? TextAlign.right : TextAlign.left),
     );
-    final shield = _logo(logo, 34, Icons.shield_outlined);
+    final shield = _daLista && (logo == null || logo.isEmpty)
+        ? EscudoDoTime(
+            nome: name, size: 34, buscar: buscarEscudo, escudos: widget.debugEscudos ?? EscudosService.instance)
+        : _logo(logo, 34, Icons.shield_outlined);
     return Expanded(
       child: Row(
         mainAxisAlignment: home ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -333,12 +407,32 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(children: [
-              _team(f.homeName, f.homeLogo, home: true),
+              _team(f.homeName, f.homeLogo, home: true, buscarEscudo: _buscarEscudo(f.id, f.homeName)),
               SizedBox(width: 76, child: Center(child: _center(f))),
-              _team(f.awayName, f.awayLogo, home: false),
+              _team(f.awayName, f.awayLogo, home: false, buscarEscudo: _buscarEscudo(f.id, f.awayName)),
             ]),
           ),
         ),
+        if (_jogosDaLista[f.id] case final j? when _daLista && (j.campeonato != null || j.esporte != null))
+          Padding(
+            key: ValueKey('detalhe-${f.id}'),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              if (j.esporte != null) ...[
+                Icon(iconeDoEsporte(j.esporte), color: Colors.white54, size: 13),
+                const SizedBox(width: 4),
+                Text(nomeDoEsporte(j.esporte!), style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                if (j.campeonato != null) const Text('  ·  ', style: TextStyle(color: Colors.white24, fontSize: 11)),
+              ],
+              if (j.campeonato != null)
+                Flexible(
+                  child: Text(j.campeonato!,
+                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+            ]),
+          ),
         if (f.emissoras.isNotEmpty)
           Padding(
             key: ValueKey('emissoras-${f.id}'),
@@ -408,3 +502,68 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     ]));
   }
 }
+
+/// Escudo da TheSportsDB quando o nome bate com segurança; senão, círculo com as iniciais.
+class EscudoDoTime extends StatelessWidget {
+  final String nome;
+  final double size;
+  final EscudosService escudos;
+  final bool buscar;
+  const EscudoDoTime({super.key, required this.nome, required this.size, required this.escudos, this.buscar = true});
+
+  @override
+  Widget build(BuildContext context) {
+    final iniciais = Container(
+      key: ValueKey('iniciais-$nome'),
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: Color(0xFF2a2538), shape: BoxShape.circle),
+      child: Text(iniciaisTime(nome),
+          style: TextStyle(color: Colors.white70, fontSize: size * 0.32, fontWeight: FontWeight.bold)),
+    );
+    return ValueListenableBuilder<String?>(
+      valueListenable: escudos.escudo(nome, buscar: buscar),
+      builder: (_, url, __) => url == null
+          ? iniciais
+          : CachedNetworkImage(
+              imageUrl: url,
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
+              placeholder: (_, __) => iniciais,
+              errorWidget: (_, __, ___) => iniciais,
+            ),
+    );
+  }
+}
+
+/// Ícone e nome do esporte identificado no plano B.
+IconData iconeDoEsporte(String? esporte) => switch (esporte) {
+      'tenis' => Icons.sports_tennis,
+      'basquete' => Icons.sports_basketball,
+      'mma' || 'boxe' => Icons.sports_mma,
+      'volei' => Icons.sports_volleyball,
+      'futebol_americano' => Icons.sports_football,
+      'beisebol' => Icons.sports_baseball,
+      'hoquei' => Icons.sports_hockey,
+      'criquete' => Icons.sports_cricket,
+      'rugby' => Icons.sports_rugby,
+      'handebol' => Icons.sports_handball,
+      _ => Icons.sports_soccer,
+    };
+
+String nomeDoEsporte(String esporte) => const {
+      'tenis': 'Tênis',
+      'basquete': 'Basquete',
+      'mma': 'UFC/MMA',
+      'boxe': 'Boxe',
+      'volei': 'Vôlei',
+      'futebol_americano': 'Futebol americano',
+      'beisebol': 'Beisebol',
+      'hoquei': 'Hóquei',
+      'criquete': 'Críquete',
+      'rugby': 'Rugby',
+      'handebol': 'Handebol',
+    }[esporte] ??
+    esporte;

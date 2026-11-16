@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import 'pc_input.dart';
+
 /// Atalhos do app: os padroes do Flutter + OK do controle remoto ativando
 /// botoes (select / botao A), garantido em qualquer versao.
 Map<ShortcutActivator, Intent> get appShortcuts => <ShortcutActivator, Intent>{
@@ -38,7 +40,8 @@ class TvTap extends StatelessWidget {
         }
         return KeyEventResult.ignored;
       },
-      child: GestureDetector(onTap: onTap, child: child),
+      // PC: cursor de mão e destaque ao passar o mouse
+      child: HoverPc(ativo: onTap != null, child: GestureDetector(onTap: onTap, child: child)),
     );
   }
 }

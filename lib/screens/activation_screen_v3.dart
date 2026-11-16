@@ -11,6 +11,7 @@ import 'device_home_screen.dart';
 import '../utils/tv_utils.dart';
 import '../widgets/tv_keyboard_dialog.dart';
 import 'package:flutter/services.dart';
+import '../core/erros.dart';
 
 class ActivationScreen extends StatefulWidget {
   const ActivationScreen({super.key});
@@ -202,7 +203,7 @@ class _ActivationScreenState extends State<ActivationScreen>
       await openHome(context, session);
     } catch (e) {
       setState(() {
-        _spError = e.toString().replaceFirst('Exception: ', '');
+        _spError = mensagemDeErro(e);
         _spLoading = false;
       });
     }
@@ -234,7 +235,7 @@ class _ActivationScreenState extends State<ActivationScreen>
       await openHome(context, session);
     } catch (e) {
       setState(() {
-        _xError = e.toString().replaceFirst('Exception: ', '');
+        _xError = mensagemDeErro(e);
         _xLoading = false;
       });
     }
@@ -264,7 +265,7 @@ class _ActivationScreenState extends State<ActivationScreen>
       await openHome(context, session);
     } catch (e) {
       setState(() {
-        _m3uError = e.toString().replaceFirst('Exception: ', '');
+        _m3uError = mensagemDeErro(e);
         _m3uLoading = false;
       });
     }

@@ -8,6 +8,7 @@ import '../services/xtream_service.dart';
 import 'player_screen.dart';
 import '../widgets/tv_focus.dart';
 import '../widgets/tv_search_field.dart';
+import '../core/erros.dart';
 
 class MoviesScreen extends StatefulWidget {
   final AppSession session;
@@ -50,14 +51,14 @@ class _MoviesScreenState extends State<MoviesScreen> {
         username: widget.session.effectiveXtreamUsername!,
         password: widget.session.effectiveXtreamPassword!,
       );
-      final results = await Future.wait([service.getMovieCategories(), service.getAllMovies()]);
+      final results = await Future.wait([service.getMoviePastas(), service.getAllMovies()]);
       setState(() {
         _categories = results[0] as List<Category>;
         _allMovies = results[1] as List<Movie>;
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+      setState(() { _error = mensagemDeErro(e); _loading = false; });
     }
   }
 

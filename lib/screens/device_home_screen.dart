@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/marca.dart';
 import '../core/lista_demo.dart';
 import '../core/loja.dart';
+import '../core/versao.dart';
 import '../models/app_session.dart';
 import '../services/assistindo_service.dart';
 import '../services/device_lists_service.dart';
@@ -16,6 +17,7 @@ import '../services/xtream_service.dart';
 import 'activation_screen_v3.dart';
 import 'home_screen_v2.dart';
 import '../widgets/modo_tv_widgets.dart';
+import '../core/erros.dart';
 
 /// Abre a home com a sessão escolhida e a salva para a próxima abertura.
 Future<void> openHome(BuildContext context, AppSession session) async {
@@ -130,7 +132,7 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
       if (!mounted) return;
       setState(() {
         _opening = null;
-        _error = 'Não foi possível abrir "${p.name}": ${e.toString().replaceFirst('Exception: ', '')}';
+        _error = 'Não foi possível abrir "${p.name}": ${mensagemDeErro(e)}';
       });
     }
   }
@@ -311,6 +313,8 @@ class _DeviceHomeScreenState extends State<DeviceHomeScreen> {
                       device,
                     ]);
                   }),
+                  const SizedBox(height: 16),
+                  Center(child: Text(versaoApp, style: const TextStyle(color: Colors.white38, fontSize: 12))),
                 ],
               ),
             ),
