@@ -15,6 +15,7 @@ import '../models/movie.dart';
 import '../models/series.dart';
 import '../widgets/banner_background.dart';
 import 'device_home_screen.dart';
+import 'inicio_loja_screen.dart';
 import 'games_today_screen.dart';
 import 'live_tv_screen.dart';
 import 'movies_screen.dart';
@@ -60,11 +61,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed != true) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('session');
-    await Assistindo.configurar(null); // sai da conta: para de avisar o painel
+    if (!Loja.play) await Assistindo.configurar(null); // sai da conta: para de avisar o painel
     ListaDemo.emUso.value = false; // fora da demonstração a tela de licença volta a valer
     if (!mounted) return;
     // Volta para a tela do aparelho (MAC + listas), sem entrar sozinho de novo
-    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const DeviceHomeScreen(autoEnter: false)), (_) => false);
+    // Loja: volta para a tela de informar a lista; painel: tela do aparelho (MAC + listas)
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (_) => Loja.play ? const InicioLoja(autoEnter: false) : const DeviceHomeScreen(autoEnter: false)),
+        (_) => false);
   }
 
   @override

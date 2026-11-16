@@ -1,0 +1,140 @@
+# Versão de loja do Sofae (Google Play e Amazon Appstore): gratuita, só player.
+#
+# Roda só em push na branch sofae-loja (ou manualmente). Gera o AAB (Play) e o APK assinado
+# (Amazon) como artifacts do workflow, sem release nem tag. Assina com a mesma chave de envio
+# dos APKs (secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS), sem imprimir nada.
+# O build falha se: o pacote não for com.sofae.app, o certificado não for o esperado, houver
+# permissão de instalar APK/serviço em primeiro plano/notificação/wake lock, ou o código tiver
+# textos de pagamento, teste grátis ou assinatura.
+name: Sofae Loja
+
+on:
+  push:
+    branches:
+      - sofae-loja
+  workflow_dispatch:
+
+concurrency:
+  group: sofae-loja
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.5'
+  APP_ID: 'com.sofae.app'
+  VERSION_NAME: '1.1.0'
+  # SHA-256 do certificado da chave de envio (o mesmo dos APKs e do AAB do teste fechado)
+  CERT_ESPERADO: '5b72ee8d7963bf6f53c77c6449c5980a7ac4765cc00ab29dc39440543f10b232'
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+      - name: Análise e testes (APK do painel e variante de loja)
+        run: |
+          flutter pub get
+          flutter analyze --no-fatal-infos --no-fatal-warnings
+          flutter test
+          flutter test --flavor play
+
+  build:
+    needs: testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Versão (versionCode = 1000 + número do run)
+        run: |
+          VC=$((1000 + ${{ github.run_number }}))
+          echo "VERSION_CODE=$VC" >> "$GITHUB_ENV"
+          # Número mostrado no app ("Sofae v1.1.0+N")
+          sed -i "s/static const int buildNumber = .*/static const int buildNumber = $VC;/" lib/core/app_config.dart
+          grep -n "buildNumber =" lib/core/app_config.dart
+          echo "versionName $VERSION_NAME, versionCode $VC"
+
+      - name: Chave de envio (secrets; nada é impresso)
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          printf '%s' "$KS_B64" | base64 --decode > android/app/simanplay.jks
+          test -s android/app/simanplay.jks || { echo "::error::KEYSTORE_BASE64 vazio"; exit 1; }
+          { printf 'storePassword=%s\n' "$KS_PASS"; printf 'keyPassword=%s\n' "$KS_PASS";
+            printf 'keyAlias=%s\n' "$KS_ALIAS"; printf 'storeFile=simanplay.jks\n'; } > android/key.properties
+
+      # flutter clean antes do build de envio: o AGP 9 já reaproveitou libapp.so antigo
+      # (store/google-play/COMO_GERAR.md)
+      - name: Build AAB (Google Play)
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build appbundle --release --no-tree-shake-icons --flavor play -Ploja=play \
+            --build-name="$VERSION_NAME" --build-number="$VERSION_CODE"
+          mkdir -p "$RUNNER_TEMP/saida"
+          cp build/app/outputs/bundle/playRelease/app-play-release.aab "$RUNNER_TEMP/saida/Sofae-$VERSION_NAME-$VERSION_CODE.aab"
+
+      - name: Build APK (Amazon Appstore)
+        run: |
+          flutter build apk --release --no-tree-shake-icons --flavor play -Ploja=play \
+            --target-platform android-arm,android-arm64 \
+            --build-name="$VERSION_NAME" --build-number="$VERSION_CODE"
+          cp build/app/outputs/flutter-apk/app-play-release.apk "$RUNNER_TEMP/saida/Sofae-$VERSION_NAME-$VERSION_CODE-amazon.apk"
+          rm -f android/key.properties android/app/simanplay.jks
+
+      - name: Conferir APK (pacote, versão, certificado, permissões, textos)
+        run: |
+          APK="$RUNNER_TEMP/saida/Sofae-$VERSION_NAME-$VERSION_CODE-amazon.apk"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/aapt2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
+          head -1 "$RUNNER_TEMP/badging.txt"
+          grep -q "package: name='$APP_ID' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'" "$RUNNER_TEMP/badging.txt" \
+            || { echo "::error::pacote/versão do APK diferente de $APP_ID $VERSION_CODE $VERSION_NAME"; exit 1; }
+          grep "uses-permission" "$RUNNER_TEMP/badging.txt" || true
+          CERT=$("$BT/apksigner" verify --print-certs "$APK" | grep "certificate SHA-256 digest" | awk '{print $NF}' | tr 'A-F' 'a-f' | sort -u)
+          [ "$CERT" = "$CERT_ESPERADO" ] || { echo "::error::APK assinado com outro certificado"; exit 1; }
+          echo "certificado ok"
+          python3 .github/sofae/conferir-loja.py "$APK" "$RUNNER_TEMP/badging.txt"
+
+      - name: Conferir AAB (pacote, certificado, permissões, textos)
+        run: |
+          AAB="$RUNNER_TEMP/saida/Sofae-$VERSION_NAME-$VERSION_CODE.aab"
+          jarsigner -verify "$AAB" | tail -1
+          CERT=$(keytool -printcert -jarfile "$AAB" | grep -m1 "SHA256:" | awk '{print $2}' | tr -d ':' | tr 'A-F' 'a-f')
+          [ "$CERT" = "$CERT_ESPERADO" ] || { echo "::error::AAB assinado com outro certificado"; exit 1; }
+          echo "certificado ok"
+          python3 .github/sofae/conferir-loja.py "$AAB" ""
+          ls -la "$RUNNER_TEMP/saida"
+
+      - name: Publicar artifact Sofae-Loja-AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sofae-Loja-AAB
+          path: ${{ runner.temp }}/saida/*.aab
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Publicar artifact Sofae-Loja-APK-Amazon
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sofae-Loja-APK-Amazon
+          path: ${{ runner.temp }}/saida/*-amazon.apk
+          retention-days: 14
+          if-no-files-found: error

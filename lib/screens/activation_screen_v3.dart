@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../core/app_config.dart';
 import '../core/loja.dart';
 import '../core/marca.dart';
+import '../core/lista_demo.dart';
+import '../core/versao.dart';
 import '../models/app_session.dart';
 import '../services/api_service.dart';
 import '../services/license_service.dart';
@@ -71,7 +73,8 @@ class _ActivationScreenState extends State<ActivationScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    // Loja: só lista própria (Xtream ou M3U); sem a aba de conta
+    _tabController = TabController(length: Loja.play ? 2 : 3, vsync: this);
     WidgetsBinding.instance.addObserver(this);
     TvUtils.isAndroidTV().then((val) { if (mounted) setState(() => _isTV = val); });
   }
@@ -324,7 +327,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                   child: Column(
                   children: [
                     _buildLogo(primary),
-                    if (_macAddress != null) ...[
+                    if (!Loja.play && _macAddress != null) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -366,7 +369,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                             dividerColor: const Color(0xFF2a2538),
                             labelStyle: const TextStyle(fontSize: 12),
                             tabs: const [
-                              Tab(text: Marca.appName),
+                              if (!Loja.play) Tab(text: Marca.appName),
                               Tab(text: 'Xtream'),
                               Tab(text: 'URL M3U'),
                             ],
@@ -376,7 +379,7 @@ class _ActivationScreenState extends State<ActivationScreen>
                           AnimatedBuilder(
                             animation: _tabController,
                             builder: (_, __) => [
-                              _buildSimanPlayTab(primary),
+                              if (!Loja.play) _buildSimanPlayTab(primary),
                               _buildXtreamTab(primary),
                               _buildM3UTab(primary),
                             ][_tabController.index],
@@ -384,8 +387,35 @@ class _ActivationScreenState extends State<ActivationScreen>
                         ],
                       ),
                     ),
+                    if (Loja.play) ...[
+                      // Loja: o Sofae é só um player; quem ainda não tem lista (e o revisor)
+                      // conhece o app com filmes abertos da Blender (Creative Commons)
+                      const SizedBox(height: 12),
+                      const Text(
+                        'O Sofae é um player: informe a sua própria lista (Xtream ou M3U). '
+                        'O app não fornece canais nem conteúdo.',
+                        key: Key('aviso_player'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          key: const Key('abrir_demo'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white38),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () => openHome(context, ListaDemo.sessao()),
+                          icon: const Icon(Icons.play_circle_outline),
+                          label: const Text('Ver demonstração (filmes livres, sem lista)'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
-                    Text(AppConfig.appVersion,
+                    Text(Loja.play ? versaoApp : AppConfig.appVersion,
                         style: const TextStyle(
                             color: Colors.white24, fontSize: 11)),
                   ],

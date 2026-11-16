@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:simanplay_iptv/core/app_config.dart';
+import 'package:simanplay_iptv/core/marca.dart';
 import 'package:simanplay_iptv/core/m3u_service.dart';
 import 'package:simanplay_iptv/core/versao.dart';
 import 'package:simanplay_iptv/models/app_session.dart';
@@ -137,6 +138,6 @@ void main() {
   test('versão mostrada: "Sofae v1.0.0+N", igual ao pubspec e ao build do CI', () {
     final pubspec = File('pubspec.yaml').readAsLinesSync().firstWhere((l) => l.startsWith('version:'));
     expect(pubspec.split(':').last.trim().split('+').first, kVersaoNome);
-    expect(versaoApp, '${AppConfig.appName} v$kVersaoNome+${AppConfig.buildNumber}');
+    expect(versaoApp, '${Marca.appName} v$kVersaoNome+${AppConfig.buildNumber}');
   });
 }

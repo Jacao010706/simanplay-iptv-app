@@ -21,7 +21,7 @@ import '../core/erros.dart';
 
 /// Abre a home com a sessão escolhida e a salva para a próxima abertura.
 Future<void> openHome(BuildContext context, AppSession session) async {
-  // Lista própria: o painel deixa de receber "assistindo agora"
+  // Lista própria: o painel deixa de receber "assistindo agora" (só desliga; não envia nada)
   await Assistindo.sessaoAberta(session);
   // Play: a demonstração passa pela tela de licença mesmo sem acesso liberado
   ListaDemo.emUso.value = ListaDemo.ativa(session.xtreamHost);

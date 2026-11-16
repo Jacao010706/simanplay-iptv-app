@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'core/providers/theme_provider.dart';
 import 'screens/device_home_screen.dart';
+import 'screens/inicio_loja_screen.dart';
 import 'screens/license_gate.dart';
 import 'core/marca.dart';
 import 'core/loja.dart';
@@ -30,7 +31,7 @@ Future<void> main() async {
   // Retoma a vigilancia das gravacoes agendadas (a Play nao tem gravacao)
   if (!Loja.play) RecordingService.instance.init();
   // "Assistindo agora" no painel: retoma os avisos com o token salvo
-  Assistindo.iniciar();
+  if (!Loja.play) Assistindo.iniciar();
 }
 
 class IptvPlayerApp extends StatelessWidget {
@@ -51,7 +52,8 @@ class IptvPlayerApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
             // Tela inicial estilo IBO: MAC + chave do aparelho e as listas cadastradas no site
-            home: const DeviceHomeScreen(),
+            // Loja: só player (lista própria ou demonstração). Painel: tela do aparelho (MAC + listas)
+            home: Loja.play ? const InicioLoja() : const DeviceHomeScreen(),
             // Teste grátis de 7 dias; depois exige plano pago no site (PIX).
             // Envolve o app inteiro, então o bloqueio vale em qualquer tela.
             builder: (context, child) {
@@ -69,7 +71,10 @@ class IptvPlayerApp extends StatelessWidget {
                   navigatorKey: appNavigatorKey,
                   child: MargemTv(
                       child: FocusRing(
-                          child: LicenseGate(child: child ?? const SizedBox.shrink()))),
+                          // Loja: sem licença, teste grátis nem bloqueio por tempo
+                          child: Loja.play
+                              ? (child ?? const SizedBox.shrink())
+                              : LicenseGate(child: child ?? const SizedBox.shrink()))),
                 ),
               );
             },
