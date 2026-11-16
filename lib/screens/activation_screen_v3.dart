@@ -148,6 +148,7 @@ class _ActivationScreenState extends State<ActivationScreen>
         // Loja: a primeira aba é a Xtream (não há aba de conta)
         if (Loja.play) {
           _xError = message;
+          _m3uError = message;
         } else {
           _spError = message;
         }

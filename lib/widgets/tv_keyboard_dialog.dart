@@ -200,12 +200,17 @@ class _TvKeyboardDialogState extends State<TvKeyboardDialog> {
               const SizedBox(height: 16),
               // Grid de teclas
               for (int r = 0; r < _rows.length; r++) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (int c = 0; c < _rows[r].length; c++)
-                      _buildKey(r, c),
-                  ],
+                // Tela estreita (ex.: 360 px): a linha encolhe em vez de transbordar
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (int c = 0; c < _rows[r].length; c++)
+                        _buildKey(r, c),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 4),
               ],

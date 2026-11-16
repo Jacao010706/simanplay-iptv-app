@@ -84,54 +84,5 @@ void main() {
     expect(find.byType(ActivationScreen), findsOneWidget);
     expect(find.byType(HomeScreen), findsNothing);
   }, skip: pular);
-
-  // Mesmos cuidados de layout da aba de conta do painel, na aba Xtream da loja
-  for (final size in [const Size(360, 640), const Size(1280, 720), const Size(960, 540), const Size(853, 480)]) {
-    for (final escala in [1.0, 1.15]) {
-      testWidgets('Xtream: botão Conectar inteiro com erro na tela em ${size.width.toInt()}x${size.height.toInt()} (fonte x$escala)',
-          (tester) async {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
-        tester.platformDispatcher.textScaleFactorTestValue = escala;
-        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-        await tester.pumpWidget(const MaterialApp(home: ActivationScreen()));
-        await tester.pump();
-        final state = tester.state(find.byType(ActivationScreen)) as dynamic;
-        state.debugSetError('O servidor recusou a conta agora. Verifique e tente de novo.');
-        await tester.pump();
-        final botao = find.widgetWithText(ElevatedButton, 'Conectar');
-        expect(botao, findsOneWidget);
-        await tester.ensureVisible(botao);
-        await tester.pumpAndSettle();
-        final b = tester.getRect(botao);
-        final t = tester.getRect(find.text('Conectar'));
-        expect(b.top, greaterThanOrEqualTo(0));
-        expect(b.bottom, lessThanOrEqualTo(size.height), reason: 'botão cortado embaixo');
-        expect(t.top, greaterThanOrEqualTo(b.top), reason: 'texto cortado em cima');
-        expect(t.bottom, lessThanOrEqualTo(b.bottom), reason: 'texto cortado embaixo');
-        expect(tester.takeException(), isNull);
-      }, skip: pular);
-    }
-    for (final campo in ['URL do servidor', 'Usuário', 'Senha']) {
-      testWidgets('Xtream: teclado aberto, campo "$campo" acima do teclado em ${size.width.toInt()}x${size.height.toInt()}',
-          (tester) async {
-        tester.view.physicalSize = size;
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
-        await tester.pumpWidget(const MaterialApp(home: ActivationScreen()));
-        await tester.pump();
-        await tester.tap(find.widgetWithText(TextField, campo));
-        final teclado = size.height * 0.45;
-        tester.view.viewInsets = FakeViewPadding(bottom: teclado);
-        await tester.pump(const Duration(milliseconds: 400));
-        await tester.pumpAndSettle();
-        final visivel = size.height - teclado;
-        final input = tester.getRect(find.widgetWithText(TextField, campo));
-        expect(input.bottom, lessThanOrEqualTo(visivel), reason: 'campo atrás do teclado');
-        expect(input.top, greaterThanOrEqualTo(0), reason: 'campo saiu pelo topo');
-        expect(tester.takeException(), isNull);
-      }, skip: pular);
-    }
-  }
+  // Layout, teclado e controle remoto das abas Xtream e M3U: test/loja_teclado_controle_test.dart
 }
