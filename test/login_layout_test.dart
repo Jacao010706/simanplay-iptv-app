@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:simanplay_iptv/core/loja.dart';
 import 'package:simanplay_iptv/screens/activation_screen_v3.dart';
 
 void main() {
+  // Aba de conta (usuário/senha do painel): só existe no APK do painel. Na versão de loja os
+  // mesmos cuidados valem para a aba Xtream (test/loja_player_test.dart).
+  group('aba de conta do painel', () {
   for (final size in [
     const Size(360, 640),
     const Size(1280, 720),
@@ -41,4 +45,5 @@ void main() {
       });
     }
   }
+  }, skip: Loja.play);
 }

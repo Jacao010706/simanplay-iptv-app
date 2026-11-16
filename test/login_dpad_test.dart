@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:simanplay_iptv/core/loja.dart';
 import 'package:simanplay_iptv/screens/activation_screen_v3.dart';
 import 'package:simanplay_iptv/widgets/tv_keyboard_dialog.dart';
 
@@ -32,6 +33,9 @@ Future<void> _esperar(WidgetTester tester) async {
 }
 
 void main() {
+  // Aba de conta (usuário/senha do painel): só existe no APK do painel. Na versão de loja os
+  // mesmos cuidados valem para a aba Xtream (test/loja_player_test.dart).
+  group('aba de conta do painel', () {
   for (final size in [const Size(960, 540), const Size(1280, 720), const Size(853, 480)]) {
     final tam = '${size.width.toInt()}x${size.height.toInt()}';
 
@@ -94,4 +98,5 @@ void main() {
           reason: 'depois do teclado o foco nao foi para o Entrar');
     });
   }
+  }, skip: Loja.play);
 }

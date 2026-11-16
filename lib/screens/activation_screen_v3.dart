@@ -144,7 +144,14 @@ class _ActivationScreenState extends State<ActivationScreen>
 
   /// Só para testes: mostra a mensagem de erro do login.
   @visibleForTesting
-  void debugSetError(String message) => setState(() => _spError = message);
+  void debugSetError(String message) => setState(() {
+        // Loja: a primeira aba é a Xtream (não há aba de conta)
+        if (Loja.play) {
+          _xError = message;
+        } else {
+          _spError = message;
+        }
+      });
 
   /// Só para testes: força o modo TV (teclado customizado).
   @visibleForTesting
