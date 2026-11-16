@@ -5,6 +5,9 @@ import '../core/app_config.dart';
 import '../models/app_session.dart';
 import '../models/channel.dart';
 import '../services/epg_service.dart' show formatHm;
+import '../core/jogos_lista.dart';
+import '../services/escudos_service.dart';
+import '../services/jogos_lista_service.dart';
 import '../services/sports_service.dart';
 import '../widgets/tv_focus.dart';
 import 'player_screen.dart';
@@ -12,6 +15,8 @@ import 'player_screen.dart';
 typedef FixturesLoader = Future<List<Fixture>> Function(DateTime day);
 typedef WhereToWatchLoader = Future<Map<int, List<Channel>>> Function(
     List<Fixture> fixtures, void Function(Map<int, List<Channel>> partial) onUpdate);
+typedef JogosDaListaLoader = Future<JogosEncontrados> Function(
+    DateTime day, void Function(JogosEncontrados parcial) parcial);
 
 /// "Jogos do Dia": jogos dos campeonatos acompanhados, com escudos, horário ou
 /// placar e os canais da lista do cliente que transmitem cada jogo.
@@ -26,6 +31,10 @@ class GamesTodayScreen extends StatefulWidget {
   @visibleForTesting
   final void Function(Channel channel)? debugOnOpenChannel;
   @visibleForTesting
+  final JogosDaListaLoader? debugJogosDaLista;
+  @visibleForTesting
+  final EscudosService? debugEscudos;
+  @visibleForTesting
   final DateTime Function()? clock;
 
   const GamesTodayScreen({
@@ -34,6 +43,8 @@ class GamesTodayScreen extends StatefulWidget {
     this.debugFixtures,
     this.debugWhereToWatch,
     this.debugOnOpenChannel,
+    this.debugJogosDaLista,
+    this.debugEscudos,
     this.clock,
   });
 
@@ -44,9 +55,8 @@ class GamesTodayScreen extends StatefulWidget {
 class _GamesTodayScreenState extends State<GamesTodayScreen> {
   int _dayOffset = 0; // -1 ontem, 0 hoje, 1 amanhã
   bool _loading = true;
-  bool _unavailable = false;
-  bool _dateUnavailable = false;
-  String? _error;
+  /// Plano B: o backend de jogos não respondeu e os jogos vêm da lista do cliente.
+  bool _daLista = false;
   List<Fixture> _fixtures = const [];
   Map<int, List<Channel>> _where = const {};
   bool _searchingChannels = false;
@@ -69,9 +79,8 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     final token = ++_loadToken;
     setState(() {
       _loading = true;
-      _unavailable = false;
-      _dateUnavailable = false;
-      _error = null;
+      _daLista = false;
+      _fixtures = const [];
       _where = const {};
       _searchingChannels = false;
     });
@@ -84,25 +93,43 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
         _searchingChannels = fixtures.isNotEmpty;
       });
       if (fixtures.isNotEmpty) _findChannels(fixtures, token);
-    } on SportsUnavailableException {
-      if (!mounted || token != _loadToken) return;
-      setState(() {
-        _unavailable = true;
-        _loading = false;
-      });
-    } on SportsDateUnavailableException {
-      if (!mounted || token != _loadToken) return;
-      setState(() {
-        _dateUnavailable = true;
-        _loading = false;
-      });
     } catch (_) {
+      // Backend fora (qualquer erro, 5xx ou 5 s sem resposta): jogos da própria lista
+      if (!mounted || token != _loadToken) return;
+      await _carregarDaLista(token);
+    }
+  }
+
+  static Fixture _fixtureDe(JogoDaLista j) => Fixture(
+        id: j.id,
+        leagueName: j.campeonato ?? 'Jogos da sua lista',
+        kickoff: j.inicio,
+        homeName: j.casa,
+        awayName: j.fora,
+      );
+
+  Future<void> _carregarDaLista(int token) async {
+    void aplicar(JogosEncontrados r) {
       if (!mounted || token != _loadToken) return;
       setState(() {
-        _error = 'Não foi possível carregar os jogos. Verifique a conexão.';
+        _daLista = true;
+        _fixtures = r.jogos.map(_fixtureDe).toList();
+        _where = r.canaisPorJogo;
         _loading = false;
       });
     }
+
+    final loader = widget.debugJogosDaLista ??
+        (day, parcial) => JogosDaListaService.instance.buscar(widget.session, day, parcial: parcial);
+    if (mounted && token == _loadToken) setState(() => _searchingChannels = true);
+    JogosEncontrados fim;
+    try {
+      fim = await loader(_day, aplicar);
+    } catch (_) {
+      fim = const JogosEncontrados([]);
+    }
+    aplicar(fim);
+    if (mounted && token == _loadToken) setState(() => _searchingChannels = false);
   }
 
   Future<void> _findChannels(List<Fixture> fixtures, int token) async {
@@ -137,7 +164,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           title: ch.name,
           isLive: true,
           recordName: ch.name,
-          streamId: widget.session.hasXtreamAccess ? ch.id : null,
+          streamId: widget.session.hasXtreamAccess && !ch.id.startsWith('m3u_') ? ch.id : null,
         ),
       ),
     );
@@ -211,17 +238,29 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
 
   Widget _body(Color primary) {
     if (_loading) return Center(child: CircularProgressIndicator(color: primary));
-    if (_unavailable) return _message('Jogos indisponíveis no momento', icon: Icons.event_busy);
-    if (_dateUnavailable) return _message('Jogos desta data não estão disponíveis.', icon: Icons.event_busy);
-    if (_error != null) return _message(_error!, icon: Icons.wifi_off, retry: true);
-    if (_fixtures.isEmpty) return _message('Nenhum jogo dos campeonatos acompanhados neste dia.');
+    if (_fixtures.isEmpty) {
+      return _message(_daLista
+          ? 'Nenhum jogo encontrado na sua lista para esta data.'
+          : 'Nenhum jogo dos campeonatos acompanhados neste dia.');
+    }
 
     // Agrupa por campeonato, na ordem do primeiro jogo de cada um
     final groups = <String, List<Fixture>>{};
     for (final f in _fixtures) {
       (groups['${f.leagueName}|${f.leagueCountry}'] ??= []).add(f);
     }
-    final children = <Widget>[];
+    final children = <Widget>[
+      if (_daLista)
+        const Padding(
+          key: ValueKey('aviso-da-lista'),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Row(children: [
+            Icon(Icons.playlist_play, color: Colors.white38, size: 14),
+            SizedBox(width: 6),
+            Text('Jogos encontrados na sua lista', style: TextStyle(color: Colors.white38, fontSize: 11)),
+          ]),
+        ),
+    ];
     for (final g in groups.values) {
       final first = g.first;
       children.add(Padding(
@@ -271,7 +310,9 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           overflow: TextOverflow.ellipsis,
           textAlign: home ? TextAlign.right : TextAlign.left),
     );
-    final shield = _logo(logo, 34, Icons.shield_outlined);
+    final shield = _daLista && (logo == null || logo.isEmpty)
+        ? EscudoDoTime(nome: name, size: 34, escudos: widget.debugEscudos ?? EscudosService.instance)
+        : _logo(logo, 34, Icons.shield_outlined);
     return Expanded(
       child: Row(
         mainAxisAlignment: home ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -406,5 +447,39 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
           child: SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white38)),
         ),
     ]));
+  }
+}
+
+/// Escudo da TheSportsDB quando o nome bate com segurança; senão, círculo com as iniciais.
+class EscudoDoTime extends StatelessWidget {
+  final String nome;
+  final double size;
+  final EscudosService escudos;
+  const EscudoDoTime({super.key, required this.nome, required this.size, required this.escudos});
+
+  @override
+  Widget build(BuildContext context) {
+    final iniciais = Container(
+      key: ValueKey('iniciais-$nome'),
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: Color(0xFF2a2538), shape: BoxShape.circle),
+      child: Text(iniciaisTime(nome),
+          style: TextStyle(color: Colors.white70, fontSize: size * 0.32, fontWeight: FontWeight.bold)),
+    );
+    return ValueListenableBuilder<String?>(
+      valueListenable: escudos.escudo(nome),
+      builder: (_, url, __) => url == null
+          ? iniciais
+          : CachedNetworkImage(
+              imageUrl: url,
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
+              placeholder: (_, __) => iniciais,
+              errorWidget: (_, __, ___) => iniciais,
+            ),
+    );
   }
 }

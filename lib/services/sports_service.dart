@@ -177,7 +177,8 @@ class SportsService {
 
   Future<List<Fixture>> fixtures(DateTime day) async {
     final uri = Uri.parse('${AppConfig.backendUrl}/sports/fixtures?date=${fixtureDateParam(day)}');
-    final res = await http.get(uri).timeout(const Duration(seconds: 20));
+    // Timeout curto: se o backend não responder, a tela usa o plano B (jogos da lista)
+    final res = await http.get(uri).timeout(const Duration(seconds: 5));
     if (res.statusCode == 503) throw SportsUnavailableException();
     if (res.statusCode == 403) throw SportsDateUnavailableException();
     if (res.statusCode != 200) throw Exception('Erro ao carregar os jogos (${res.statusCode})');
