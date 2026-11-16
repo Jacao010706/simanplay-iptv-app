@@ -229,11 +229,40 @@ void main() {
       expect(find.textContaining('Verifique'), findsNothing);
     });
 
-    testWidgets('plano B que falha tambem vira "nenhum jogo"', (tester) async {
+    testWidgets('plano B que falha: "sua lista nao traz" (nunca "Verifique a conexao")', (tester) async {
       await abrir(tester,
           fixtures: (day) async => throw Exception('502'),
           daLista: (day, parcial) async => throw Exception('lista fora'));
-      expect(find.text('Nenhum jogo encontrado na sua lista para esta data.'), findsOneWidget);
+      expect(find.text('Sua lista não traz a programação de jogos para esta data.'), findsOneWidget);
+      expect(find.textContaining('Verifique'), findsNothing);
+    });
+
+    testWidgets('lista sem dados de ontem: esconde "Ontem"; dia sem dados: mensagem propria', (tester) async {
+      final hoje = DateTime(agora.year, agora.month, agora.day);
+      await abrir(tester,
+          fixtures: (day) async => throw Exception('502'),
+          daLista: (day, parcial) async => JogosEncontrados(
+                day == hoje ? [inter] : const [],
+                temDadosDoDia: day == hoje,
+                diasComDados: {hoje},
+              ),
+          escudos: escudos());
+      expect(find.text('Ontem'), findsNothing);
+      expect(find.text('Hoje'), findsOneWidget);
+      expect(find.text('Amanhã'), findsOneWidget);
+      await tester.tap(find.text('Amanhã'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Sua lista não traz a programação de jogos para esta data.'), findsOneWidget);
+    });
+
+    testWidgets('lista com dados de ontem: "Ontem" aparece', (tester) async {
+      final hoje = DateTime(agora.year, agora.month, agora.day);
+      await abrir(tester,
+          fixtures: (day) async => throw Exception('502'),
+          daLista: (day, parcial) async => JogosEncontrados(const [],
+              diasComDados: {hoje, hoje.subtract(const Duration(days: 1))}));
+      expect(find.text('Ontem'), findsOneWidget);
     });
 
     testWidgets('backend respondendo: fonte normal, sem aviso da lista', (tester) async {

@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simanplay_iptv/core/jogos_lista.dart';
 import 'package:simanplay_iptv/models/channel.dart';
 import 'package:simanplay_iptv/models/app_session.dart';
-import 'package:simanplay_iptv/services/epg_service.dart';
+import 'package:simanplay_iptv/services/grade_esportes_service.dart';
 import 'package:simanplay_iptv/services/escudos_service.dart';
 import 'package:simanplay_iptv/services/jogos_lista_service.dart';
 
@@ -307,72 +307,260 @@ void main() {
   });
 
   group('Plano B (serviço)', () {
-    test('grade: só entra ao vivo ou o que também está nos eventos; chamada e VT não', () async {
-      final hoje = agoraEmBrasilia();
-      final dia = DateTime(hoje.year, hoje.month, hoje.day);
-      // Hora de Brasília (UTC-3) -> timestamp, independente do fuso da máquina do teste
-      int s(int h, [int m = 0]) => DateTime.utc(dia.year, dia.month, dia.day, h + 3, m).millisecondsSinceEpoch ~/ 1000;
-      final amanha2 = dia.add(const Duration(days: 2));
-      final data = '${amanha2.day.toString().padLeft(2, '0')}/${amanha2.month.toString().padLeft(2, '0')}';
-      final epg = EpgService(fetcher: (id, limit) async => {
-            'epg_listings': [
-              {'title': 'Dia $data - Corinthians x Botafogo', 'start_timestamp': s(0), 'stop_timestamp': s(2)},
-              {'title': 'VT - Bahia x Flamengo', 'start_timestamp': s(1), 'stop_timestamp': s(1, 30)},
-              {'title': 'Brasileirão: Grêmio x Bahia', 'start_timestamp': s(2), 'stop_timestamp': s(4)},
-              {'title': 'Copa do Brasil: Inter x Flamengo', 'start_timestamp': s(15, 50), 'stop_timestamp': s(18)},
-              {'title': 'Eliminatórias: França x Turquia (AO VIVO)', 'start_timestamp': s(16, 45), 'stop_timestamp': s(19)},
-              {'title': 'Programa 24h', 'start_timestamp': s(0), 'stop_timestamp': s(23, 59)},
-            ]
-          }, clock: () => DateTime(dia.year, dia.month, dia.day));
-      final svc = JogosDaListaService(
-        carregarCanais: (_) async => [
-          _canal('1', 'Internacional x Flamengo - 16:00 FHD'),
-          _canal('3', 'Premiere Clubes FHD', 'PREMIERE'),
-        ],
-        epg: epg,
-      );
-      final r = await svc.buscar(const AppSession(type: SessionType.simanplay), dia);
-      expect(r.jogos.map((j) => '${j.casa} x ${j.fora}'), ['Internacional x Flamengo', 'França x Turquia']);
-      expect(r.jogos.first.canais.map((c) => c.id), ['1', '3'], reason: 'grade sem "ao vivo" entra porque o jogo está nos eventos');
-    });
+    final hoje = agoraEmBrasilia();
+    final dia = DateTime(hoje.year, hoje.month, hoje.day);
+    DateTime h(int hora, [int m = 0, int d = 0]) => DateTime(dia.year, dia.month, dia.day + d, hora, m);
+    ProgramaGrade prog(String c, String t, DateTime i, DateTime f, [String desc = '']) => ProgramaGrade(c, t, desc, i, f);
 
-
-    test('jogos do dia pelos nomes e pela grade, juntos e ordenados', () async {
-      final epg = EpgService(
-        fetcher: (id, limit) async => id == '3'
-            ? {
-                'epg_listings': [
-                  {'title': 'Copa do Brasil: Inter x Flamengo', 'start_timestamp': DateTime(2026, 11, 15, 15, 45).millisecondsSinceEpoch ~/ 1000, 'stop_timestamp': DateTime(2099).millisecondsSinceEpoch ~/ 1000},
-                  {'title': 'Brasileirão: Grêmio x Palmeiras', 'start_timestamp': DateTime(2026, 11, 15, 21, 30).millisecondsSinceEpoch ~/ 1000, 'stop_timestamp': DateTime(2099).millisecondsSinceEpoch ~/ 1000},
-                ]
-              }
-            : {'epg_listings': []},
-      );
+    test('nomes primeiro; grade do painel que marca AO VIVO: só ao vivo ou o que está nos eventos', () async {
       final svc = JogosDaListaService(
         carregarCanais: (_) async => [
           _canal('1', 'Internacional x Flamengo - 16:00 FHD'),
           _canal('2', 'Internacional x Flamengo - 16:00 HD'),
           _canal('3', 'SporTV FHD', 'SPORTV'),
+          _canal('4', 'Premiere Clubes FHD', 'PREMIERE'),
         ],
-        epg: epg,
+        carregarGrade: (_, __, {ate}) async => [
+          prog('3', 'Copa do Brasil: Inter x Flamengo', h(15, 45), h(18)),
+          prog('3', 'Grécia x Sérvia - Ao Vivo', h(16, 15), h(18, 40)),
+          prog('3', 'Ilhas Faroé x Moldávia - Ao Vivo', h(11, 45), h(14)),
+          prog('3', 'Estônia x Bulgária - Ao Vivo', h(14), h(16)),
+          prog('4', 'VT - Bahia x Flamengo', h(16, 30), h(17)),
+          prog('4', 'Brasileirão: Grêmio x Bahia', h(20), h(22)),
+          prog('3', 'País de Gales x Portugal - Ao Vivo', h(16, 15, 1), h(18, 40, 1)),
+        ],
       );
       final parciais = <int>[];
-      final hoje = DateTime.now();
-      final r = await svc.buscar(const AppSession(type: SessionType.simanplay), DateTime(hoje.year, hoje.month, hoje.day),
-          parcial: (p) => parciais.add(p.jogos.length));
-      // As datas dos nomes sem data são "hoje"; a grade de teste é de 15/11/2026
+      final r = await svc.buscar(const AppSession(type: SessionType.simanplay), dia, parcial: (p) => parciais.add(p.jogos.length));
       expect(parciais.first, 1, reason: 'primeiro os nomes, sem esperar a grade');
-      expect(r.jogos.first.casa, 'Internacional');
-      expect(r.jogos.first.canais.map((c) => c.id), ['1', '2']);
+      expect(r.jogos.map((j) => '${j.casa} x ${j.fora}'),
+          ['Ilhas Faroé x Moldávia', 'Estônia x Bulgária', 'Internacional x Flamengo', 'Grécia x Sérvia']);
+      expect(r.jogos[2].canais.map((c) => c.id), ['1', '2', '3']);
+      expect(r.temDadosDoDia, isTrue);
+      final amanha = await svc.buscar(const AppSession(type: SessionType.simanplay), dia.add(const Duration(days: 1)));
+      expect(amanha.jogos.map((j) => j.casa), ['País de Gales']);
+      expect(amanha.diasComDados, containsAll([dia, dia.add(const Duration(days: 1))]));
+      expect(amanha.diasComDados.contains(dia.subtract(const Duration(days: 1))), isFalse);
+    });
+
+    test('lista sem dados para o dia: temDadosDoDia falso', () async {
+      final svc = JogosDaListaService(carregarCanais: (_) async => [], carregarGrade: (_, __, {ate}) async => []);
+      final r = await svc.buscar(const AppSession(type: SessionType.simanplay), dia.subtract(const Duration(days: 1)));
+      expect(r.jogos, isEmpty);
+      expect(r.temDadosDoDia, isFalse);
     });
 
     test('lista que não carrega: nenhum jogo (sem erro)', () async {
-      final svc = JogosDaListaService(carregarCanais: (_) async => throw Exception('x'));
+      final svc = JogosDaListaService(carregarCanais: (_) async => throw Exception('x'), carregarGrade: (_, __, {ate}) async => []);
       final r = await svc.buscar(const AppSession(type: SessionType.simanplay), DateTime.now());
       expect(r.jogos, isEmpty);
     });
   });
+
+  group('Regra AO VIVO adaptável (jogosDaGrade)', () {
+    final dia = DateTime(2026, 11, 17);
+    DateTime h(int hora, [int m = 0, int d = 0]) => DateTime(2026, 11, 17 + d, hora, m);
+    final canais = {'5': _canal('5', 'Combate FHD', 'COMBATE'), '6': _canal('6', 'ESPN FHD', 'ESPN')};
+
+    test('painel que marca AO VIVO: boxe repetido do Combate fica fora', () {
+      final r = jogosDaGrade([
+        ProgramaGrade('6', 'Dinamarca x Noruega - Ao Vivo', '', h(16, 30), h(18, 45)),
+        ProgramaGrade('6', 'Polônia x Suécia - Ao Vivo', '', h(16, 15), h(18, 45)),
+        ProgramaGrade('6', 'NBB: Corinthians x Paulistano - Ao Vivo', '', h(20, 20), h(22, 30)),
+        ProgramaGrade('5', 'Boxe - Baumgardner x Turhan', 'Boxe - Baumgardner X Turhan', h(14, 10), h(16, 10)),
+      ], dia, const [], canais);
+      expect(r.map((j) => j.casa), isNot(contains('Baumgardner')));
+      expect(r, hasLength(3));
+    });
+
+    test('painel que não marca AO VIVO: aceita 08:00-23:59, sem repetição em 48 h', () {
+      final r = jogosDaGrade([
+        ProgramaGrade('6', 'Brasileirão: Atlético-MG x São Paulo', '', h(18, 45), h(21)),
+        ProgramaGrade('6', 'Liga dos Campeões: Real Madrid x Liverpool', '', h(7, 0), h(9)),
+        ProgramaGrade('5', 'Boxe - Baumgardner x Turhan', '', h(21, 40, -1), h(23, 35, -1)),
+        ProgramaGrade('5', 'Boxe - Baumgardner x Turhan', '', h(14, 10), h(16, 10)),
+        ProgramaGrade('6', 'JOGO COMPLETO: PRAIA CLUBE X MACKENZIE | SUPERLIGA FEMININA DE VÔLEI', '', h(15), h(18)),
+      ], dia, const [], canais);
+      expect(r.map((j) => '${j.casa} x ${j.fora}'), ['Atlético-MG x São Paulo']);
+      expect(r.single.canais.single.id, '6');
+    });
+  });
+
+  group('Títulos reais da grade (jes.lat)', () {
+    test('"Hoje a partir das 20:30 - Cruzeiro x Palmeiras" às 00:00: jogo do dia às 20:30', () {
+      final j = jogoDoTituloDoPrograma('Hoje a partir das 20:30 - Cruzeiro x Palmeiras', DateTime(2026, 11, 18, 0),
+          descricao: 'Cruzeiro e Palmeiras jogam pela 35ª rodada', fim: DateTime(2026, 11, 18, 2))!;
+      expect((j.casa, j.fora, j.inicio, j.aoVivo), ('Cruzeiro', 'Palmeiras', DateTime(2026, 11, 18, 20, 30), true));
+      final b = jogoDoTituloDoPrograma('Hoje a partir das 20:30 - Cruzeiro x Palmeiras', DateTime(2026, 11, 18, 2),
+          fim: DateTime(2026, 11, 18, 4))!;
+      expect(juntarJogos([j, b]), hasLength(1));
+    });
+
+    test('"AO VIVO E COM IMAGENS", "E EXCLUSIVO" e campeonato depois do "|"', () {
+      final a = jogoDoTituloDoPrograma(
+          'BORUSSIA MONCHENGLABACH X BORUSSIA DORTMUND AO VIVO E COM IMAGENS | RODADA 10 | BUNDESLIGA',
+          DateTime(2026, 11, 21, 11, 30), fim: DateTime(2026, 11, 21, 14, 30))!;
+      expect((a.casa, a.fora, a.aoVivo), ('BORUSSIA MONCHENGLABACH', 'BORUSSIA DORTMUND', true));
+      final b = jogoDoTituloDoPrograma('SEVILLA X REAL BÉTIS: AO VIVO, COM IMAGENS E EXCLUSIVO | LALIGA | RODADA 13',
+          DateTime(2026, 11, 21, 14, 30), fim: DateTime(2026, 11, 21, 17, 30))!;
+      expect((b.casa, b.fora, b.campeonato), ('SEVILLA', 'REAL BÉTIS', 'LALIGA'));
+    });
+
+    test('"JOGO COMPLETO" é reprise; "LOGO APÓS O AMISTOSO..." não é jogo', () {
+      expect(jogoDoTituloDoPrograma('JOGO COMPLETO: PRAIA CLUBE X MACKENZIE | SUPERLIGA', DateTime(2026, 11, 16, 15),
+          fim: DateTime(2026, 11, 16, 18)), isNull);
+      expect(jogoDoTituloDoPrograma('AO VIVO: LOGO APÓS O AMISTOSO BRASIL X CINGAPURA | GERAL CAZÉTV',
+          DateTime(2026, 11, 17, 8, 45), fim: DateTime(2026, 11, 17, 11, 45)), isNull);
+    });
+  });
+
+  group('xmltv.php', () {
+    const xml = '<?xml version="1.0" encoding="utf-8" ?><tv>\n'
+        '<channel id="SPORTV"><display-name>SporTV</display-name></channel>\n'
+        '<programme start="20261115135500 -0300" stop="20261115160000 -0300" channel="SPORTV"><title>Finlândia x San Marino - Ao Vivo</title><desc>Eliminatórias</desc></programme>\n'
+        '<programme start="20261115213000 -0300" stop="20261115223000 -0300" channel="SPORTV"><title>VT - França x Turquia</title></programme>\n'
+        '<programme start="20261115160000 -0300" stop="20261115164500 -0300" channel="SPORTV"><title>Aquecimento sportv - Ao Vivo</title></programme>\n'
+        '<programme start="20261115190000 +0000" stop="20261115210000 +0000" channel="OUTRO"><title>A x B</title></programme>\n'
+        '<programme start="20261116191500 +0000" stop="20261116214000 +0000" channel="SPORTV"><title>Grécia &amp; Cia x Sérvia</title></programme>\n'
+        '</tv>';
+
+    test('lê só os canais de esporte, só o que parece jogo, com fuso convertido', () {
+      final r = lerXmltv((xml, {'SPORTV': ['6928', '6929']}));
+      expect(r.map((p) => '${p.canal} ${p.titulo}'), [
+        '6928 Finlândia x San Marino - Ao Vivo', '6929 Finlândia x San Marino - Ao Vivo',
+        '6928 VT - França x Turquia', '6929 VT - França x Turquia',
+        '6928 Grécia & Cia x Sérvia', '6929 Grécia & Cia x Sérvia',
+      ]);
+      expect(r.first.inicio, DateTime(2026, 11, 15, 13, 55));
+      expect(r.first.descricao, 'Eliminatórias');
+      expect(r.last.inicio, DateTime(2026, 11, 16, 16, 15), reason: '19:15 UTC = 16:15 em Brasília');
+    });
+
+    test('horaXmltv', () {
+      expect(horaXmltv('20261115135500 -0300'), DateTime(2026, 11, 15, 13, 55));
+      expect(horaXmltv('20261116030000 +0000'), DateTime(2026, 11, 16, 0, 0));
+      expect(horaXmltv('20261116000000 -0400'), DateTime(2026, 11, 16, 1, 0), reason: 'America/Moncton');
+      expect(horaXmltv('lixo'), isNull);
+    });
+
+    final sessao = AppSession.xtream(host: 'http://painel.exemplo', username: 'u', password: 'p');
+    List<Channel> canais() => [
+          Channel(id: '6928', name: 'SporTV FHD', streamUrl: '', categoryId: '1', categoryName: 'SPORTV', epgKey: 'SPORTV'),
+          for (var i = 1; i <= 30; i++)
+            Channel(id: '${100 + i}', name: 'Premiere Clubes $i FHD', streamUrl: '', categoryId: '2', categoryName: 'PREMIERE'),
+        ];
+
+    test('UM pedido (xmltv) na primeira abertura; nenhum ao reabrir em 60 min; ontem fica guardado', () async {
+      SharedPreferences.setMockInitialValues({});
+      final caminhos = <String>[];
+      var agora = DateTime(2026, 11, 16, 12);
+      final g = GradeEsportesService(
+        client: MockClient((req) async {
+          caminhos.add(req.url.path);
+          return http.Response.bytes(utf8.encode(xml), 200);
+        }),
+        clock: () => agora,
+      );
+      final p1 = await g.programas(sessao, canais());
+      expect(caminhos, ['/xmltv.php']);
+      expect(p1.where((p) => p.inicio.day == 15), isNotEmpty);
+
+      agora = agora.add(const Duration(minutes: 59));
+      final g2 = GradeEsportesService(client: MockClient((_) async => throw Exception('não devia chamar')), clock: () => agora);
+      expect(await g2.programas(sessao, canais()), hasLength(p1.length));
+      expect(g2.pedidos, 0);
+
+      agora = agora.add(const Duration(minutes: 2));
+      final so16 = xml.split('\n').where((l) => !l.contains('start="20261115')).join('\n');
+      final g3 = GradeEsportesService(client: MockClient((_) async => http.Response.bytes(utf8.encode(so16), 200)), clock: () => agora);
+      final p3 = await g3.programas(sessao, canais());
+      expect(g3.pedidos, 1);
+      expect(p3.where((p) => p.inicio.day == 15), isNotEmpty, reason: 'ontem continua guardado em disco');
+      expect(p3.where((p) => p.inicio.day == 16), isNotEmpty);
+    });
+
+    test('xmltv curto (~24 h): "Amanhã" complementa canal a canal uma vez; reabrir em 60 min: 0 pedidos', () async {
+      SharedPreferences.setMockInitialValues({});
+      final caminhos = <String>[];
+      final agora = DateTime(2026, 11, 16, 12);
+      MockClient cliente() => MockClient((req) async {
+            caminhos.add(req.url.path.endsWith('xmltv.php') ? 'xmltv' : 'tabela ${req.url.queryParameters['stream_id']}');
+            if (req.url.path.endsWith('xmltv.php')) return http.Response.bytes(utf8.encode(xml), 200);
+            return http.Response.bytes(utf8.encode(jsonEncode({'epg_listings': [
+              {'title': 'País de Gales x Portugal - Ao Vivo', 'start_timestamp': DateTime.utc(2026, 11, 17, 19, 15).millisecondsSinceEpoch ~/ 1000,
+               'stop_timestamp': DateTime.utc(2026, 11, 17, 21, 40).millisecondsSinceEpoch ~/ 1000},
+            ]})), 200);
+          });
+      final g = GradeEsportesService(client: cliente(), intervalo: Duration.zero, clock: () => agora);
+      // Hoje: só o xmltv (sem "ate": hoje e ontem saem do xmltv)
+      await g.programas(sessao, canais());
+      expect(caminhos, ['xmltv']);
+      // Amanhã: o xmltv para em 16/11 21:40 -> complemento canal a canal (até 25)
+      final amanha = await g.programas(sessao, canais(), ate: DateTime(2026, 11, 17, 23));
+      expect(caminhos.where((c) => c.startsWith('tabela')).length, inInclusiveRange(1, maxCanaisGradeCanalACanal));
+      expect(amanha.where((p) => p.titulo.startsWith('País de Gales')), isNotEmpty);
+      expect(amanha.where((p) => p.inicio.day == 15), isNotEmpty, reason: 'ontem (do xmltv) continua');
+      // Reabrir o app em 30 min (outro serviço, mesma cópia em disco): nenhum pedido
+      final g2 = GradeEsportesService(client: MockClient((_) async => throw Exception('não devia chamar')),
+          clock: () => agora.add(const Duration(minutes: 30)));
+      await g2.programas(sessao, canais(), ate: DateTime(2026, 11, 17, 23));
+      await g2.programas(sessao, canais());
+      expect(g2.pedidos, 0);
+    });
+
+    test('sem xmltv.php: no máximo 25 canais relevantes, 2 por vez', () async {
+      SharedPreferences.setMockInitialValues({});
+      var aoMesmoTempo = 0, maximo = 0;
+      final ids = <String>[];
+      final g = GradeEsportesService(
+        intervalo: Duration.zero,
+        client: MockClient((req) async {
+          if (req.url.path.endsWith('xmltv.php')) return http.Response('', 404);
+          aoMesmoTempo++;
+          maximo = aoMesmoTempo > maximo ? aoMesmoTempo : maximo;
+          ids.add(req.url.queryParameters['stream_id']!);
+          await Future.delayed(const Duration(milliseconds: 5));
+          aoMesmoTempo--;
+          return http.Response(jsonEncode({'epg_listings': []}), 200);
+        }),
+      );
+      await g.programas(sessao, canais());
+      expect(ids.length, lessThanOrEqualTo(maxCanaisGradeCanalACanal));
+      expect(maximo, lessThanOrEqualTo(2));
+      expect(ids.first, '6928', reason: 'SporTV antes do Premiere');
+    });
+
+    test('conta recusada (429/401/auth 0): para na hora', () async {
+      for (final resposta in [
+        http.Response('', 429),
+        http.Response('', 401),
+        http.Response(jsonEncode({'user_info': {'auth': 0}}), 200),
+      ]) {
+        SharedPreferences.setMockInitialValues({});
+        var pedidos = 0;
+        final g = GradeEsportesService(
+          intervalo: Duration.zero,
+          client: MockClient((req) async {
+            pedidos++;
+            if (req.url.path.endsWith('xmltv.php')) return http.Response('', 404);
+            return resposta;
+          }),
+        );
+        expect(await g.programas(sessao, canais()), isEmpty);
+        expect(pedidos, lessThanOrEqualTo(3), reason: 'xmltv + no máximo os 2 que já estavam em andamento');
+      }
+      SharedPreferences.setMockInitialValues({});
+      var pedidos = 0;
+      final g = GradeEsportesService(client: MockClient((_) async {
+        pedidos++;
+        return http.Response('', 429);
+      }));
+      await g.programas(sessao, canais());
+      expect(pedidos, 1, reason: '429 já no xmltv: nem tenta canal a canal');
+    });
+  });
 }
+
 
 Future<void> _esperar(ValueListenable<String?> v) async {
   for (var i = 0; i < 100 && v.value == null; i++) {

@@ -77,12 +77,14 @@ class M3uService {
         final name = commaIndex != -1 ? texto.substring(commaIndex + 1).trim() : 'Canal sem nome';
         final logo = RegExp(r'tvg-logo="([^"]*)"').firstMatch(texto)?.group(1);
         final group = RegExp(r'group-title="([^"]*)"').firstMatch(texto)?.group(1) ?? 'Sem categoria';
+        final tvgId = RegExp(r'tvg-id="([^"]+)"').firstMatch(texto)?.group(1);
         channels.add(Channel.fromM3u(
           id: 'm3u_$autoId',
           name: name,
           streamUrl: fixMojibake(line),
           logoUrl: logo,
           categoryName: group,
+          epgKey: tvgId,
         ));
       }
     }

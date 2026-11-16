@@ -58,6 +58,9 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
   /// Plano B: o backend de jogos não respondeu e os jogos vêm da lista do cliente.
   bool _daLista = false;
   Map<int, JogoDaLista> _jogosDaLista = const {};
+  bool _semDadosDoDia = false;
+  /// Dias com dados na lista (plano B); null = ainda não se sabe (mostra os três botões).
+  Set<DateTime>? _diasComDados;
   List<Fixture> _fixtures = const [];
   Map<int, List<Channel>> _where = const {};
   bool _searchingChannels = false;
@@ -81,6 +84,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     setState(() {
       _loading = true;
       _daLista = false;
+      _semDadosDoDia = false;
       _fixtures = const [];
       _where = const {};
       _searchingChannels = false;
@@ -89,6 +93,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       final fixtures = await (widget.debugFixtures ?? SportsService.instance.fixtures)(_day);
       if (!mounted || token != _loadToken) return;
       setState(() {
+        _diasComDados = null; // backend no ar: Ontem/Hoje/Amanhã como sempre
         _fixtures = fixtures;
         _loading = false;
         _searchingChannels = fixtures.isNotEmpty;
@@ -116,6 +121,8 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
         _daLista = true;
         _fixtures = r.jogos.map(_fixtureDe).toList();
         _jogosDaLista = {for (final j in r.jogos) j.id: j};
+        _semDadosDoDia = !r.temDadosDoDia;
+        _diasComDados = {...?_diasComDados, ...r.diasComDados};
         _where = r.canaisPorJogo;
         _loading = false;
       });
@@ -128,7 +135,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
     try {
       fim = await loader(_day, aplicar);
     } catch (_) {
-      fim = const JogosEncontrados([]);
+      fim = const JogosEncontrados([], temDadosDoDia: false);
     }
     aplicar(fim);
     if (mounted && token == _loadToken) setState(() => _searchingChannels = false);
@@ -145,6 +152,16 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
       update(await finder(fixtures, update));
     } catch (_) {}
     if (mounted && token == _loadToken) setState(() => _searchingChannels = false);
+  }
+
+  /// Backend fora e a lista sem dados de ontem: esconde "Ontem" (a grade dos painéis
+  /// quase nunca traz o passado). "Amanhã" fica sempre.
+  bool _mostrarDia(int offset) {
+    if (offset != -1 || _dayOffset == -1) return true;
+    final dias = _diasComDados;
+    if (!_daLista || dias == null) return true;
+    final n = _now;
+    return dias.contains(DateTime(n.year, n.month, n.day - 1));
   }
 
   /// Escudo só para futebol (esporte não identificado) ou seleção; tênis, UFC etc.: iniciais.
@@ -195,6 +212,7 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
                     style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               for (final d in const [(-1, 'Ontem'), (0, 'Hoje'), (1, 'Amanhã')])
+                if (_mostrarDia(d.$1))
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: TvTap(
@@ -247,6 +265,9 @@ class _GamesTodayScreenState extends State<GamesTodayScreen> {
   Widget _body(Color primary) {
     if (_loading) return Center(child: CircularProgressIndicator(color: primary));
     if (_fixtures.isEmpty) {
+      if (_daLista && _semDadosDoDia) {
+        return _message('Sua lista não traz a programação de jogos para esta data.', icon: Icons.event_busy);
+      }
       return _message(_daLista
           ? 'Nenhum jogo encontrado na sua lista para esta data.'
           : 'Nenhum jogo dos campeonatos acompanhados neste dia.');
