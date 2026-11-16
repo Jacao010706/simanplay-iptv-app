@@ -8,8 +8,8 @@ import 'loja.dart';
 
 /// Lista de demonstração da versão Google Play: deixa o revisor (ou quem ainda não tem lista)
 /// usar o app sem lista própria. Só filmes abertos da Blender Foundation, com licença Creative
-/// Commons, tocados direto do Wikimedia Commons (e dois streams HLS públicos de teste dos mesmos
-/// filmes, como "canais").
+/// Commons, tocados direto do Wikimedia Commons (filmes e "canais"; nenhum servidor de teste
+/// de terceiros).
 ///
 /// Funciona como um provedor Xtream que responde no próprio aparelho: a sessão usa [host]
 /// (domínio `.invalid`, que nunca resolve) e o `XtreamService` devolve os dados daqui, sem rede.
@@ -82,12 +82,12 @@ class ListaDemo {
           ),
       ];
 
-  /// "Canais" de demonstração: os mesmos filmes abertos, em HLS (como um canal ao vivo).
+  /// "Canais" de demonstração: os mesmos filmes abertos, do Wikimedia Commons.
   static List<Channel> get canais => [
         Channel(
           id: 'demo_canal_1',
           name: 'Demo 1 · Big Buck Bunny',
-          streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+          streamUrl: _video('c/c0', 'Big_Buck_Bunny_4K.webm'),
           logoUrl: _capa('c/c0', 'Big_Buck_Bunny_4K.webm'),
           categoryId: categoriasCanais.first.id,
           categoryName: categoriasCanais.first.name,
@@ -95,8 +95,7 @@ class ListaDemo {
         Channel(
           id: 'demo_canal_2',
           name: 'Demo 2 · Tears of Steel',
-          streamUrl:
-              'https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8',
+          streamUrl: _video('1/10', 'Tears_of_Steel_in_4k_-_Official_Blender_Foundation_release.webm'),
           logoUrl: _capa('1/10', 'Tears_of_Steel_in_4k_-_Official_Blender_Foundation_release.webm'),
           categoryId: categoriasCanais.first.id,
           categoryName: categoriasCanais.first.name,

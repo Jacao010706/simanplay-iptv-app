@@ -115,7 +115,7 @@ void main() {
 
   group('lista de demonstração', () {
     test('só conteúdo livre: filmes abertos da Blender com licença CC, por HTTPS em hosts conhecidos', () {
-      const hosts = {'upload.wikimedia.org', 'thumb.wikimedia.org', 'test-streams.mux.dev', 'demo.unified-streaming.com'};
+      const hosts = {'upload.wikimedia.org', 'thumb.wikimedia.org'}; // só Wikimedia Commons (sem servidores de teste)
       expect(ListaDemo.filmesInfo, hasLength(10));
       for (final f in ListaDemo.filmesInfo) {
         expect(f.licenca, startsWith('CC BY'), reason: f.titulo);
