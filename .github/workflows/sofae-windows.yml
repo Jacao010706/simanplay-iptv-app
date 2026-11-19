@@ -144,20 +144,37 @@ jobs:
           if-no-files-found: error
 
       - name: Instalador (Inno Setup)
+        env:
+          # Git Bash (MSYS) converte argumentos que começam com "/" em caminhos POSIX e
+          # estragaria os parâmetros do ISCC ("/DSourceDir=..."): desliga a conversão
+          MSYS_NO_PATHCONV: '1'
+          MSYS2_ARG_CONV_EXCL: '*'
         run: |
           ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
           if [ ! -f "$ISCC" ]; then
             echo "Inno Setup não encontrado no runner: instalando com o Chocolatey"
-            choco install innosetup -y --no-progress
+            choco install innosetup -y --no-progress || { echo "::error::choco install innosetup falhou"; exit 1; }
           fi
           test -f "$ISCC" || { echo "::error::ISCC.exe não encontrado depois da instalação"; exit 1; }
           mkdir -p "$RUNNER_TEMP/release"
+          # Se o ISCC falhar, as últimas linhas da saída viram anotações (visíveis sem login)
+          set +e
           "$ISCC" \
             "/DSourceDir=$(cygpath -w "$APP_DIR")" \
             "/DIconFile=$(cygpath -w "$PWD/windows/runner/resources/app_icon.ico")" \
             "/DAppVersion=1.0.0+${{ github.run_number }}" \
             "/DOutputDir=$(cygpath -w "$RUNNER_TEMP/release")" \
-            installer/sofae.iss
+            installer/sofae.iss > "$RUNNER_TEMP/iscc.log" 2>&1
+          RC=$?
+          set -e
+          head -3 "$RUNNER_TEMP/iscc.log"
+          tail -15 "$RUNNER_TEMP/iscc.log"
+          if [ $RC -ne 0 ]; then
+            tail -8 "$RUNNER_TEMP/iscc.log" | tr -d '\r' | while IFS= read -r linha; do
+              [ -n "$linha" ] && echo "::error title=ISCC::$linha"
+            done
+            exit $RC
+          fi
           test -f "$RUNNER_TEMP/release/Sofae-Setup.exe" || { echo "::error::Sofae-Setup.exe não foi gerado"; exit 1; }
           ls -la "$RUNNER_TEMP/release"
 
