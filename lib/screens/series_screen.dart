@@ -5,6 +5,7 @@ import '../models/series.dart';
 import '../models/category.dart';
 import '../services/xtream_service.dart';
 import 'series_detail_screen.dart';
+import '../widgets/grade_capas.dart';
 import '../widgets/tv_focus.dart';
 import '../widgets/tv_search_field.dart';
 import '../core/erros.dart';
@@ -186,14 +187,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 const Text('Nenhuma série encontrada',
                     style: TextStyle(color: Colors.white54)),
               ]))
-            : GridView.builder(
-                padding: const EdgeInsets.all(12),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.62,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
+            : GradeCapas(
+                proporcao: 0.62,
                 itemCount: _filteredSeries.length,
                 itemBuilder: (_, i) => _buildCard(_filteredSeries[i], primary),
               ),

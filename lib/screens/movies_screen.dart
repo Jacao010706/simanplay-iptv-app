@@ -6,6 +6,7 @@ import '../models/category.dart';
 import '../core/marca.dart';
 import '../services/xtream_service.dart';
 import 'player_screen.dart';
+import '../widgets/grade_capas.dart';
 import '../widgets/tv_focus.dart';
 import '../widgets/tv_search_field.dart';
 import '../core/erros.dart';
@@ -71,13 +72,9 @@ class _MoviesScreenState extends State<MoviesScreen> {
   }
 
   void _showMovieDetail(Movie movie) {
-    showModalBottomSheet(
+    // Janela no meio da tela (cabe inteira na TV; ver _MovieDetailSheet.build)
+    showDialog(
       context: context,
-      backgroundColor: const Color(0xFF1a1625),
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => _MovieDetailSheet(
         movie: movie,
         session: widget.session,
@@ -157,11 +154,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
       ),
       const SizedBox(height: 8),
       Expanded(
-        child: GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, childAspectRatio: 0.65, crossAxisSpacing: 8, mainAxisSpacing: 8,
-          ),
+        child: GradeCapas(
+          proporcao: 0.65,
           itemCount: _filteredMovies.length,
           itemBuilder: (_, i) => _buildMovieCard(_filteredMovies[i], primary),
         ),
@@ -256,112 +250,118 @@ class _MovieDetailSheetState extends State<_MovieDetailSheet> {
         ? movieInfo['backdrop_path'][0]?.toString()
         : null;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, scrollCtrl) => Column(children: [
-        // Handle
-        Padding(
-          padding: const EdgeInsets.only(top: 12, bottom: 4),
-          child: Center(child: Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)))),
-        ),
-        Expanded(child: SingleChildScrollView(
-          controller: scrollCtrl,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Backdrop or poster
-            if (backdropUrl != null && backdropUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Stack(children: [
-                  Image.network(backdropUrl, height: 180, width: double.infinity, fit: BoxFit.cover,
+    // Cabe na tela (TV 1920x1080 e 1280x720, texto ampliado): margem de 5% de cada lado,
+    // capa e fundo proporcionais à altura, textos com rolagem e "Assistir" sempre visível
+    // embaixo, fora da rolagem.
+    final tela = MediaQuery.sizeOf(context);
+    final margemH = tela.width * 0.05;
+    final margemV = tela.height * 0.05;
+    final altura = tela.height - 2 * margemV;
+    final capaH = (altura * 0.3).clamp(72.0, 130.0);
+    final capaW = capaH * 90 / 130;
+    final fundoH = (altura * 0.3).clamp(0.0, 180.0);
+    Widget capaVazia() => Container(width: capaW, height: capaH, color: const Color(0xFF0d0b14),
+        child: const Icon(Icons.movie, color: Colors.white38, size: 36));
+
+    return Dialog(
+      key: const Key('detalhe_filme'),
+      backgroundColor: const Color(0xFF1a1625),
+      insetPadding: EdgeInsets.symmetric(horizontal: margemH, vertical: margemV),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Flexible(child: SingleChildScrollView(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Backdrop or poster
+              if (backdropUrl != null && backdropUrl.isNotEmpty && fundoH >= 80)
+                Stack(children: [
+                  Image.network(backdropUrl, height: fundoH, width: double.infinity, fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const SizedBox()),
-                  Container(height: 180,
+                  Container(height: fundoH,
                       decoration: const BoxDecoration(
                           gradient: LinearGradient(
                               begin: Alignment.topCenter, end: Alignment.bottomCenter,
                               colors: [Colors.transparent, Color(0xFF1a1625)]))),
                 ]),
-              ),
 
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // Poster + info side by side
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: widget.movie.posterUrl != null && widget.movie.posterUrl!.isNotEmpty
-                        ? Image.network(widget.movie.posterUrl!, width: 90, height: 130, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(width: 90, height: 130,
-                                color: const Color(0xFF0d0b14),
-                                child: const Icon(Icons.movie, color: Colors.white38, size: 36)))
-                        : Container(width: 90, height: 130, color: const Color(0xFF0d0b14),
-                            child: const Icon(Icons.movie, color: Colors.white38, size: 36)),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(widget.movie.name,
-                        style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    Wrap(spacing: 8, runSpacing: 4, children: [
-                      if (year.isNotEmpty) _badge(year),
-                      if (duration.isNotEmpty) _badge(duration),
-                      if (rating.isNotEmpty) _badgeIcon(Icons.star, Colors.amber, rating),
-                    ]),
-                    if (genre.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(genre, style: const TextStyle(color: Colors.white54, fontSize: 12),
-                          maxLines: 2, overflow: TextOverflow.ellipsis),
-                    ],
-                  ])),
-                ]),
-
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38)),
-                  ),
-
-                if (plot.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  const Text('SINOPSE', style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
-                  const SizedBox(height: 6),
-                  Text(plot, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
-                ],
-
-                if (director.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _infoRow('Diretor', director),
-                ],
-                if (cast.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  _infoRow('Elenco', cast),
-                ],
-
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    autofocus: true, // controle remoto ja cai no "Assistir"
-                    onPressed: _play,
-                    icon: const Icon(Icons.play_arrow, color: Colors.white),
-                    label: const Text('Assistir', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // Poster + info side by side
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: widget.movie.posterUrl != null && widget.movie.posterUrl!.isNotEmpty
+                          ? Image.network(widget.movie.posterUrl!, width: capaW, height: capaH, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => capaVazia())
+                          : capaVazia(),
                     ),
-                  ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(widget.movie.name,
+                          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Wrap(spacing: 8, runSpacing: 4, children: [
+                        if (year.isNotEmpty) _badge(year),
+                        if (duration.isNotEmpty) _badge(duration),
+                        if (rating.isNotEmpty) _badgeIcon(Icons.star, Colors.amber, rating),
+                      ]),
+                      if (genre.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(genre, style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ],
+                    ])),
+                  ]),
+
+                  if (_loading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38)),
+                    ),
+
+                  if (plot.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text('SINOPSE', style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+                    const SizedBox(height: 6),
+                    Text(plot, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
+                  ],
+
+                  if (director.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _infoRow('Diretor', director),
+                  ],
+                  if (cast.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    _infoRow('Elenco', cast),
+                  ],
+                ]),
+              ),
+            ]),
+          )),
+
+          // Fora da rolagem: sempre visível e com o foco do controle remoto
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: ElevatedButton.icon(
+                key: const Key('detalhe_filme_assistir'),
+                autofocus: true, // controle remoto ja cai no "Assistir"
+                onPressed: _play,
+                icon: const Icon(Icons.play_arrow, color: Colors.white),
+                label: const Text('Assistir', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                const SizedBox(height: 80),
-              ]),
+              ),
             ),
-          ]),
-        )),
-      ]),
+          ),
+        ]),
+      ),
     );
   }
 
