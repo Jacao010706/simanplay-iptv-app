@@ -1,7 +1,9 @@
 # Builds de teste do app Sofae: Windows e APK de teste (Android).
 #
-# Roda só em push na branch sofae-windows. Publica os resultados como artifacts do workflow
-# (sem MSIX, sem release, sem tag). Não usa nenhum secret.
+# Roda só em push na branch sofae-windows. Publica os resultados como artifacts do workflow e,
+# no job do Windows, o instalador (Inno Setup) e o zip na release fixa "sofae-windows"
+# (--latest=false, para não interferir nas releases apk-* do white-label). Não usa nenhum
+# secret além do GITHUB_TOKEN do próprio workflow.
 #
 # A marca é aplicada como no build_apk.yml (sed nas constantes de lib/core/app_config.dart),
 # pelo script .github/sofae/aplicar-marca.sh. Os ajustes só do Windows (nome do .exe, título
@@ -53,6 +55,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 45
+    # Só este job pode criar/apagar a release fixa "sofae-windows"
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
@@ -127,6 +132,7 @@ jobs:
           done
           ls -la "$OUT"
           du -sh "$OUT"
+          echo "APP_DIR=$OUT" >> "$GITHUB_ENV"
 
       # O artifact é baixado como Sofae-Windows.zip, com a pasta Sofae\ (Sofae.exe + DLLs + data\) dentro.
       - name: Publicar artifact Sofae-Windows.zip
@@ -136,6 +142,44 @@ jobs:
           path: ${{ runner.temp }}/out
           retention-days: 14
           if-no-files-found: error
+
+      - name: Instalador (Inno Setup)
+        run: |
+          ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+          if [ ! -f "$ISCC" ]; then
+            echo "Inno Setup não encontrado no runner: instalando com o Chocolatey"
+            choco install innosetup -y --no-progress
+          fi
+          test -f "$ISCC" || { echo "::error::ISCC.exe não encontrado depois da instalação"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/release"
+          "$ISCC" \
+            "/DSourceDir=$(cygpath -w "$APP_DIR")" \
+            "/DIconFile=$(cygpath -w "$PWD/windows/runner/resources/app_icon.ico")" \
+            "/DAppVersion=1.0.0+${{ github.run_number }}" \
+            "/DOutputDir=$(cygpath -w "$RUNNER_TEMP/release")" \
+            installer/sofae.iss
+          test -f "$RUNNER_TEMP/release/Sofae-Setup.exe" || { echo "::error::Sofae-Setup.exe não foi gerado"; exit 1; }
+          ls -la "$RUNNER_TEMP/release"
+
+      - name: Zip da pasta do app (para a release)
+        run: |
+          cd "$RUNNER_TEMP/out"
+          7z a -tzip "$RUNNER_TEMP/release/Sofae-Windows.zip" Sofae > /dev/null
+          ls -la "$RUNNER_TEMP/release"
+
+      # Release fixa: o link .../releases/download/sofae-windows/Sofae-Setup.exe não muda.
+      # Só roda se o instalador saiu (se o Inno Setup falhar, nada é publicado).
+      - name: Publicar na release fixa "sofae-windows"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP/release"
+          test -f Sofae-Setup.exe && test -f Sofae-Windows.zip
+          gh release delete sofae-windows -y --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+          gh release create sofae-windows Sofae-Setup.exe Sofae-Windows.zip \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Sofae para Windows" --notes "Build ${{ github.run_number }}" --latest=false
+          gh release view sofae-windows --repo "$GITHUB_REPOSITORY" --json tagName,assets --jq '.tagName, (.assets[].name)'
 
   build-apk-teste:
     runs-on: ubuntu-latest
