@@ -12,6 +12,7 @@ on:
   push:
     branches:
       - sofae-loja
+      - sofae-loja-capas-menores
   workflow_dispatch:
 
 concurrency:
