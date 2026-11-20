@@ -12,6 +12,7 @@ on:
   push:
     branches:
       - sofae-loja
+      - sofae-loja-capturas-tv
   workflow_dispatch:
 
 concurrency:
@@ -38,6 +39,23 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
+      # Capturas de tela em modo TV (1920x1080) para a ficha de Android TV na Google Play.
+      # Roda antes dos testes: o "flutter test --flavor play" abaixo compara com estes PNG.
+      - name: Capturas de tela TV (1920x1080)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-color-emoji
+          flutter pub get
+          flutter test --flavor play test/capturas_tv_test.dart --update-goldens
+          ls -la test/capturas_tv/
+
+      - name: Publicar artifact Sofae-Capturas-TV
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sofae-Capturas-TV
+          path: test/capturas_tv/*.png
+          retention-days: 14
+          if-no-files-found: error
+
       - name: Análise e testes (APK do painel e variante de loja)
         run: |
           flutter pub get
