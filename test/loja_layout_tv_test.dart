@@ -1,16 +1,20 @@
 // Layout da demonstração na TV (relato da Amazon Appstore, Fire TV):
 //  1. a janela de detalhes do filme ("Assistir") cabe na tela;
-//  2. o destaque do item focado na grade de Filmes não passa por cima das opções de cima.
+//  2. o destaque do item focado na grade de Filmes não passa por cima das opções de cima;
+//  3. a janela do canal (Ao Vivo) cabe na tela, com o "Assistir" inteiro e focado, e o
+//     destaque do canal focado não passa por cima da busca.
 //
 // A demonstração só existe na variante de loja:
 //   flutter test test/loja_layout_tv_test.dart --flavor play
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:simanplay_iptv/core/lista_demo.dart';
 import 'package:simanplay_iptv/core/loja.dart';
 import 'package:simanplay_iptv/core/modo_tv.dart';
+import 'package:simanplay_iptv/screens/live_tv_screen.dart';
 import 'package:simanplay_iptv/screens/movies_screen.dart';
 import 'package:simanplay_iptv/widgets/grade_capas.dart';
 import 'package:simanplay_iptv/widgets/modo_tv_widgets.dart';
@@ -30,6 +34,14 @@ const _telas = [
   _Tela('1280x720 (1280x720 lógico)', Size(1280, 720), 1.0, ModoTv.escalaTexto),
   _Tela('1280x720, fonte do sistema 1.3', Size(1280, 720), 1.0, 1.3),
   _Tela('1280x720 em densidade 1.5 (853x480 lógico), fonte 1.3', Size(1280, 720), 1.5, 1.3),
+];
+
+/// Canais: as mesmas telas, também com a fonte do sistema em 1.25.
+const _telasCanais = [
+  ..._telas,
+  _Tela('1920x1080, fonte do sistema 1.25', Size(1920, 1080), 2.0, 1.25),
+  _Tela('1280x720, fonte do sistema 1.25', Size(1280, 720), 1.0, 1.25),
+  _Tela('1280x720 em densidade 1.5 (853x480 lógico), fonte 1.25', Size(1280, 720), 1.5, 1.25),
 ];
 
 /// O mesmo envelope do main.dart na TV: escala de texto, margem de overscan e borda de foco.
@@ -91,6 +103,40 @@ Future<void> _fechar(WidgetTester tester) async {
 }
 
 FocusNode? _foco() => FocusManager.instance.primaryFocus;
+
+/// Foco no item do canal (a linha inteira, não a estrela de favorito dentro dela).
+bool _focoNoCanal() {
+  final f = _foco();
+  if (f == null || f.debugLabel == 'TvTap') return false;
+  final k = f.context?.findAncestorWidgetOfExactType<InkWell>()?.key;
+  return k is ValueKey<String> && k.value.startsWith('canal-');
+}
+
+Future<void> _abrirCanais(WidgetTester tester, _Tela t) async {
+  SharedPreferences.setMockInitialValues({});
+  tester.view.physicalSize = t.tamanho;
+  tester.view.devicePixelRatio = t.dpr;
+  addTearDown(tester.view.reset);
+  ModoTv.debugDefinir(tv: true, pacote: ModoTv.pacoteSofae);
+  addTearDown(ModoTv.debugDefinir);
+  await tester.pumpWidget(_app(LiveTvScreen(session: ListaDemo.sessao()), t.texto));
+  await _passar(tester);
+  expect(find.byKey(const ValueKey('canal-demo_canal_1')), findsOneWidget,
+      reason: '${t.nome}: a lista de canais da demonstração não abriu');
+}
+
+/// Controle remoto: anda até a lista de canais (busca → categorias → canais).
+Future<void> _irParaCanais(WidgetTester tester, _Tela t) async {
+  for (final k in [
+    LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowRight, LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.arrowRight,
+  ]) {
+    if (_focoNoCanal()) return;
+    await _tecla(tester, k);
+  }
+  expect(_focoNoCanal(), isTrue, reason: '${t.nome}: o controle não chegou aos canais (foco em ${_foco()})');
+}
 
 bool _focoNaGrade() => _foco()?.context?.findAncestorWidgetOfExactType<GridView>() != null;
 
@@ -163,6 +209,46 @@ void main() {
             reason: '${t.nome}: "Assistir" ($botao) cortado na janela ($caixa)');
         expect(Focus.of(tester.element(find.text('Assistir'))).hasFocus, isTrue,
             reason: '${t.nome}: "Assistir" sem o foco do controle');
+        await _fechar(tester);
+      });
+      expect(erros, isEmpty, reason: '${t.nome}: erros de layout:\n${erros.join('\n')}');
+    }, skip: !Loja.play);
+  }
+
+  for (final t in _telasCanais) {
+    testWidgets('janela do canal, ${t.nome}: cabe na tela e "Assistir" fica inteiro e focado', (tester) async {
+      final erros = await _comErros(() async {
+        await _abrirCanais(tester, t);
+        final tela = Offset.zero & (t.tamanho / t.dpr);
+        final lista = tester.getRect(find.ancestor(
+            of: find.byKey(const ValueKey('canal-demo_canal_1')), matching: find.byType(ListView)));
+
+        await _irParaCanais(tester, t);
+        // O destaque do canal focado não sobe por cima da busca
+        final anel = tester.getRect(find.byKey(FocusRing.ringKey));
+        expect(anel.top, greaterThanOrEqualTo(lista.top),
+            reason: '${t.nome}: a borda do canal focado ($anel) sobe acima da lista ($lista)');
+        expect(anel.left >= lista.left && anel.right <= lista.right, isTrue,
+            reason: '${t.nome}: a borda do canal focado ($anel) passa das laterais da lista ($lista)');
+
+        // OK no canal abre a janela de detalhes
+        await _tecla(tester, LogicalKeyboardKey.select);
+        await _passar(tester);
+
+        final janela = find.byKey(const Key('detalhe_canal'));
+        expect(janela, findsOneWidget, reason: '${t.nome}: a janela do canal não abriu');
+        final caixa = tester.getRect(find.descendant(of: janela, matching: find.byType(Material)).first);
+        final seguro = tela.deflate(tela.shortestSide * 0.04);
+        expect(caixa.left >= seguro.left && caixa.top >= seguro.top &&
+            caixa.right <= seguro.right && caixa.bottom <= seguro.bottom, isTrue,
+            reason: '${t.nome}: janela ($caixa) fora da área segura ($seguro)');
+
+        final botao = tester.getRect(find.byKey(const Key('detalhe_canal_assistir')));
+        expect(botao.top >= caixa.top && botao.bottom <= caixa.bottom &&
+            botao.left >= caixa.left && botao.right <= caixa.right, isTrue,
+            reason: '${t.nome}: "Assistir" ($botao) cortado na janela ($caixa)');
+        expect(Focus.of(tester.element(find.descendant(of: janela, matching: find.text('Assistir')))).hasFocus,
+            isTrue, reason: '${t.nome}: "Assistir" sem o foco do controle');
         await _fechar(tester);
       });
       expect(erros, isEmpty, reason: '${t.nome}: erros de layout:\n${erros.join('\n')}');
