@@ -12,7 +12,6 @@ on:
   push:
     branches:
       - sofae-loja
-      - sofae-loja-layout-tv
   workflow_dispatch:
 
 concurrency:
