@@ -188,7 +188,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
                     style: TextStyle(color: Colors.white54)),
               ]))
             : GradeCapas(
-                proporcao: 0.62,
                 itemCount: _filteredSeries.length,
                 itemBuilder: (_, i) => _buildCard(_filteredSeries[i], primary),
               ),
@@ -236,10 +235,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
               ]),
             )),
         ])),
-        const SizedBox(height: 4),
-        Text(series.name,
-            style: const TextStyle(color: Colors.white, fontSize: 11),
-            maxLines: 2, overflow: TextOverflow.ellipsis),
+        GradeCapas.titulo(series.name),
       ]),
     );
   }

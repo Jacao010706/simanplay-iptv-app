@@ -156,7 +156,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
       const SizedBox(height: 8),
       Expanded(
         child: GradeCapas(
-          proporcao: 0.65,
           itemCount: _filteredMovies.length,
           itemBuilder: (_, i) => _buildMovieCard(_filteredMovies[i], primary),
         ),
@@ -180,9 +179,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
                 : const Center(child: Icon(Icons.movie, color: Colors.white38, size: 32)),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(movie.name, style: const TextStyle(color: Colors.white, fontSize: 11),
-            maxLines: 2, overflow: TextOverflow.ellipsis),
+        GradeCapas.titulo(movie.name),
       ]),
     );
   }
