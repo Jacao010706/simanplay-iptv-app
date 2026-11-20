@@ -13,6 +13,8 @@ import '../services/epg_service.dart';
 import '../services/recording_service.dart';
 import 'player_screen.dart';
 import 'recordings_screen.dart';
+import '../widgets/grade_capas.dart';
+import '../widgets/janela_detalhes.dart';
 import '../widgets/tv_focus.dart';
 import '../widgets/modo_tv_widgets.dart';
 import '../widgets/tv_search_field.dart';
@@ -122,13 +124,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
   }
 
   void _showChannelSheet(Channel channel, Color primary) {
-    showModalBottomSheet(
+    // Janela no meio da tela (cabe inteira na TV; ver JanelaDetalhes)
+    showDialog(
       context: context,
-      backgroundColor: const Color(0xFF1a1625),
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => _ChannelEpgSheet(
         channel: channel,
         session: widget.session,
@@ -300,6 +298,9 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
       ]));
     }
     return ListView.builder(
+      // Folga para a borda de foco (3 px + sombra) caber dentro da lista, sem passar por
+      // cima da busca nem das categorias
+      padding: const EdgeInsets.all(6),
       itemCount: channels.length,
       itemBuilder: (_, i) {
         final ch    = channels[i];
@@ -307,7 +308,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
         final isThisRecording = RecordingService.instance.activeRecording?.channelName == ch.name;
 
         // Menu (☰) no Fire TV ou a tecla amarela: adiciona/remove o canal com foco dos favoritos
-        return TeclaFavorito(
+        return RolarAoFocar(child: TeclaFavorito(
           onFavorito: () => _toggleFavorite(ch),
           child: InkWell(
           key: ValueKey('canal-${ch.id}'),
@@ -354,7 +355,7 @@ class _LiveTvScreenState extends State<LiveTvScreen> {
               Icon(Icons.chevron_right, color: primary, size: 20),
             ]),
           ),
-        ));
+        )));
       },
     );
   }
@@ -412,7 +413,7 @@ class _NowPlayingLineState extends State<_NowPlayingLine> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Bottom sheet do canal: EPG + favorito + gravar + assistir
+// Janela do canal: EPG + favorito + gravar + assistir
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class _ChannelEpgSheet extends StatefulWidget {
@@ -569,21 +570,15 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
         rs.activeRecording?.channelName == widget.channel.name;
     final otherRec    = rs.isRecording && !isThisRec;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min,
+    // Cabe na tela: cabeçalho e programação rolam por dentro; "Assistir"/"Gravar" ficam
+    // fixos embaixo, fora da rolagem, com o foco inicial no "Assistir".
+    return JanelaDetalhes(
+      key: const Key('detalhe_canal'),
+      paddingRodape: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      conteudo: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // Handle
-        Center(child: Container(
-          width: 40, height: 4,
-          decoration: BoxDecoration(
-              color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-        )),
-        const SizedBox(height: 16),
 
         // ── Cabeçalho do canal ──────────────────────────────────────────────
         Row(children: [
@@ -722,19 +717,22 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
             child: const Row(children: [
               Icon(Icons.info_outline, color: Colors.white24, size: 16),
               SizedBox(width: 8),
-              Text('Sem informação de programação disponível',
-                  style: TextStyle(color: Colors.white38, fontSize: 13)),
+              Expanded(child: Text('Sem informação de programação disponível',
+                  style: TextStyle(color: Colors.white38, fontSize: 13))),
             ]),
           ),
+        ]),
+      ),
 
-        const SizedBox(height: 20),
-
-        // ── Botões de ação ──────────────────────────────────────────────────
+      // ── Botões de ação (fixos embaixo) ──────────────────────────────────
+      rodape: Column(mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
           // Assistir
-          Expanded(child: SizedBox(
-            height: 48,
+          Expanded(child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
             child: ElevatedButton.icon(
+              key: const Key('detalhe_canal_assistir'),
+              autofocus: true, // controle remoto ja cai no "Assistir"
               onPressed: widget.onPlay,
               icon: const Icon(Icons.play_arrow, color: Colors.white),
               label: const Text('Assistir',
@@ -748,8 +746,8 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
           )),
           // Gravar / Parar (a Play não tem gravação)
           if (!Loja.play) const SizedBox(width: 10),
-          if (!Loja.play) SizedBox(
-            height: 48,
+          if (!Loja.play) ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
             child: ElevatedButton.icon(
               onPressed: otherRec ? null : _toggleRecording,
               icon: Icon(
@@ -785,9 +783,7 @@ class _ChannelEpgSheetState extends State<_ChannelEpgSheet> {
                 style: TextStyle(color: Colors.white54, fontSize: 13)),
           )),
         ],
-
-        const SizedBox(height: 4),
-      ])),
+      ]),
     );
   }
 }
