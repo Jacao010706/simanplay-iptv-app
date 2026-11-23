@@ -41,6 +41,17 @@ jobs:
           channel: 'stable'
       # Capturas de tela em modo TV (1920x1080) para a ficha de Android TV na Google Play.
       # Roda antes dos testes: o "flutter test --flavor play" abaixo compara com estes PNG.
+      # Capas dos filmes da demonstração (as mesmas URLs do app): o teste das capturas as
+      # serve de arquivos locais, sem internet no teste.
+      - name: Capas da demonstração (para as capturas)
+        run: |
+          mkdir -p test/capturas_tv/capas
+          grep -v '^#' test/capturas_tv/capas.txt | while read -r url; do
+            [ -z "$url" ] && continue
+            curl -fsSL --retry 3 -A "SofaeCapturas/1.0 (GitHub Actions)" -o "test/capturas_tv/capas/${url##*/}" "$url"
+          done
+          ls -la test/capturas_tv/capas/
+
       - name: Capturas de tela TV (1920x1080)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-color-emoji

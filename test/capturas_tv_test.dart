@@ -2,12 +2,15 @@
 //
 // Mesmo envelope de test/loja_layout_tv_test.dart: tela 1920x1080 (960x540 lógico, densidade 2),
 // modo TV do Sofae ativo e a lista de demonstração (filmes abertos da Blender). Sem internet no
-// teste: as capas de rede caem no mesmo substituto (errorBuilder) dos outros testes.
+// teste: as capas (test/capturas_tv/capas.txt) são baixadas antes pelo workflow para
+// test/capturas_tv/capas/ e servidas aqui por um HttpClient falso, que devolve o arquivo local.
 // As fontes reais (Roboto e ícones do Material) são carregadas do SDK do Flutter, para o texto
 // não sair em quadradinhos.
 //
 // Gerar os PNG (test/capturas_tv/):
+//   (baixar as capas: ver o passo "Capas da demonstração" em .github/workflows/sofae-loja.yml)
 //   flutter test --flavor play test/capturas_tv_test.dart --update-goldens
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -54,6 +57,101 @@ Future<void> _carregarFontes() async {
   if (emoji.existsSync()) await carregar('NotoColorEmoji', [emoji]);
 }
 
+/// Capas baixadas pelo workflow (test/capturas_tv/capas/), pelo nome do arquivo na URL.
+final _pastaCapas = Directory('test/capturas_tv/capas');
+
+/// URLs das capas que a demonstração usa (filmes e logos dos canais).
+Set<String> _urlsDaDemo() => {
+      for (final f in ListaDemo.filmes)
+        if (f.posterUrl != null) f.posterUrl!,
+      for (final c in ListaDemo.canais)
+        if (c.logoUrl != null) c.logoUrl!,
+    };
+
+String _nome(Uri u) => Uri.decodeComponent(u.pathSegments.last);
+
+File? _capaLocal(Uri u) {
+  final f = File('${_pastaCapas.path}/${u.pathSegments.last}');
+  if (f.existsSync()) return f;
+  if (!_pastaCapas.existsSync()) return null;
+  for (final g in _pastaCapas.listSync().whereType<File>()) {
+    if (Uri.decodeComponent(g.uri.pathSegments.last) == _nome(u)) return g;
+  }
+  return null;
+}
+
+/// HttpClient falso das imagens de rede: devolve o arquivo local da capa (404 se não houver).
+class _CapasLocais implements HttpClient {
+  @override
+  bool autoUncompress = false;
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) async => _Pedido(url);
+
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
+class _Pedido implements HttpClientRequest {
+  _Pedido(this.uri);
+  @override
+  final Uri uri;
+  @override
+  final HttpHeaders headers = _Cabecalhos();
+
+  @override
+  Future<HttpClientResponse> close() async {
+    final f = _capaLocal(uri);
+    return _Resposta(f == null ? null : f.readAsBytesSync());
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
+class _Cabecalhos implements HttpHeaders {
+  @override
+  void add(String name, Object value, {bool preserveHeaderCase = false}) {}
+
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
+class _Resposta extends Stream<List<int>> implements HttpClientResponse {
+  _Resposta(this._bytes);
+  final List<int>? _bytes;
+
+  @override
+  int get statusCode => _bytes == null ? HttpStatus.notFound : HttpStatus.ok;
+  @override
+  int get contentLength => _bytes?.length ?? 0;
+  @override
+  HttpClientResponseCompressionState get compressionState => HttpClientResponseCompressionState.notCompressed;
+
+  @override
+  StreamSubscription<List<int>> listen(void Function(List<int>)? onData,
+          {Function? onError, void Function()? onDone, bool? cancelOnError}) =>
+      Stream<List<int>>.fromIterable([if (_bytes != null) _bytes])
+          .listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+}
+
+/// As capas da demonstração estão todas na lista do workflow e já baixadas.
+void _conferirCapas() {
+  final lista = File('test/capturas_tv/capas.txt')
+      .readAsLinesSync()
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty && !l.startsWith('#'))
+      .toSet();
+  for (final u in _urlsDaDemo()) {
+    expect(lista, contains(u), reason: 'capa da demonstração fora de test/capturas_tv/capas.txt: $u');
+    expect(_capaLocal(Uri.parse(u)), isNotNull,
+        reason: 'capa não baixada em ${_pastaCapas.path}: $u (o workflow baixa antes do teste)');
+  }
+}
+
 /// Tema do app; só no teste, emoji (ex.: "⭐ Favoritos") cai na fonte de emoji, como no aparelho.
 ThemeData _tema() {
   const emoji = ['NotoColorEmoji'];
@@ -79,7 +177,8 @@ Widget _app(Widget home) => MaterialApp(
       home: home,
     );
 
-/// Ignora só as capas de rede (sem internet no teste).
+/// Sem internet: as imagens de rede vêm de [_CapasLocais]. Erros de imagem continuam ignorados
+/// (01 e 04 têm logos fora da demonstração).
 Future<void> _semRede(Future<void> Function() corpo) async {
   final original = FlutterError.onError;
   FlutterError.onError = (d) {
@@ -87,9 +186,11 @@ Future<void> _semRede(Future<void> Function() corpo) async {
     if (s.contains('HTTP request failed') || s.contains('NetworkImage')) return;
     original?.call(d);
   };
+  debugNetworkImageHttpClientProvider = _CapasLocais.new;
   try {
     await corpo();
   } finally {
+    debugNetworkImageHttpClientProvider = null;
     FlutterError.onError = original;
   }
 }
@@ -131,8 +232,10 @@ Future<void> _abrir(WidgetTester tester, Widget tela) async {
   await _passar(tester);
 }
 
-Future<void> _capturar(WidgetTester tester, String arquivo) async {
+Future<void> _capturar(WidgetTester tester, String arquivo, {bool assentar = false}) async {
   await _imagens(tester);
+  // Espera as animações (abertura da janela, foco do botão) terminarem
+  if (assentar) await tester.pumpAndSettle();
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('capturas_tv/$arquivo'));
 }
 
@@ -180,7 +283,8 @@ void main() {
     });
   }, skip: !Loja.play);
 
-  testWidgets('02-filmes: grade de Filmes com um item focado', (tester) async {
+  testWidgets('02-filmes: grade de Filmes (7 por linha, com capas) e um item focado', (tester) async {
+    _conferirCapas();
     await _semRede(() async {
       await _filmes(tester);
       for (var i = 0; i < 6 && !_focoNaGrade(); i++) {
@@ -189,12 +293,15 @@ void main() {
       expect(_focoNaGrade(), isTrue, reason: 'o controle não chegou aos filmes');
       await _tecla(tester, LogicalKeyboardKey.arrowRight);
       expect(_focoNaGrade(), isTrue);
+      expect(tester.widget<GridView>(find.byType(GridView)).gridDelegate,
+          isA<SliverGridDelegateWithFixedCrossAxisCount>().having((d) => d.crossAxisCount, 'colunas', 7));
       await _capturar(tester, '02-filmes.png');
       await _fechar(tester);
     });
   }, skip: !Loja.play);
 
-  testWidgets('03-detalhes: janela de detalhes com "Assistir" focado', (tester) async {
+  testWidgets('03-detalhes: janela de detalhes com capa, sinopse e "Assistir" focado', (tester) async {
+    _conferirCapas();
     await _semRede(() async {
       await _filmes(tester);
       for (var i = 0; i < 6 && !_focoNaGrade(); i++) {
@@ -207,7 +314,10 @@ void main() {
       expect(janela, findsOneWidget, reason: 'a janela de detalhes não abriu');
       expect(Focus.of(tester.element(find.descendant(of: janela, matching: find.text('Assistir')))).hasFocus,
           isTrue, reason: '"Assistir" sem o foco do controle');
-      await _capturar(tester, '03-detalhes.png');
+      expect(find.descendant(of: janela, matching: find.text('SINOPSE')), findsOneWidget);
+      await _capturar(tester, '03-detalhes.png', assentar: true);
+      expect(Focus.of(tester.element(find.descendant(of: janela, matching: find.text('Assistir')))).hasFocus,
+          isTrue, reason: '"Assistir" perdeu o foco depois das animações');
       await _fechar(tester);
     });
   }, skip: !Loja.play);
