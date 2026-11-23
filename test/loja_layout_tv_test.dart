@@ -1,21 +1,29 @@
 // Layout da demonstração na TV (relato da Amazon Appstore, Fire TV):
 //  1. a janela de detalhes do filme ("Assistir") cabe na tela;
 //  2. o destaque do item focado na grade de Filmes não passa por cima das opções de cima;
-//  3. a janela do canal (Ao Vivo) cabe na tela, com o "Assistir" inteiro e focado, e o
+//  3. capas menores: 7 colunas de Filmes e Séries na TV e 4 no celular em pé, sem overflow;
+//  4. a janela do canal (Ao Vivo) cabe na tela, com o "Assistir" inteiro e focado, e o
 //     destaque do canal focado não passa por cima da busca.
 //
 // A demonstração só existe na variante de loja:
 //   flutter test test/loja_layout_tv_test.dart --flavor play
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:simanplay_iptv/core/lista_demo.dart';
 import 'package:simanplay_iptv/core/loja.dart';
 import 'package:simanplay_iptv/core/modo_tv.dart';
+import 'package:simanplay_iptv/models/app_session.dart';
 import 'package:simanplay_iptv/screens/live_tv_screen.dart';
 import 'package:simanplay_iptv/screens/movies_screen.dart';
+import 'package:simanplay_iptv/screens/series_screen.dart';
+import 'package:simanplay_iptv/services/xtream_service.dart';
 import 'package:simanplay_iptv/widgets/grade_capas.dart';
 import 'package:simanplay_iptv/widgets/modo_tv_widgets.dart';
 import 'package:simanplay_iptv/widgets/tv_focus.dart';
@@ -30,6 +38,8 @@ class _Tela {
 
 const _telas = [
   _Tela('1920x1080 (Fire TV, 960x540 lógico)', Size(1920, 1080), 2.0, ModoTv.escalaTexto),
+  _Tela('1920x1080, fonte 1.0', Size(1920, 1080), 2.0, 1.0),
+  _Tela('1280x720, fonte 1.0', Size(1280, 720), 1.0, 1.0),
   _Tela('1920x1080, fonte do sistema 1.3', Size(1920, 1080), 2.0, 1.3),
   _Tela('1280x720 (1280x720 lógico)', Size(1280, 720), 1.0, ModoTv.escalaTexto),
   _Tela('1280x720, fonte do sistema 1.3', Size(1280, 720), 1.0, 1.3),
@@ -86,15 +96,71 @@ Future<void> _tecla(WidgetTester tester, LogicalKeyboardKey k) async {
   await tester.pump(const Duration(milliseconds: 500));
 }
 
-Future<void> _abrirFilmes(WidgetTester tester, _Tela t) async {
+Future<void> _abrirFilmes(WidgetTester tester, _Tela t) => _abrirGrade(tester, t, _Grade.filmes);
+
+/// Lista Xtream falsa só com séries (a demonstração não tem séries).
+const _hostSeries = 'http://series.exemplo';
+
+Object _respostaSeries(String acao) => switch (acao) {
+      'get_series_categories' => [
+          {'category_id': '1', 'category_name': 'Séries de teste'},
+          {'category_id': '2', 'category_name': 'Animação'},
+        ],
+      'get_series' => [
+          for (var i = 1; i <= 30; i++)
+            {
+              'series_id': i,
+              'name': 'Série de teste número $i com um nome bem comprido',
+              'category_id': '${1 + i % 2}',
+              'cover': 'http://series.exemplo/capa$i.jpg',
+              'rating': '7.5',
+              'stream_type': 'series',
+            },
+        ],
+      _ => {'user_info': {'auth': 1, 'status': 'Active'}},
+    };
+
+/// Deixa as séries no cache do XtreamService (a tela usa o mesmo host, usuário e senha).
+Future<AppSession> _sessaoSeries(WidgetTester tester) async {
+  XtreamService.clearCache();
+  addTearDown(XtreamService.clearCache);
+  final svc = XtreamService(
+    host: _hostSeries, username: 'u', password: 'p',
+    client: MockClient((req) async =>
+        http.Response(jsonEncode(_respostaSeries(req.url.queryParameters['action'] ?? '')), 200,
+            headers: {'content-type': 'application/json; charset=utf-8'})),
+  );
+  await tester.runAsync(() => svc.getSeriesPastas());
+  return AppSession.xtream(host: _hostSeries, username: 'u', password: 'p');
+}
+
+enum _Grade { filmes, series }
+
+Future<void> _abrirGrade(WidgetTester tester, _Tela t, _Grade g, {bool tv = true}) async {
+  SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = t.tamanho;
   tester.view.devicePixelRatio = t.dpr;
   addTearDown(tester.view.reset);
-  ModoTv.debugDefinir(tv: true, pacote: ModoTv.pacoteSofae);
+  if (tv) ModoTv.debugDefinir(tv: true, pacote: ModoTv.pacoteSofae);
   addTearDown(ModoTv.debugDefinir);
-  await tester.pumpWidget(_app(MoviesScreen(session: ListaDemo.sessao()), t.texto));
+  final tela = g == _Grade.filmes
+      ? MoviesScreen(session: ListaDemo.sessao())
+      : SeriesScreen(session: await _sessaoSeries(tester));
+  await tester.pumpWidget(_app(tela, t.texto));
+  // Séries: o cache foi preenchido fora do relógio falso; deixa a tela receber os dados
+  if (g == _Grade.series) await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
   await _passar(tester);
-  expect(find.byType(GridView), findsOneWidget, reason: '${t.nome}: a grade de filmes não abriu');
+  expect(find.byType(GridView), findsOneWidget, reason: '${t.nome}: a grade de ${g.name} não abriu');
+}
+
+int _colunas(WidgetTester tester) =>
+    (tester.widget<GridView>(find.byType(GridView)).gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+        .crossAxisCount;
+
+/// Capa (o Expanded do item) em pôster 2:3.
+void _conferirCapa(WidgetTester tester, String nome) {
+  final capa = tester.getRect(find.descendant(of: find.byType(GridView), matching: find.byType(Expanded)).first);
+  expect(capa.height / capa.width, closeTo(1.5, 0.03), reason: '$nome: capa ($capa) fora de 2:3');
 }
 
 Future<void> _fechar(WidgetTester tester) async {
@@ -142,20 +208,48 @@ bool _focoNaGrade() => _foco()?.context?.findAncestorWidgetOfExactType<GridView>
 
 void main() {
   test('grade: uma fileira cabe na área visível com folga para a borda de foco', () {
-    for (final (w, h) in [(864.0, 380.0), (1180.0, 520.0), (780.0, 300.0), (360.0, 600.0)]) {
-      final cols = GradeCapas.colunas(w, h, 0.65);
-      final item = ((w - 2 * GradeCapas.margem - (cols - 1) * GradeCapas.espaco) / cols) / 0.65;
+    const legenda = 22.0;
+    for (final (w, h, tv) in [
+      (864.0, 380.0, true), (1180.0, 520.0, true), (780.0, 300.0, true), (780.0, 240.0, true),
+      (366.0, 600.0, false), (820.0, 250.0, false), (1000.0, 600.0, false),
+    ]) {
+      final cols = GradeCapas.colunas(w, h, tv: tv, legenda: legenda);
+      final item = GradeCapas.alturaDoItem(w - 2 * GradeCapas.margem, cols, legenda);
       expect(item, lessThanOrEqualTo(h - 2 * GradeCapas.margem - 2 * GradeCapas.folgaFoco),
           reason: '${w}x$h: $cols colunas, item de $item px');
     }
-    expect(GradeCapas.colunas(336, 600, 0.65), 3, reason: 'celular em pé continua com 3 colunas');
+    expect(GradeCapas.colunas(864, 380, tv: true, legenda: legenda), 7, reason: 'TV: 7 colunas');
+    expect(GradeCapas.colunas(366, 700, tv: false, legenda: legenda), 4, reason: 'celular em pé: 4 colunas');
+    expect(GradeCapas.colunas(1000, 2000, tv: false, legenda: legenda), 8,
+        reason: 'tablet: colunas pela largura (capa de ~110)');
   });
 
-  for (final t in _telas) {
-    testWidgets('Filmes da demonstração, ${t.nome}: o item focado fica inteiro na grade', (tester) async {
+  for (final g in _Grade.values) {
+    testWidgets('celular 390x844, ${g.name}: 4 colunas, capas 2:3, sem overflow', (tester) async {
       final erros = await _comErros(() async {
-        await _abrirFilmes(tester, t);
+        const t = _Tela('390x844', Size(1170, 2532), 3.0, 1.0);
+        await _abrirGrade(tester, t, g, tv: false);
+        expect(_colunas(tester), 4, reason: 'celular em pé: 4 colunas');
+        _conferirCapa(tester, t.nome);
+        await _fechar(tester);
+      });
+      expect(erros, isEmpty, reason: 'erros de layout:\n${erros.join('\n')}');
+    }, skip: !Loja.play);
+  }
+
+  for (final t in _telas) {
+   for (final g in _Grade.values) {
+    testWidgets('${g.name}, ${t.nome}: 7 colunas e o item focado fica inteiro na grade', (tester) async {
+      final erros = await _comErros(() async {
+        await _abrirGrade(tester, t, g);
         final grade = tester.getRect(find.byType(GridView));
+        final logico = t.tamanho / t.dpr;
+        if (logico.width >= 960) {
+          expect(_colunas(tester), 7, reason: '${t.nome}: a TV tem 7 colunas');
+        } else {
+          expect(_colunas(tester), greaterThanOrEqualTo(7), reason: '${t.nome}: a TV tem 7 colunas ou mais');
+        }
+        _conferirCapa(tester, t.nome);
 
         var checados = 0;
         for (final k in [
@@ -176,11 +270,12 @@ void main() {
           expect(item.left >= grade.left && item.right <= grade.right, isTrue,
               reason: '${t.nome}, $k: item focado ($item) cortado nas laterais da grade ($grade)');
         }
-        expect(checados, greaterThanOrEqualTo(3), reason: '${t.nome}: o controle não chegou aos filmes');
+        expect(checados, greaterThanOrEqualTo(3), reason: '${t.nome}: o controle não chegou aos itens');
         await _fechar(tester);
       });
       expect(erros, isEmpty, reason: '${t.nome}: erros de layout:\n${erros.join('\n')}');
     }, skip: !Loja.play);
+   }
 
     testWidgets('janela de detalhes, ${t.nome}: cabe na tela e "Assistir" fica visível e focado', (tester) async {
       final erros = await _comErros(() async {
