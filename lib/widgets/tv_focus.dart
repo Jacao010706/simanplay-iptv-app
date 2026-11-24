@@ -176,6 +176,17 @@ class _FocusRingState extends State<FocusRing> with SingleTickerProviderStateMix
           child: IgnorePointer(
             child: ClipRect(
               child: Stack(clipBehavior: Clip.none, children: [
+                // Contorno escuro por fora da borda branca (contraste em fundo claro). Antes era
+                // um BoxShadow, que pinta a caixa inteira: o item focado saía escurecido.
+                Positioned.fromRect(
+                  rect: r.inflate(5).shift(-clip.topLeft),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black54, width: 2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
                 Positioned.fromRect(
                   rect: r.inflate(3).shift(-clip.topLeft),
                   child: Container(
@@ -183,7 +194,6 @@ class _FocusRingState extends State<FocusRing> with SingleTickerProviderStateMix
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.white, width: 3),
                       borderRadius: BorderRadius.circular(8),
-                      boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6)],
                     ),
                   ),
                 ),

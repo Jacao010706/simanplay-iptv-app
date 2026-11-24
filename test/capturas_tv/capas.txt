@@ -1,0 +1,11 @@
+# Capas da demonstração (lib/core/lista_demo.dart). O workflow baixa para capas/; o teste confere a lista.
+https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/Big_Buck_Bunny_4K.webm/330px--Big_Buck_Bunny_4K.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/Elephants_Dream_%282006%29.webm/330px--Elephants_Dream_%282006%29.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Sintel_movie_4K.webm/330px--Sintel_movie_4K.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Tears_of_Steel_in_4k_-_Official_Blender_Foundation_release.webm/330px--Tears_of_Steel_in_4k_-_Official_Blender_Foundation_release.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/3/36/Cosmos_Laundromat_-_First_Cycle_-_Official_Blender_Foundation_release.webm/330px--Cosmos_Laundromat_-_First_Cycle_-_Official_Blender_Foundation_release.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8b/Caminandes%2C_Gran_Dillama_-_Blender_Foundation.webm/330px--Caminandes%2C_Gran_Dillama_-_Blender_Foundation.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Spring_-_Blender_Open_Movie.webm/330px--Spring_-_Blender_Open_Movie.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Coffee_Run_-_Blender_Open_Movie-full_movie.webm/330px--Coffee_Run_-_Blender_Open_Movie-full_movie.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Sprite_Fright_-_Blender_Open_Movie-full_movie.webm/330px--Sprite_Fright_-_Blender_Open_Movie-full_movie.webm.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7a/Charge_-_Blender_Open_Movie-full_movie.webm/330px--Charge_-_Blender_Open_Movie-full_movie.webm.jpg

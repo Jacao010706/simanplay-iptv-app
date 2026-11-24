@@ -55,3 +55,6 @@ roku_channel/images/
 dist_lg/
 scripts/tests/__pycache__/
 scripts/__pycache__/
+
+# Capas baixadas pelo workflow para as capturas de TV
+test/capturas_tv/capas/
